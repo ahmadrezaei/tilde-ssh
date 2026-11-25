@@ -360,7 +360,9 @@ struct HostKeyValidationTests {
 /// A prompter that never answers.
 @MainActor private final class SilentPrompter: HostKeyPrompter {
     func decide(_ challenge: HostKeyChallenge) async -> HostKeyDecision {
-        await withCheckedContinuation { (_: CheckedContinuation<HostKeyDecision, Never>) in }
+        // Wait far longer than any test timeout without leaking a continuation.
+        try? await Task.sleep(for: .seconds(3600))
+        return .reject
     }
 }
 
