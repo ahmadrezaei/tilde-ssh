@@ -1,0 +1,49 @@
+# Fastlane is optional: nothing in the build or CI needs it. It exists to push the App Store listing text
+# (fastlane/metadata) without clicking through App Store Connect.
+#
+#   bundle exec fastlane check_metadata            # validate limits locally, no network
+#   bundle exec fastlane ios upload_metadata       # push text for the iOS / iPadOS listing
+#   bundle exec fastlane mac upload_metadata       # push text for the macOS listing
+#
+# With universal purchase both platforms share one record but have separate versions, so each is uploaded
+# on its own. Authentication uses an App Store Connect API key, never a password:
+#   APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_ISSUER_ID, APP_STORE_CONNECT_API_KEY_PATH (a .p8 file)
+
+default_platform(:ios)
+
+lane :check_metadata do
+  sh("../scripts/validate-metadata.py")
+end
+
+def upload_listing_text(platform)
+  check_metadata
+  api_key = app_store_connect_api_key(
+    key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+    issuer_id: ENV.fetch("APP_STORE_CONNECT_API_ISSUER_ID"),
+    key_filepath: ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH")
+  )
+  deliver(
+    api_key: api_key,
+    platform: platform,
+    metadata_path: "./fastlane/metadata",
+    skip_binary_upload: true,
+    skip_screenshots: true,
+    force: true,
+    submit_for_review: false,
+    precheck_include_in_app_purchases: false
+  )
+end
+
+platform :ios do
+  desc "Upload listing text only for iOS and iPadOS (no binary, no screenshots)"
+  lane :upload_metadata do
+    upload_listing_text("ios")
+  end
+end
+
+platform :mac do
+  desc "Upload listing text only for macOS (no binary, no screenshots)"
+  lane :upload_metadata do
+    upload_listing_text("osx")
+  end
+end
