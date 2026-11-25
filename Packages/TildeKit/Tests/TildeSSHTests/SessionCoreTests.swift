@@ -30,6 +30,7 @@ final class FakeShell: LiveShell {
 
     func write(_ data: Data) { log.withLock { $0.written.append(data) } }
     func resize(cols: Int, rows: Int, pixelWidth: Int, pixelHeight: Int) { log.withLock { $0.resizes.append([cols, rows, pixelWidth, pixelHeight]) } }
+    func setReading(_ enabled: Bool) {}
     func ping(timeout: Duration) async -> Duration? { log.withLock { $0.pings += 1; return $0.pingResult } }
 
     func waitUntilEnded() async -> ShellEnd {
@@ -49,13 +50,21 @@ final class FakeConnector: ShellConnecting {
     private let steps: Mutex<[Step]>
     private let count = Mutex(0)
     private let delay: Duration
+    private let lists = Mutex<[OnceAllowList]>([])
+    private let sizes = Mutex<[PTYConfig]>([])
 
     init(_ steps: [Step], delay: Duration = .zero) { self.steps = Mutex(steps); self.delay = delay }
+
+    /// The `OnceAllowList` each attempt was given (they must all be the same object).
+    var allowLists: [OnceAllowList] { lists.withLock { $0 } }
+    var sizesUsed: [PTYConfig] { sizes.withLock { $0 } }
 
     var connectCount: Int { count.withLock { $0 } }
 
     func connect(_ plan: ConnectPlan, size: PTYConfig, events: ConnectEvents) async throws -> any LiveShell {
         count.withLock { $0 += 1 }
+        lists.withLock { $0.append(plan.allowedOnce) }
+        sizes.withLock { $0.append(size) }
         events.phase(.tcp)
         events.phase(.authenticating)
         if delay > .zero { try await Task.sleep(for: delay) }
@@ -79,7 +88,7 @@ struct SessionCoreTests {
 
     private func makeSession(
         _ connector: FakeConnector, policy: ReconnectPolicy? = nil, keepAlive: Int = 0, knownHosts: InMemoryKnownHostsStore = InMemoryKnownHostsStore(),
-        hostKey: AlwaysTrustPrompter = AlwaysTrustPrompter()
+        hostKey: any HostKeyPrompter = AlwaysTrustPrompter()
     ) -> (CitadelTerminalSession, SessionRecorder) {
         let server = ServerSnapshot(name: "fake", target: ConnectionTarget(host: "fake.test", username: "me"), keepAliveSeconds: keepAlive)
         let session = CitadelTerminalSession(
@@ -292,4 +301,88 @@ struct SessionCoreTests {
         #expect(recorder.lastState == .disconnected(.error(.hostKeyMismatch(challengeID: challenge.id))))
         #expect(connector.connectCount == 1)
     }
+
+    @Test func resizeDuringConnectIsAppliedOnceConnected() async {
+        let shell = FakeShell()
+        let connector = FakeConnector([.shell(shell)], delay: .milliseconds(200))
+        let (session, recorder) = makeSession(connector)
+        let connecting = Task { await session.connect() }
+        try? await Task.sleep(for: .milliseconds(50))
+        session.resize(cols: 150, rows: 45, pixelWidth: 10, pixelHeight: 20)   // arrives while the PTY is being opened
+        await connecting.value
+        await recorder.settle()
+        #expect(connector.sizesUsed.first?.cols == 80)
+        #expect(shell.resizes == [[150, 45, 10, 20]])
+    }
+
+    @Test func unchangedSizeIsNotResentAfterConnect() async {
+        let shell = FakeShell()
+        let (session, recorder) = makeSession(FakeConnector([.shell(shell)]))
+        await session.connect()
+        await recorder.settle()
+        #expect(shell.resizes.isEmpty)
+    }
+
+    @Test func reconnectOpensThePTYAtTheLatestSize() async {
+        let first = FakeShell()
+        let connector = FakeConnector([.shell(first), .shell(FakeShell())])
+        let (session, recorder) = makeSession(connector)
+        await session.connect()
+        session.resize(cols: 99, rows: 31, pixelWidth: 0, pixelHeight: 0)
+        first.end(.lost)
+        #expect(await recorder.waitForState { _ in connector.connectCount == 2 })
+        #expect(connector.sizesUsed.last?.cols == 99)
+        #expect(connector.sizesUsed.last?.rows == 31)
+    }
+
+    @Test func unclassifiedErrorsAreNotRetried() async {
+        let first = FakeShell()
+        let connector = FakeConnector([.shell(first), .fail(SessionError.underlying("The private key is passphrase-protected.")), .shell(FakeShell())])
+        let (session, recorder) = makeSession(connector)
+        await session.connect()
+        first.end(.lost)
+        #expect(await recorder.waitForState { $0 == .disconnected(.error(.underlying("The private key is passphrase-protected."))) })
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(connector.connectCount == 2)
+    }
+
+    @Test func everyAttemptSharesTheSessionsConnectOnceList() async {
+        let first = FakeShell()
+        let connector = FakeConnector([.shell(first), .shell(FakeShell())])
+        let (session, recorder) = makeSession(connector)
+        await session.connect()
+        first.end(.lost)
+        #expect(await recorder.waitForState { _ in connector.connectCount == 2 })
+        let lists = connector.allowLists
+        #expect(lists.count == 2)
+        #expect(lists[0] === lists[1])
+    }
+
+    @Test func noSecondConnectWhileAHostKeyDecisionIsPending() async {
+        let endpoint = HostEndpoint(host: "fake.test")
+        let key = HostKey(algorithm: "ssh-ed25519", blobBase64: "BBBB", fingerprintSHA256: "SHA256:new")
+        let challenge = HostKeyChallenge(endpoint: endpoint, serverName: nil, presented: key, lookup: .mismatch(pinned: []))
+        let connector = FakeConnector([.fail(HostKeyMismatchError(challenge: challenge)), .shell(FakeShell())])
+        let prompter = GatedHostKeyPrompter()
+        let (session, recorder) = makeSession(connector, hostKey: prompter)
+
+        let first = Task { await session.connect() }
+        #expect(await recorder.waitForState { $0 == .disconnected(.error(.hostKeyMismatch(challengeID: challenge.id))) })
+        await session.connect()      // ignored: the sheet is still open
+        await session.reconnect()    // ignored too
+        #expect(connector.connectCount == 1)
+
+        prompter.answer(.reject)
+        await first.value
+        #expect(connector.connectCount == 1)
+    }
+}
+
+/// A prompter that waits until the test answers.
+@MainActor private final class GatedHostKeyPrompter: HostKeyPrompter {
+    private var continuation: CheckedContinuation<HostKeyDecision, Never>?
+    func decide(_ challenge: HostKeyChallenge) async -> HostKeyDecision {
+        await withCheckedContinuation { continuation = $0 }
+    }
+    func answer(_ decision: HostKeyDecision) { continuation?.resume(returning: decision); continuation = nil }
 }

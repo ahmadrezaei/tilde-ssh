@@ -64,7 +64,7 @@ enum SessionErrorMapper {
         case ECONNREFUSED: .refused
         case ETIMEDOUT: .timeout(seconds: timeoutSeconds)
         case ECONNRESET, EPIPE, ENOTCONN, ECONNABORTED, ENETDOWN, ENETUNREACH: .networkLost
-        case EHOSTUNREACH: .underlying("No route to host")
+        case EHOSTUNREACH: .networkLost
         default: nil
         }
     }
@@ -74,7 +74,8 @@ enum SessionErrorMapper {
     static func isRetriable(_ error: SessionError) -> Bool {
         switch error {
         case .dnsFailure, .refused, .timeout, .networkLost: true
-        case .underlying: true
+        // Unclassified failures (an unreadable key, a pin that could not be saved) will not fix themselves.
+        case .underlying: false
         case .hostKeyMismatch, .hostKeyRejected, .authFailed, .secretUnavailable, .noCommonAlgorithm, .channelFailed: false
         }
     }

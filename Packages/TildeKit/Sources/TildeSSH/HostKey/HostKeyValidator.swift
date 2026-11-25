@@ -11,6 +11,26 @@ struct HostKeyMismatchError: Error {
     var challenge: HostKeyChallenge
 }
 
+/// Host keys the user accepted for one session only ("Connect once"). Entries are bound to the endpoint
+/// they were accepted for, so accepting a bastion's key never covers a target that happens to present the
+/// same key, and never overrides a pin on a different endpoint. Shared by all attempts of one session
+/// (including automatic reconnects).
+final class OnceAllowList: Sendable {
+    private struct Entry: Hashable {
+        var endpoint: String
+        var fingerprint: String
+    }
+    private let entries = Mutex(Set<Entry>())
+
+    func insert(_ key: HostKey, for endpoint: HostEndpoint) {
+        entries.withLock { _ = $0.insert(Entry(endpoint: endpoint.canonical, fingerprint: key.fingerprintSHA256)) }
+    }
+
+    func contains(_ key: HostKey, for endpoint: HostEndpoint) -> Bool {
+        entries.withLock { $0.contains(Entry(endpoint: endpoint.canonical, fingerprint: key.fingerprintSHA256)) }
+    }
+}
+
 /// Thrown when the user (or strict mode, or the 120 s prompt timeout) refused an unknown host key.
 struct HostKeyRejectedError: Error, Equatable {}
 
@@ -52,8 +72,8 @@ final class TOFUHostKeyValidator: NIOSSHClientServerAuthenticationDelegate, @unc
         var prompter: HostKeyAsker?
         var strict: Bool
         var promptTimeout: Duration
-        /// Fingerprints the user chose to accept once (the "Connect once" decision on a previous mismatch).
-        var allowedOnce: Set<String>
+        /// Keys the user chose to accept once ("Connect once"), per endpoint.
+        var allowedOnce: OnceAllowList
     }
 
     private let configuration: Configuration
@@ -97,7 +117,7 @@ final class TOFUHostKeyValidator: NIOSSHClientServerAuthenticationDelegate, @unc
             await c.knownHosts.touch(c.endpoint)
 
         case .unknown:
-            if c.allowedOnce.contains(presented.fingerprintSHA256) { return }
+            if c.allowedOnce.contains(presented, for: c.endpoint) { return }
             guard !c.strict, let prompter = c.prompter else { throw HostKeyRejectedError() }
             let challenge = HostKeyChallenge(endpoint: c.endpoint, serverName: c.serverName, presented: presented, lookup: lookup)
             onPrompt(true)
@@ -107,13 +127,13 @@ final class TOFUHostKeyValidator: NIOSSHClientServerAuthenticationDelegate, @unc
             case .trustAndSave:
                 try await c.knownHosts.trust(presented, for: c.endpoint, replacing: false)
             case .connectOnce:
-                break
+                c.allowedOnce.insert(presented, for: c.endpoint)
             case .reject, .none:
                 throw HostKeyRejectedError()
             }
 
         case .mismatch, .conflicted:
-            if c.allowedOnce.contains(presented.fingerprintSHA256) { return }
+            if c.allowedOnce.contains(presented, for: c.endpoint) { return }
             throw HostKeyMismatchError(
                 challenge: HostKeyChallenge(endpoint: c.endpoint, serverName: c.serverName, presented: presented, lookup: lookup)
             )

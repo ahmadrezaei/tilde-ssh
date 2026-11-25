@@ -106,6 +106,7 @@ struct HopParameters: Sendable {
     var endpoint: HostEndpoint
     var username: String
     var credential: SSHCredential
+    var allowLegacySSHRSA = false
     /// Called when the server rejected a password; returns the replacement.
     var passwordRetry: (@Sendable () async -> String?)?
     var hostKey: TOFUHostKeyValidator.Configuration
@@ -151,6 +152,7 @@ enum SSHConnector {
             // Prefer a precise reason over the generic "closed" error that follows a validator abort.
             throw await Self.refineHandshakeError(error, installed: installed)
         }
+        installed.auth.forgetCredential()
 
         return SSHConnection(
             channel: channel, sshHandler: installed.sshHandler, jumpHost: jumpHost, hello: installed.hello,
@@ -183,6 +185,7 @@ enum SSHConnector {
         let auth = ClientAuthDelegate(
             username: hop.username,
             credential: hop.credential,
+            allowLegacySSHRSA: hop.allowLegacySSHRSA,
             passwordRetry: hop.passwordRetry.map { retry in
                 { @Sendable in
                     handshake.pauseTimeout()
@@ -249,10 +252,10 @@ enum SSHConnector {
             guard remaining > .zero else { break }
             let left = addresses.count - index
             // Spread the budget over the remaining addresses, but give each a fair chance.
-            let attempt = min(remaining, max(.seconds(3), remaining / left))
+            let attempt = min(remaining, max(.seconds(3), remaining / Double(left)))
             do {
                 return try await ClientBootstrap(group: MultiThreadedEventLoopGroup.singleton)
-                    .connectTimeout(.nanoseconds(Int64(attempt.components.seconds) * 1_000_000_000))
+                    .connectTimeout(attempt.timeAmount)
                     .channelOption(ChannelOptions.socket(SocketOptionLevel(IPPROTO_TCP), TCP_NODELAY), value: 1)
                     .channelInitializer(initialize)
                     .connect(to: address)
@@ -261,7 +264,7 @@ enum SSHConnector {
                 lastError = error
             }
         }
-        throw lastError ?? ConnectTimeoutError(seconds: Int(hop.timeout.components.seconds))
+        throw lastError ?? ConnectTimeoutError(seconds: hop.timeout.wholeSecondsRoundedUp)
     }
 
     /// `getaddrinfo` off the cooperative pool, abandoned (not cancelled) on timeout.
@@ -284,7 +287,7 @@ enum SSHConnector {
                     resume(.failure(DNSResolutionError(host: host)))
                 }
             }
-            DispatchQueue.global().asyncAfter(deadline: .now() + .nanoseconds(Int(timeout.components.seconds) * 1_000_000_000)) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout.totalSeconds) {
                 resume(.failure(DNSResolutionError(host: host)))
             }
         }

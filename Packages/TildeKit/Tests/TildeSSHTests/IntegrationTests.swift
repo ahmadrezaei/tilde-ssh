@@ -4,7 +4,7 @@ import TildeCore
 @testable import TildeSSH
 
 /// End-to-end tests against the OpenSSH 9.7 containers in `ci/sshd`. Skipped unless `TILDE_SSH_INTEGRATION=1`.
-@Suite(.serialized, .enabled(if: Lab.isEnabled))
+@Suite(.serialized, .enabled(if: Lab.isDockerLabEnabled))
 @MainActor
 struct IntegrationTests {
     let engine = CitadelSessionEngine(options: .init(reconnect: .disabled))
@@ -191,6 +191,84 @@ struct IntegrationTests {
             knownHosts: InMemoryKnownHostsStore(), hostKeyPrompter: prompter, passwordPrompter: ScriptedPasswordPrompter([])
         )
         guard case .success = result else { Issue.record("\(result)"); return }
+    }
+
+    // MARK: Dropbear (a second SSH implementation)
+
+    @Test(arguments: [("ed25519user", "id_ed25519"), ("ecdsauser", "id_ecdsa")])
+    func dropbearKeyAuth(user: String, keyFile: String) async {
+        let result = await test(Lab.server(user: user, port: Lab.dropbearPort, auth: .key), credentials: LabCredentials(keyFile: keyFile))
+        guard case .success(let info) = result else { Issue.record("\(result)"); return }
+        #expect(info.serverVersion.contains("dropbear"))
+    }
+
+    /// Known limitation, pinned down here so a NIOSSH change that fixes it shows up: NIOSSH writes the public key
+    /// blob header and the algorithm name from one string, so our `rsa-sha2-*` offers carry `rsa-sha2-*` as the
+    /// blob header. OpenSSH accepts that; Dropbear does not. Dropbear RSA users need `allowLegacySSHRSA`.
+    @Test func dropbearRSARequiresTheLegacyFallback() async {
+        let server = Lab.server(user: "rsauser", port: Lab.dropbearPort, auth: .key)
+        let strict = await test(server, credentials: LabCredentials(keyFile: "id_rsa"))
+        guard case .failure(.authFailed(let method, _)) = strict else { Issue.record("expected authFailed, got \(strict)"); return }
+        #expect(method == "publickey")
+
+        let legacy = CitadelSessionEngine(options: .init(reconnect: .disabled, allowLegacySSHRSA: true))
+        let result = await legacy.test(
+            request(server), credentials: LabCredentials(keyFile: "id_rsa"), knownHosts: InMemoryKnownHostsStore(),
+            hostKeyPrompter: AlwaysTrustPrompter(), passwordPrompter: ScriptedPasswordPrompter([])
+        )
+        guard case .success(let info) = result else { Issue.record("\(result)"); return }
+        #expect(info.authenticatedWith == "ssh-rsa")
+    }
+
+    /// OpenSSH 9.7 refuses SHA-1 `ssh-rsa`, so enabling the legacy fallback must not change how a modern server is handled.
+    @Test func legacyFallbackStillUsesSHA2OnModernServers() async {
+        let legacy = CitadelSessionEngine(options: .init(reconnect: .disabled, allowLegacySSHRSA: true))
+        let result = await legacy.test(
+            request(Lab.server(user: "rsauser", auth: .key)), credentials: LabCredentials(keyFile: "id_rsa"),
+            knownHosts: InMemoryKnownHostsStore(), hostKeyPrompter: AlwaysTrustPrompter(), passwordPrompter: ScriptedPasswordPrompter([])
+        )
+        guard case .success(let info) = result else { Issue.record("\(result)"); return }
+        #expect(info.authenticatedWith == "rsa-sha2-512")
+    }
+
+    @Test func dropbearPasswordAuthAndShell() async {
+        let (session, recorder) = await openShell(Lab.server(user: "pwuser", port: Lab.dropbearPort))
+        guard case .connected? = recorder.lastState else { Issue.record("not connected: \(recorder.allStates)"); return }
+        session.send(Data("echo $((6*7))\n".utf8))
+        #expect(await recorder.waitForOutput("42"))
+        await session.disconnect()
+    }
+
+    // MARK: Flow control
+
+    /// Output nobody reads must stop the server instead of piling up in memory, and reading must resume afterwards.
+    @Test func unreadOutputIsBoundedAndFlowResumesWhenConsumed() async throws {
+        let server = Lab.server(user: "pwuser")
+        let session = CitadelSessionEngine(options: .init(reconnect: .disabled)).makeSession(
+            request(server), credentials: LabCredentials(), knownHosts: InMemoryKnownHostsStore(),
+            hostKeyPrompter: AlwaysTrustPrompter(), passwordPrompter: ScriptedPasswordPrompter([])
+        ) as! CitadelTerminalSession
+        await session.connect()
+
+        // 40 MB of text, then a marker. Nobody consumes `output` yet.
+        let total = 40_000_000
+        session.send(Data("head -c \(total) /dev/zero | tr '\\0' 'x'; echo; echo flood-finished\n".utf8))
+        try await Task.sleep(for: .seconds(3))
+        let held = session.pendingOutputBytes
+        #expect(held >= 1_000_000, "the flood should have started (\(held) bytes held)")
+        #expect(held < 12_000_000, "unconsumed output must stay bounded (\(held) bytes held, \(total) sent)")
+
+        // Now consume everything: the remote side must resume and finish.
+        var received = 0
+        var tail = ""
+        for await chunk in session.output {
+            received += chunk.count
+            tail = String((tail + String(decoding: chunk.suffix(64), as: UTF8.self)).suffix(128))
+            if tail.contains("flood-finished\r\n") && received >= total { break }
+        }
+        #expect(received >= total)
+        #expect(session.pendingOutputBytes < 1024)
+        await session.disconnect()
     }
 
     // MARK: Shell behaviour

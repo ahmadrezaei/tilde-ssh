@@ -45,7 +45,7 @@ enum ExecRunner {
             return (collector.data, close.exitStatus ?? -1)
         } catch is LoopTimeoutError {
             await channel.close()
-            throw SessionError.timeout(seconds: Int(timeout.components.seconds))
+            throw SessionError.timeout(seconds: timeout.wholeSecondsRoundedUp)
         } catch {
             await channel.close()
             throw error

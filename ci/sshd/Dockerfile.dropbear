@@ -1,0 +1,13 @@
+# Dropbear test server (Alpine 3.20, Dropbear 2024.x): a second SSH implementation for the RSA SHA-2 tests.
+# Same accounts and key directory as the OpenSSH image.
+FROM alpine:3.20
+
+RUN apk add --no-cache dropbear bash \
+ && for u in pwuser ed25519user ecdsauser rsauser; do adduser -D -s /bin/bash "$u"; done \
+ && echo "pwuser:tilde-test-pw" | chpasswd
+
+COPY entrypoint-dropbear.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 22
+ENTRYPOINT ["/entrypoint.sh"]

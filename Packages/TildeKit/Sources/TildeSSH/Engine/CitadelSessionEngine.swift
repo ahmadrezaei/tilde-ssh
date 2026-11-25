@@ -20,17 +20,22 @@ public struct CitadelSessionEngine: SessionEngine {
         public var reconnect: ReconnectPolicy
         /// Unanswered keep-alives before the connection is declared dead.
         public var keepAliveMissLimit: Int
+        /// After `rsa-sha2-512` and `rsa-sha2-256` fail, also try the SHA-1 `ssh-rsa` signature. Only useful
+        /// for servers older than OpenSSH 7.2; SHA-1 signatures are considered broken, so this is off by default.
+        public var allowLegacySSHRSA: Bool
 
         public init(
             strictHostKeyChecking: Bool = false,
             hostKeyPromptTimeout: Duration = .seconds(120),
             reconnect: ReconnectPolicy = .default,
-            keepAliveMissLimit: Int = 3
+            keepAliveMissLimit: Int = 3,
+            allowLegacySSHRSA: Bool = false
         ) {
             self.strictHostKeyChecking = strictHostKeyChecking
             self.hostKeyPromptTimeout = hostKeyPromptTimeout
             self.reconnect = reconnect
             self.keepAliveMissLimit = keepAliveMissLimit
+            self.allowLegacySSHRSA = allowLegacySSHRSA
         }
     }
 
@@ -75,13 +80,13 @@ public struct CitadelSessionEngine: SessionEngine {
     ) async -> Result<ConnectionInfo, SessionError> {
         let hostAsker = HostKeyAsker(hostKeyPrompter)
         let passwordAsker = PasswordAsker(passwordPrompter)
-        var allowedOnce: Set<String> = []
+        let allowedOnce = OnceAllowList()
         var retried = false
         while true {
             let plan = ConnectPlan(
                 request: request, credentials: credentials, knownHosts: knownHosts,
                 hostKeyPrompter: hostAsker, passwordPrompter: passwordAsker,
-                options: options, allowedOnceFingerprints: allowedOnce
+                options: options, allowedOnce: allowedOnce
             )
             do {
                 let connection = try await ConnectionOpener.open(plan, report: { _ in })
@@ -100,7 +105,7 @@ public struct CitadelSessionEngine: SessionEngine {
                         return .failure(.underlying("The new host key could not be saved."))
                     }
                 case .connectOnce:
-                    allowedOnce.insert(challenge.presented.fingerprintSHA256)
+                    allowedOnce.insert(challenge.presented, for: challenge.endpoint)
                 case .reject:
                     return .failure(.hostKeyMismatch(challengeID: challenge.id))
                 }
@@ -108,7 +113,7 @@ public struct CitadelSessionEngine: SessionEngine {
                 return .failure(.authFailed(method: "password", serverAllows: []))
             } catch {
                 return .failure(SessionErrorMapper.map(
-                    error, host: request.server.target.host, timeoutSeconds: Int(request.connectTimeout.components.seconds)
+                    error, host: request.server.target.host, timeoutSeconds: request.connectTimeout.wholeSecondsRoundedUp
                 ))
             }
         }
@@ -126,7 +131,7 @@ public struct CitadelSessionEngine: SessionEngine {
             hostKeyPrompter: nil, passwordPrompter: nil, options: options
         )
         let host = request.server.target.host
-        let timeoutSeconds = Int(request.connectTimeout.components.seconds)
+        let timeoutSeconds = request.connectTimeout.wholeSecondsRoundedUp
         do {
             let connection = try await ConnectionOpener.open(plan, report: { _ in })
             do {

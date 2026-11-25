@@ -20,6 +20,7 @@ enum ConnectionOpener {
                 endpoint: HostEndpoint(host: jump.target.host, port: jump.target.port),
                 username: jump.target.username,
                 credential: credential.credential,
+                allowLegacySSHRSA: plan.options.allowLegacySSHRSA,
                 passwordRetry: credential.retry,
                 hostKey: hostKeyConfiguration(for: HostEndpoint(host: jump.target.host, port: jump.target.port), name: "Jump host \(jump.target.host)", plan: plan),
                 timeout: timeout,
@@ -39,6 +40,7 @@ enum ConnectionOpener {
                 endpoint: endpoint,
                 username: server.target.username,
                 credential: credential.credential,
+                allowLegacySSHRSA: plan.options.allowLegacySSHRSA,
                 passwordRetry: credential.retry,
                 hostKey: hostKeyConfiguration(for: endpoint, name: server.name, plan: plan),
                 timeout: timeout,
@@ -59,7 +61,7 @@ enum ConnectionOpener {
             prompter: plan.hostKeyPrompter,
             strict: plan.options.strictHostKeyChecking,
             promptTimeout: plan.options.hostKeyPromptTimeout,
-            allowedOnce: plan.allowedOnceFingerprints
+            allowedOnce: plan.allowedOnce
         )
     }
 
@@ -207,6 +209,8 @@ final class NIOLiveShell: LiveShell {
         channel.windowChange(cols: cols, rows: rows, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
     }
 
+    func setReading(_ enabled: Bool) { channel.setReading(enabled) }
+
     func ping(timeout: Duration) async -> Duration? {
         guard connection.isActive else { return nil }
         let clock = ContinuousClock()
@@ -249,7 +253,7 @@ func withLoopTimeout<T: Sendable>(
     loop: any EventLoop, timeout: Duration, _ operation: @escaping @Sendable () async throws -> T
 ) async throws -> T {
     let promise = loop.makePromise(of: T.self)
-    let timer = loop.scheduleTask(in: .nanoseconds(Int64(timeout.components.seconds) * 1_000_000_000 + timeout.components.attoseconds / 1_000_000_000)) {
+    let timer = loop.scheduleTask(in: timeout.timeAmount) {
         promise.fail(LoopTimeoutError())
     }
     Task {

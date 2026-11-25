@@ -10,12 +10,17 @@ import Security
 // These types plug into NIOSSH's custom-key hooks instead and sign with `rsa-sha2-512` / `rsa-sha2-256`
 // (and `ssh-rsa` as a last resort for very old servers), using the system `SecKey` implementation.
 //
-// Wire note: NIOSSH writes the key blob header and the "public key algorithm name" field from the same
-// string (`publicKeyPrefix`). RFC 8332 wants the algorithm name `rsa-sha2-512` but the blob header
-// `ssh-rsa`. We can only supply one string, so the blob header carries the algorithm name. OpenSSH's
-// `sshkey_from_blob` resolves both names to an RSA key and the authorised-key comparison uses the key
-// material only, so this interoperates (verified against OpenSSH 9.x in the integration tests).
-
+// Wire note (known limitation): NIOSSH writes the key blob header and the "public key algorithm name" field
+// of the userauth request from the same string (`publicKeyPrefix`). RFC 8332 wants the algorithm name
+// `rsa-sha2-512` but the blob header `ssh-rsa`. A custom key type can only supply one string, so our blob header
+// carries the algorithm name. There is no hook in NIOSSH to serialise the request ourselves (the encoder is
+// internal), so fixing this cleanly needs a change in the swift-nio-ssh fork.
+//
+// Interoperability, verified in the integration tests:
+// - OpenSSH 9.x accepts it: `sshkey_from_blob` resolves both names to an RSA key.
+// - Dropbear 2024.x rejects it. Its RSA users need `CitadelSessionEngine.Options.allowLegacySSHRSA`, which
+//   falls back to a plain SHA-1 `ssh-rsa` offer (correct blob header, accepted by Dropbear and by pre-8.8 OpenSSH).
+//
 /// How an RSA signature is produced and named on the wire.
 enum RSASignatureScheme: Sendable, CaseIterable {
     case sha512, sha256, sha1

@@ -49,6 +49,16 @@ private func blobFields(_ publicLine: String) -> [Data] {
         #expect(c.modulus.count == 256)
     }
 
+    @Test func readsTraditionalRSAPEM() throws {
+        guard case .rsa(let c) = try OpenSSHKeyReader.parse(Data(KeyFixtures.rsaPEMPrivate.utf8)) else { Issue.record("wrong type"); return }
+        let fields = blobFields(KeyFixtures.rsaPEMPublic)
+        #expect(c.publicExponent == Data(fields[1].drop(while: { $0 == 0 })))
+        #expect(c.modulus == Data(fields[2].drop(while: { $0 == 0 })))
+        // The CRT parameters must be usable: sign something with the parsed key.
+        let key = try RSAClientPrivateKey<RSASHA512Tag>(c)
+        #expect(throws: Never.self) { try key.signature(for: Data("x".utf8)) }
+    }
+
     @Test func acceptsRawBinaryAsWellAsPEMArmour() throws {
         let body = KeyFixtures.ed25519Private.split(separator: "\n").dropFirst().dropLast().joined()
         let binary = try #require(Data(base64Encoded: body))
@@ -165,10 +175,21 @@ private func blobFields(_ publicLine: String) -> [Data] {
         await #expect(throws: AuthRejectedError.self) { try await ask(delegate, methods: [.password, .publicKey]) }
     }
 
-    @Test func rsaTriesSHA512ThenSHA256ThenSHA1ThenGivesUp() async throws {
-        guard case .rsa = try OpenSSHKeyReader.parse(Data(KeyFixtures.rsa2048Private.utf8)) else { return }
+    @Test func rsaTriesSHA512ThenSHA256AndGivesUpWithoutLegacyFallback() async throws {
         let credential = try SSHCredential.make(from: .privateKey(PrivateKeyMaterial(algorithm: .rsa, openSSHBytes: Data(KeyFixtures.rsa2048Private.utf8))))
         let delegate = ClientAuthDelegate(username: "u", credential: credential)
+        var offered: [String] = []
+        for _ in 0..<2 {
+            _ = try await ask(delegate, methods: [.publicKey])
+            offered.append(delegate.authenticatedWith)
+        }
+        #expect(offered == ["rsa-sha2-512", "rsa-sha2-256"])
+        await #expect(throws: AuthRejectedError.self) { try await ask(delegate, methods: [.publicKey]) }
+    }
+
+    @Test func legacySSHRSAIsOptIn() async throws {
+        let credential = try SSHCredential.make(from: .privateKey(PrivateKeyMaterial(algorithm: .rsa, openSSHBytes: Data(KeyFixtures.rsa2048Private.utf8))))
+        let delegate = ClientAuthDelegate(username: "u", credential: credential, allowLegacySSHRSA: true)
         var offered: [String] = []
         for _ in 0..<3 {
             _ = try await ask(delegate, methods: [.publicKey, .password])
@@ -178,6 +199,13 @@ private func blobFields(_ publicLine: String) -> [Data] {
         await #expect(throws: AuthRejectedError(method: "publickey", serverAllows: ["publickey", "password"])) {
             try await ask(delegate, methods: [.publicKey, .password])
         }
+    }
+
+    @Test func credentialIsDroppedAfterSuccess() async throws {
+        let delegate = ClientAuthDelegate(username: "u", credential: .password("secret"))
+        _ = try await ask(delegate, methods: .all)
+        delegate.forgetCredential()
+        await #expect(throws: AuthRejectedError.self) { try await ask(delegate, methods: .all) }
     }
 
     @Test(arguments: [

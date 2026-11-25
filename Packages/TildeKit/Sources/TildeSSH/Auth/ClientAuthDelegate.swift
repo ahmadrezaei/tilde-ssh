@@ -34,8 +34,9 @@ enum SSHCredential: Sendable {
 ///
 /// - Password: offers the password; if the server rejects it, asks `passwordRetry` for a new one
 ///   (the engine wires that to `PasswordPrompter` with `.rejected`) and offers it on the same connection.
-/// - Public key: Ed25519 and ECDSA are a single attempt. RSA tries `rsa-sha2-512`, then `rsa-sha2-256`,
-///   then legacy `ssh-rsa` (SHA-1), because NIOSSH does not expose the server's `server-sig-algs`.
+/// - Public key: Ed25519 and ECDSA are a single attempt. RSA tries `rsa-sha2-512`, then `rsa-sha2-256`
+///   (NIOSSH does not expose the server's `server-sig-algs`), and only if `allowLegacySSHRSA` is set,
+///   finally `ssh-rsa` (SHA-1).
 ///
 /// `@unchecked Sendable`: NIOSSH calls the delegate on the connection's event loop only, and the
 /// mutable state is behind a `Mutex` regardless, so the compiler's complaint (a non-Sendable protocol
@@ -45,29 +46,36 @@ final class ClientAuthDelegate: NIOSSHClientUserAuthenticationDelegate, @uncheck
         var calls = 0
         var offeredMethod = ""
         var pendingSchemes: [RSASignatureScheme]
+        /// Cleared once authentication succeeded so the secret does not outlive the handshake.
+        var credential: SSHCredential?
     }
 
     private let username: String
-    private let credential: SSHCredential
     private let passwordRetry: (@Sendable () async -> String?)?
     private let onAttempt: @Sendable () -> Void
     private let state: Mutex<State>
 
     /// - Parameters:
+    ///   - allowLegacySSHRSA: Also try `ssh-rsa` (SHA-1) after the SHA-2 variants. Off by default: every server
+    ///     since OpenSSH 7.2 accepts SHA-2, and SHA-1 signatures are broken.
     ///   - passwordRetry: Called after the server rejected a password. `nil` return gives up.
     ///   - onAttempt: Called each time a method is about to be offered (drives `ConnectPhase.authenticating`).
     init(
         username: String,
         credential: SSHCredential,
+        allowLegacySSHRSA: Bool = false,
         passwordRetry: (@Sendable () async -> String?)? = nil,
         onAttempt: @escaping @Sendable () -> Void = {}
     ) {
         self.username = username
-        self.credential = credential
         self.passwordRetry = passwordRetry
         self.onAttempt = onAttempt
-        self.state = Mutex(State(pendingSchemes: RSASignatureScheme.allCases))
+        let schemes: [RSASignatureScheme] = allowLegacySSHRSA ? [.sha512, .sha256, .sha1] : [.sha512, .sha256]
+        self.state = Mutex(State(pendingSchemes: schemes, credential: credential))
     }
+
+    /// Drops the secret. Called once authentication has succeeded.
+    func forgetCredential() { state.withLock { $0.credential = nil } }
 
     /// Name of the method the server accepted, e.g. `password`, `ssh-ed25519`, `rsa-sha2-512`.
     var authenticatedWith: String { state.withLock { $0.offeredMethod } }
@@ -77,7 +85,11 @@ final class ClientAuthDelegate: NIOSSHClientUserAuthenticationDelegate, @uncheck
         nextChallengePromise: EventLoopPromise<NIOSSHUserAuthenticationOffer?>
     ) {
         onAttempt()
-        let call = state.withLock { state -> Int in state.calls += 1; return state.calls }
+        let (call, credential) = state.withLock { state -> (Int, SSHCredential?) in state.calls += 1; return (state.calls, state.credential) }
+        guard let credential else {
+            nextChallengePromise.fail(AuthRejectedError(method: "", serverAllows: Self.names(availableMethods)))
+            return
+        }
 
         switch credential {
         case .password(let password):

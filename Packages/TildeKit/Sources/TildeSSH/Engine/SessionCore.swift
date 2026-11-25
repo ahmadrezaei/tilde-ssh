@@ -7,6 +7,8 @@ final class SessionShared: Sendable {
     struct Inner {
         var live: (any LiveShell)?
         var size: PTYConfig
+        var pixelWidth = 0
+        var pixelHeight = 0
         /// Incremented whenever a connect, reconnect or disconnect supersedes whatever was running.
         var epoch = 0
     }
@@ -17,10 +19,13 @@ final class SessionShared: Sendable {
 
     var live: (any LiveShell)? { inner.withLock { $0.live } }
     var size: PTYConfig { inner.withLock { $0.size } }
+    var pixelSize: (width: Int, height: Int) { inner.withLock { ($0.pixelWidth, $0.pixelHeight) } }
     var epoch: Int { inner.withLock { $0.epoch } }
 
     func setLive(_ shell: (any LiveShell)?) { inner.withLock { $0.live = shell } }
-    func setSize(cols: Int, rows: Int) { inner.withLock { $0.size.cols = cols; $0.size.rows = rows } }
+    func setSize(cols: Int, rows: Int, pixelWidth: Int, pixelHeight: Int) {
+        inner.withLock { $0.size.cols = cols; $0.size.rows = rows; $0.pixelWidth = pixelWidth; $0.pixelHeight = pixelHeight }
+    }
 
     @discardableResult
     func advanceEpoch() -> Int { inner.withLock { $0.epoch += 1; return $0.epoch } }
@@ -39,29 +44,31 @@ actor SessionCore {
         case finished
     }
 
-    private let makePlan: @Sendable (Set<String>) -> ConnectPlan
+    private let makePlan: @Sendable (OnceAllowList) -> ConnectPlan
     private let connector: any ShellConnecting
     private let policy: ReconnectPolicy
     private let keepAliveInterval: Duration?
     private let keepAliveMissLimit: Int
     private let shared: SessionShared
-    private let states: AsyncBroadcaster<SessionState>
-    private let outputSink: @Sendable (Data) -> Void
+    private let states: StateBroadcaster<SessionState>
+    private let output: OutputPipe
 
     private var monitorTask: Task<Void, Never>?
     private var keepAliveTask: Task<Void, Never>?
-    private var allowedOnce: Set<String> = []
+    private let allowedOnce = OnceAllowList()
     private var lastLatency: Duration?
+    /// True while the UI is deciding about a changed host key; nothing else may start a connection meanwhile.
+    private var decisionPending = false
 
     init(
-        makePlan: @escaping @Sendable (Set<String>) -> ConnectPlan,
+        makePlan: @escaping @Sendable (OnceAllowList) -> ConnectPlan,
         connector: any ShellConnecting,
         policy: ReconnectPolicy,
         keepAliveInterval: Duration?,
         keepAliveMissLimit: Int,
         shared: SessionShared,
-        states: AsyncBroadcaster<SessionState>,
-        outputSink: @escaping @Sendable (Data) -> Void
+        states: StateBroadcaster<SessionState>,
+        output: OutputPipe
     ) {
         self.makePlan = makePlan
         self.connector = connector
@@ -70,7 +77,7 @@ actor SessionCore {
         self.keepAliveMissLimit = keepAliveMissLimit
         self.shared = shared
         self.states = states
-        self.outputSink = outputSink
+        self.output = output
     }
 
     // MARK: Public operations
@@ -80,12 +87,14 @@ actor SessionCore {
         case .connecting, .connected, .reconnecting: return
         case .idle, .disconnected: break
         }
+        guard !decisionPending else { return }
         let epoch = shared.advanceEpoch()
         await runFirstAttempt(epoch: epoch, announceReconnect: false)
     }
 
     /// Drops the current connection (if any) and connects again right away. A failure is reported, not retried.
     func reconnect() async {
+        guard !decisionPending else { return }
         let epoch = shared.advanceEpoch()
         await tearDown()
         await runFirstAttempt(epoch: epoch, announceReconnect: true)
@@ -119,23 +128,30 @@ actor SessionCore {
 
         let plan = makePlan(allowedOnce)
         let host = plan.request.server.target.host
-        let timeoutSeconds = Int(plan.request.connectTimeout.components.seconds)
+        let timeoutSeconds = plan.request.connectTimeout.wholeSecondsRoundedUp
         let events = ConnectEvents(
             phase: { [shared, states] phase in
                 if shared.epoch == epoch { states.send(.connecting(phase: phase)) }
             },
-            output: outputSink
+            output: { [output] data in output.push(data) }
         )
 
         do {
-            let shell = try await connector.connect(plan, size: shared.size, events: events)
+            let usedSize = shared.size
+            let shell = try await connector.connect(plan, size: usedSize, events: events)
             guard shared.epoch == epoch else {
                 await shell.close()
                 return .finished
             }
             shared.setLive(shell)
+            output.setReadControl { shell.setReading($0) }
+            // A resize that arrived while connecting only updated the stored size; the PTY was opened with the old one.
+            let latest = shared.size
+            if latest.cols != usedSize.cols || latest.rows != usedSize.rows {
+                shell.resize(cols: latest.cols, rows: latest.rows, pixelWidth: shared.pixelSize.width, pixelHeight: shared.pixelSize.height)
+            }
             states.send(.connected(shell.info))
-            if announceReconnect { outputSink(Data("\r\n\u{1B}[2m[Tilde] Reconnected\u{1B}[0m\r\n".utf8)) }
+            if announceReconnect { output.push(Data("\r\n\u{1B}[2m[Tilde] Reconnected\u{1B}[0m\r\n".utf8)) }
             startWatching(shell, epoch: epoch)
             return .connected
         } catch let mismatch as HostKeyMismatchError {
@@ -158,7 +174,9 @@ actor SessionCore {
         states.send(.disconnected(.error(.hostKeyMismatch(challengeID: challenge.id))))
         guard !alreadyRetried, let prompter = plan.hostKeyPrompter else { return .finished }
 
+        decisionPending = true
         let decision = await prompter.decide(challenge)
+        decisionPending = false
         guard shared.epoch == epoch else { return .finished }
         switch decision {
         case .trustAndSave:
@@ -168,7 +186,7 @@ actor SessionCore {
                 return .failed(.underlying("The new host key could not be saved."))
             }
         case .connectOnce:
-            allowedOnce.insert(challenge.presented.fingerprintSHA256)
+            allowedOnce.insert(challenge.presented, for: challenge.endpoint)
         case .reject:
             return .finished
         }
@@ -213,6 +231,7 @@ actor SessionCore {
         guard shared.epoch == epoch else { return }
         keepAliveTask?.cancel()
         shared.setLive(nil)
+        output.setReadControl(nil)
 
         switch end {
         case .closedLocally:
@@ -236,7 +255,7 @@ actor SessionCore {
             guard shared.epoch == epoch, !Task.isCancelled else { return }
 
             let delay = policy.delay(forAttempt: attemptNumber)
-            let seconds = Double(delay.components.seconds) + Double(delay.components.attoseconds) / 1e18
+            let seconds = delay.totalSeconds
             states.send(.reconnecting(attempt: attemptNumber, retryAt: Date().addingTimeInterval(seconds)))
             do { try await Task.sleep(for: delay) } catch { return }
             guard shared.epoch == epoch else { return }
@@ -264,6 +283,7 @@ actor SessionCore {
         keepAliveTask = nil
         let shell = shared.live
         shared.setLive(nil)
+        output.setReadControl(nil)
         await shell?.close()
     }
 }

@@ -6,13 +6,24 @@ import TildeCore
 /// Helpers for the Docker-backed tests. They only run with `TILDE_SSH_INTEGRATION=1` and the containers from
 /// `ci/sshd` up (`./generate-keys.sh && docker compose up -d --build`).
 enum Lab {
-    static var isEnabled: Bool { ProcessInfo.processInfo.environment["TILDE_SSH_INTEGRATION"] == "1" }
+    private static var environment: [String: String] { ProcessInfo.processInfo.environment }
 
-    static let host = "127.0.0.1"
+    static var isEnabled: Bool { environment["TILDE_SSH_INTEGRATION"] == "1" }
+
+    /// The CI script exports `TILDE_TEST_SSH_*` for one key-only sshd. When those are set the Docker lab
+    /// (password users, bastion, legacy servers) is not available, and `CIServerTests` run instead.
+    static var usesCIServer: Bool { environment["TILDE_TEST_SSH_PORT"] != nil }
+
+    /// Docker lab suites run with `TILDE_SSH_INTEGRATION=1` and no CI server configured.
+    static var isDockerLabEnabled: Bool { isEnabled && !usesCIServer }
+    static var isCIServerEnabled: Bool { isEnabled && usesCIServer }
+
+    static var host: String { environment["TILDE_TEST_SSH_HOST"] ?? "127.0.0.1" }
     static let targetPort = 2201
     static let bastionPort = 2202
     static let legacyPort = 2203
     static let noKexPort = 2204
+    static let dropbearPort = 2205
     static let password = "tilde-test-pw"
 
     /// `ci/sshd/keys`, or `TILDE_SSH_KEYS_DIR`.
@@ -126,5 +137,43 @@ final class SessionRecorder: Sendable {
             try? await Task.sleep(for: .milliseconds(50))
         }
         return condition()
+    }
+}
+
+
+/// The single key-only sshd started by the CI script.
+enum CIServer {
+    private static var environment: [String: String] { ProcessInfo.processInfo.environment }
+
+    static var host: String { environment["TILDE_TEST_SSH_HOST"] ?? "127.0.0.1" }
+    static var port: Int { Int(environment["TILDE_TEST_SSH_PORT"] ?? "") ?? 2222 }
+    static var user: String { environment["TILDE_TEST_SSH_USER"] ?? NSUserName() }
+
+    static func keyMaterial(_ variable: String) throws -> PrivateKeyMaterial {
+        guard let path = environment[variable] else { throw SessionError.underlying("\(variable) is not set") }
+        return PrivateKeyMaterial(algorithm: .ed25519, openSSHBytes: try Data(contentsOf: URL(fileURLWithPath: path)))
+    }
+
+    /// The server's host key from `TILDE_TEST_SSH_HOST_KEY` (a `.pub` file).
+    static func hostKey() throws -> HostKey {
+        guard let path = environment["TILDE_TEST_SSH_HOST_KEY"] else { throw SessionError.underlying("TILDE_TEST_SSH_HOST_KEY is not set") }
+        let line = try String(contentsOfFile: path, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = line.split(separator: " ")
+        return HostKey(algorithm: String(parts[0]), blobBase64: String(parts[1]), fingerprintSHA256: HostKey.fingerprint(ofBlobBase64: String(parts[1])))
+    }
+
+    static func server() -> ServerSnapshot {
+        ServerSnapshot(
+            name: "ci", target: ConnectionTarget(host: host, port: port, username: user), auth: .key,
+            keyID: UUID(), keepAliveSeconds: 0
+        )
+    }
+}
+
+/// Resolves the key file named by one of the `TILDE_TEST_SSH_KEY_*` variables.
+struct CICredentials: CredentialResolver {
+    var variable: String
+    func resolve(auth: AuthMethod, keyID: UUID?, passwordSecretID: UUID?, target: ConnectionTarget) async throws -> ResolvedCredential {
+        .privateKey(try CIServer.keyMaterial(variable))
     }
 }

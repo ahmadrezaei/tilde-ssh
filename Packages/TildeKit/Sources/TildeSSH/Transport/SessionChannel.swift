@@ -145,6 +145,16 @@ final class SSHSessionChannel: Sendable {
         channel.triggerUserOutboundEvent(event, promise: nil)
     }
 
+    /// Flow control: with `autoRead` off the channel stops delivering and stops granting the server more
+    /// window, so the sender backs off. Turning it back on asks for the next read.
+    func setReading(_ enabled: Bool) {
+        let channel = channel
+        channel.eventLoop.execute {
+            try? channel.syncOptions?.setOption(ChannelOptions.autoRead, value: enabled)
+            if enabled { channel.read() }
+        }
+    }
+
     func close() async {
         try? await channel.close()
     }

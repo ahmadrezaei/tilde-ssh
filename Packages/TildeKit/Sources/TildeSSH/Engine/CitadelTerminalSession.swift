@@ -11,10 +11,9 @@ import TildeCore
 public final class CitadelTerminalSession: TerminalSession {
     public let id: UUID
     public let server: ServerSnapshot
-    public let output: AsyncStream<Data>
 
-    private let outputContinuation: AsyncStream<Data>.Continuation
-    private let stateBroadcaster = AsyncBroadcaster<SessionState>(initial: .idle)
+    private let outputPipe = OutputPipe()
+    private let stateBroadcaster = StateBroadcaster<SessionState>(initial: .idle)
     private let shared: SessionShared
     private let core: SessionCore
 
@@ -31,16 +30,12 @@ public final class CitadelTerminalSession: TerminalSession {
         self.id = id
         self.server = request.server
 
-        let (stream, continuation) = AsyncStream<Data>.makeStream()
-        self.output = stream
-        self.outputContinuation = continuation
-
         let shared = SessionShared(size: request.pty)
         self.shared = shared
 
         let hostAsker = HostKeyAsker(hostKeyPrompter)
         let passwordAsker = PasswordAsker(passwordPrompter)
-        let makePlan: @Sendable (Set<String>) -> ConnectPlan = { allowedOnce in
+        let makePlan: @Sendable (OnceAllowList) -> ConnectPlan = { allowedOnce in
             ConnectPlan(
                 request: request,
                 credentials: credentials,
@@ -48,7 +43,7 @@ public final class CitadelTerminalSession: TerminalSession {
                 hostKeyPrompter: hostAsker,
                 passwordPrompter: passwordAsker,
                 options: options,
-                allowedOnceFingerprints: allowedOnce
+                allowedOnce: allowedOnce
             )
         }
         let keepAlive: Duration? = request.server.keepAliveSeconds > 0 ? .seconds(request.server.keepAliveSeconds) : nil
@@ -60,12 +55,12 @@ public final class CitadelTerminalSession: TerminalSession {
             keepAliveMissLimit: options.keepAliveMissLimit,
             shared: shared,
             states: stateBroadcaster,
-            outputSink: { continuation.yield($0) }
+            output: outputPipe
         )
     }
 
     deinit {
-        outputContinuation.finish()
+        outputPipe.finish()
         let core = core
         Task { await core.disconnect() }
     }
@@ -85,13 +80,23 @@ public final class CitadelTerminalSession: TerminalSession {
 
     // MARK: TerminalIO
 
+    /// Remote bytes. Each access returns a fresh stream over the same queue, so a view that is recreated can
+    /// simply subscribe again. Reading from the network pauses while more than 4 MiB are unconsumed.
+    public var output: AsyncStream<Data> {
+        let pipe = outputPipe
+        return AsyncStream(unfolding: { await pipe.next() })
+    }
+
+    /// Bytes received but not yet consumed by `output` (exposed for tests).
+    var pendingOutputBytes: Int { outputPipe.pendingBytes }
+
     /// Queues keyboard bytes. Input typed while not connected is dropped.
     public func send(_ bytes: Data) {
         shared.live?.write(bytes)
     }
 
     public func resize(cols: Int, rows: Int, pixelWidth: Int, pixelHeight: Int) {
-        shared.setSize(cols: cols, rows: rows)
+        shared.setSize(cols: cols, rows: rows, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
         shared.live?.resize(cols: cols, rows: rows, pixelWidth: pixelWidth, pixelHeight: pixelHeight)
     }
 }

@@ -32,7 +32,7 @@ final class HandshakeHandler: ChannelInboundHandler, @unchecked Sendable {
     init(loop: any EventLoop, timeout: Duration) {
         self.loop = loop
         self.promise = loop.makePromise(of: Void.self)
-        self.timeout = .nanoseconds(Int64(timeout.components.seconds) * 1_000_000_000 + timeout.components.attoseconds / 1_000_000_000)
+        self.timeout = timeout.timeAmount
         self.deadline = .now() + self.timeout
         self.remaining = self.timeout
         loop.execute { [self] in arm(in: self.timeout) }
@@ -64,7 +64,7 @@ final class HandshakeHandler: ChannelInboundHandler, @unchecked Sendable {
     private func arm(in delay: TimeAmount) {
         timer?.cancel()
         deadline = .now() + delay
-        let seconds = max(1, Int(timeout.nanoseconds / 1_000_000_000))
+        let seconds = max(1, Int((Double(timeout.nanoseconds) / 1e9).rounded(.up)))
         timer = loop.scheduleTask(in: delay) { [self] in
             finish(.failure(ConnectTimeoutError(seconds: seconds)))
         }

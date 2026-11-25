@@ -49,9 +49,36 @@ enum OpenSSHKeyReader {
     private static let magic = Data("openssh-key-v1\0".utf8)
     private static let pemBegin = "-----BEGIN OPENSSH PRIVATE KEY-----"
     private static let pemEnd = "-----END OPENSSH PRIVATE KEY-----"
+    private static let pkcs1Begin = "-----BEGIN RSA PRIVATE KEY-----"
+    private static let pkcs1End = "-----END RSA PRIVATE KEY-----"
+
+    /// `RSAPrivateKey ::= SEQUENCE { version, n, e, d, p, q, dp, dq, qinv }` (RFC 8017, A.1.2).
+    private static func parsePKCS1(pem: String) throws -> ParsedPrivateKey {
+        guard let begin = pem.range(of: pkcs1Begin), let end = pem.range(of: pkcs1End), begin.upperBound <= end.lowerBound else {
+            throw OpenSSHKeyError.malformed("PEM armour")
+        }
+        let body = pem[begin.upperBound..<end.lowerBound]
+        if body.contains("ENCRYPTED") { throw OpenSSHKeyError.encrypted }
+        let base64 = body.split(whereSeparator: \.isNewline).filter { !$0.contains(":") }.joined()
+        guard let der = Data(base64Encoded: base64) else { throw OpenSSHKeyError.malformed("base64") }
+
+        var reader = DERReader(der)
+        guard var sequence = reader.readSequence() else { throw OpenSSHKeyError.malformed("RSA sequence") }
+        var integers: [Data] = []
+        while let integer = sequence.readInteger() { integers.append(integer) }
+        guard integers.count >= 9, integers[0].isEmpty || integers[0] == Data([0]) else { throw OpenSSHKeyError.malformed("RSA fields") }
+        return .rsa(RSAComponents(
+            modulus: integers[1], publicExponent: integers[2], privateExponent: integers[3],
+            inverseQ: integers[8], primeP: integers[4], primeQ: integers[5]
+        ))
+    }
 
     /// Parses either the raw binary container (`openssh-key-v1\0...`) or the PEM-armoured text form.
+    /// Traditional unencrypted RSA PEM (`BEGIN RSA PRIVATE KEY`, what `ssh-keygen -m PEM` writes) is accepted too.
     static func parse(_ data: Data) throws -> ParsedPrivateKey {
+        if let text = String(data: data, encoding: .utf8), text.contains(pkcs1Begin) {
+            return try parsePKCS1(pem: text)
+        }
         let binary = try unarmor(data)
         var reader = SSHWireReader(binary)
 
@@ -154,5 +181,39 @@ struct SSHWireReader {
     mutating func readMPInt() -> Data? {
         guard let raw = readData() else { return nil }
         return raw.drop(while: { $0 == 0 })
+    }
+}
+
+/// Just enough DER to read PKCS#1: definite-length SEQUENCE and INTEGER.
+struct DERReader {
+    private let data: Data
+    private var offset = 0
+
+    init(_ data: Data) { self.data = Data(data) }
+
+    private mutating func readLength() -> Int? {
+        guard offset < data.count else { return nil }
+        let first = Int(data[offset]); offset += 1
+        if first < 0x80 { return first }
+        let count = first & 0x7F
+        guard count > 0, count <= 4, offset + count <= data.count else { return nil }
+        var length = 0
+        for _ in 0..<count { length = (length << 8) | Int(data[offset]); offset += 1 }
+        return length
+    }
+
+    private mutating func readElement(tag: UInt8) -> Data? {
+        guard offset < data.count, data[offset] == tag else { return nil }
+        offset += 1
+        guard let length = readLength(), offset + length <= data.count else { return nil }
+        defer { offset += length }
+        return data.subdata(in: offset..<(offset + length))
+    }
+
+    mutating func readSequence() -> DERReader? { readElement(tag: 0x30).map(DERReader.init) }
+
+    /// An INTEGER as an unsigned magnitude without leading zeros.
+    mutating func readInteger() -> Data? {
+        readElement(tag: 0x02).map { Data($0.drop(while: { $0 == 0 })) }
     }
 }

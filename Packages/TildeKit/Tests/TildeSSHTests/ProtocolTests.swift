@@ -167,7 +167,7 @@ private func kexInitPacket(kex: [String], hostKeys: [String], ciphers: [String],
         #expect(map(IOError(errnoCode: ECONNREFUSED, reason: "connect")) == .refused)
         #expect(map(IOError(errnoCode: ECONNRESET, reason: "read")) == .networkLost)
         #expect(map(IOError(errnoCode: ETIMEDOUT, reason: "connect")) == .timeout(seconds: 15))
-        if case .underlying(let text) = map(IOError(errnoCode: EHOSTUNREACH, reason: "connect")) { #expect(text.contains("route")) } else { Issue.record("expected underlying") }
+        #expect(map(IOError(errnoCode: EHOSTUNREACH, reason: "connect")) == .networkLost)
     }
 
     @Test func retriability() {
@@ -177,6 +177,7 @@ private func kexInitPacket(kex: [String], hostKeys: [String], ciphers: [String],
         #expect(SessionErrorMapper.isRetriable(.timeout(seconds: 1)))
         #expect(!SessionErrorMapper.isRetriable(.authFailed(method: "password", serverAllows: [])))
         #expect(!SessionErrorMapper.isRetriable(.hostKeyRejected))
+        #expect(!SessionErrorMapper.isRetriable(.underlying("The private key is passphrase-protected")))
         #expect(!SessionErrorMapper.isRetriable(.noCommonAlgorithm(kind: "kex", offered: [])))
     }
 }
@@ -189,9 +190,9 @@ struct HostKeyValidationTests {
     private let presented = HostKey(algorithm: "ssh-ed25519", blobBase64: "AAAA", fingerprintSHA256: "SHA256:presented")
 
     private func configuration(
-        store: InMemoryKnownHostsStore, prompter: AlwaysTrustPrompter?, strict: Bool = false, allowedOnce: Set<String> = [], timeout: Duration = .seconds(5)
+        store: InMemoryKnownHostsStore, prompter: AlwaysTrustPrompter?, strict: Bool = false, allowedOnce: OnceAllowList = OnceAllowList(), endpoint: HostEndpoint? = nil, timeout: Duration = .seconds(5)
     ) -> TOFUHostKeyValidator.Configuration {
-        .init(endpoint: endpoint, serverName: "db", knownHosts: store, prompter: prompter.map(HostKeyAsker.init), strict: strict, promptTimeout: timeout, allowedOnce: allowedOnce)
+        .init(endpoint: endpoint ?? self.endpoint, serverName: "db", knownHosts: store, prompter: prompter.map(HostKeyAsker.init), strict: strict, promptTimeout: timeout, allowedOnce: allowedOnce)
     }
 
     @Test func fingerprintMatchesSSHKeygen() {
@@ -269,17 +270,86 @@ struct HostKeyValidationTests {
         #expect(prompter.challenges.isEmpty, "the engine delivers mismatch challenges itself, after aborting")
     }
 
-    @Test func allowedOnceFingerprintBypassesTheCheck() async throws {
+    @Test func allowedOnceKeyBypassesTheCheckForItsOwnEndpoint() async throws {
         let pinned = HostKey(algorithm: "ssh-ed25519", blobBase64: "BBBB", fingerprintSHA256: "SHA256:pinned")
         let store = InMemoryKnownHostsStore(pins: [endpoint: [pinned]])
-        try await TOFUHostKeyValidator.validate(presented, configuration: configuration(store: store, prompter: nil, allowedOnce: [presented.fingerprintSHA256]), onPrompt: { _ in })
+        let once = OnceAllowList()
+        once.insert(presented, for: endpoint)
+        try await TOFUHostKeyValidator.validate(presented, configuration: configuration(store: store, prompter: nil, allowedOnce: once), onPrompt: { _ in })
+    }
+
+    // MARK: Connect once is bound to one endpoint (jump host + target)
+
+    private let bastion = HostEndpoint(host: "bastion.example.com", port: 22)
+
+    /// A bastion accepted once must not vouch for a target that presents the same key.
+    @Test func connectOnceOnTheBastionDoesNotCoverTheTarget() async throws {
+        let once = OnceAllowList()
+        let store = InMemoryKnownHostsStore()
+        try await TOFUHostKeyValidator.validate(
+            presented, configuration: configuration(store: store, prompter: AlwaysTrustPrompter(decision: .connectOnce), allowedOnce: once, endpoint: bastion), onPrompt: { _ in }
+        )
+        #expect(once.contains(presented, for: bastion))
+        #expect(!once.contains(presented, for: endpoint))
+
+        // Same key at the target, no pin: the user is asked again (here they refuse).
+        let targetPrompter = AlwaysTrustPrompter(decision: .reject)
+        await #expect(throws: HostKeyRejectedError.self) {
+            try await TOFUHostKeyValidator.validate(presented, configuration: configuration(store: store, prompter: targetPrompter, allowedOnce: once), onPrompt: { _ in })
+        }
+        #expect(targetPrompter.challenges.count == 1)
+    }
+
+    @Test func connectOnceOnTheBastionNeverOverridesATargetPin() async throws {
+        let pinned = HostKey(algorithm: "ssh-ed25519", blobBase64: "BBBB", fingerprintSHA256: "SHA256:pinned")
+        let store = InMemoryKnownHostsStore(pins: [endpoint: [pinned]])
+        let once = OnceAllowList()
+        once.insert(presented, for: bastion)
+        await #expect(throws: HostKeyMismatchError.self) {
+            try await TOFUHostKeyValidator.validate(presented, configuration: configuration(store: store, prompter: nil, allowedOnce: once), onPrompt: { _ in })
+        }
+    }
+
+    @Test func changedKeyOnTheBastionAndOnTheTargetAreEachReportedForTheirOwnEndpoint() async {
+        let old = HostKey(algorithm: "ssh-ed25519", blobBase64: "BBBB", fingerprintSHA256: "SHA256:old")
+        let store = InMemoryKnownHostsStore(pins: [bastion: [old], endpoint: [old]])
+        for hop in [bastion, endpoint] {
+            do {
+                try await TOFUHostKeyValidator.validate(presented, configuration: configuration(store: store, prompter: nil, endpoint: hop), onPrompt: { _ in })
+                Issue.record("expected a mismatch for \(hop.canonical)")
+            } catch let error as HostKeyMismatchError {
+                #expect(error.challenge.endpoint == hop)
+            } catch {
+                Issue.record("unexpected \(error)")
+            }
+        }
+    }
+
+    @Test func onceListIsKeyedByEndpointAndFingerprint() {
+        let once = OnceAllowList()
+        let other = HostKey(algorithm: "ssh-ed25519", blobBase64: "CCCC", fingerprintSHA256: "SHA256:other")
+        once.insert(presented, for: HostEndpoint(host: "A.example.com", port: 2222))
+        #expect(once.contains(presented, for: HostEndpoint(host: "a.example.com", port: 2222)), "endpoints compare canonically")
+        #expect(!once.contains(presented, for: HostEndpoint(host: "a.example.com", port: 22)))
+        #expect(!once.contains(other, for: HostEndpoint(host: "a.example.com", port: 2222)))
+    }
+
+    @Test func connectOnceOnAnUnknownKeyIsRememberedForLaterAttemptsOfTheSameSession() async throws {
+        let once = OnceAllowList()
+        let store = InMemoryKnownHostsStore()
+        let prompter = AlwaysTrustPrompter(decision: .connectOnce)
+        try await TOFUHostKeyValidator.validate(presented, configuration: configuration(store: store, prompter: prompter, allowedOnce: once), onPrompt: { _ in })
+        // An automatic reconnect validates again with the same list: no second prompt, still nothing pinned.
+        try await TOFUHostKeyValidator.validate(presented, configuration: configuration(store: store, prompter: prompter, allowedOnce: once), onPrompt: { _ in })
+        #expect(prompter.challenges.count == 1)
+        #expect(await store.pinned(for: endpoint).isEmpty)
     }
 
     @Test func unansweredPromptTimesOutAsRejection() async {
         let silent = SilentPrompter()
         let config = TOFUHostKeyValidator.Configuration(
             endpoint: endpoint, serverName: nil, knownHosts: InMemoryKnownHostsStore(), prompter: HostKeyAsker(silent),
-            strict: false, promptTimeout: .milliseconds(100), allowedOnce: []
+            strict: false, promptTimeout: .milliseconds(100), allowedOnce: OnceAllowList()
         )
         await #expect(throws: HostKeyRejectedError.self) {
             try await TOFUHostKeyValidator.validate(presented, configuration: config, onPrompt: { _ in })

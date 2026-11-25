@@ -46,7 +46,7 @@ public struct NWReachabilityProbe: ReachabilityProbe {
                 }
                 connection.start(queue: .global(qos: .utility))
 
-                let seconds = Double(timeout.components.seconds) + Double(timeout.components.attoseconds) / 1e18
+                let seconds = timeout.totalSeconds
                 DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + seconds) {
                     finish(.unreachable(reason: "No response"))
                 }

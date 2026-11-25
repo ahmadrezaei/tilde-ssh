@@ -11,8 +11,8 @@ struct ConnectPlan: Sendable {
     /// `nil` when nobody can be asked: missing or rejected passwords fail the connection.
     var passwordPrompter: PasswordAsker?
     var options: CitadelSessionEngine.Options
-    /// Host key fingerprints accepted for this attempt only ("Connect once" after a mismatch).
-    var allowedOnceFingerprints: Set<String> = []
+    /// Host keys accepted "once" for this session, per endpoint; shared by every attempt of the session.
+    var allowedOnce = OnceAllowList()
 }
 
 /// Callbacks a connection attempt uses to report progress.
@@ -39,6 +39,9 @@ protocol LiveShell: Sendable {
     /// Non-blocking, ordered.
     func write(_ data: Data)
     func resize(cols: Int, rows: Int, pixelWidth: Int, pixelHeight: Int)
+    /// Stops (`false`) or resumes reading from the network. Pausing stops the SSH window from reopening, so the
+    /// server stops sending; used for flow control when the terminal falls behind.
+    func setReading(_ enabled: Bool)
     /// One request/response round trip to the server; `nil` if it did not answer within `timeout`.
     func ping(timeout: Duration) async -> Duration?
     /// Returns once the shell has ended, whatever the reason.
