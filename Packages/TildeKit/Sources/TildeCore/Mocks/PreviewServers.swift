@@ -43,7 +43,7 @@ public enum PreviewServers {
     public static let devBox = ServerSnapshot(
         id: UUID(uuidString: "00000000-0000-0000-0000-000000000005")!,
         name: "dev-sandbox",
-        target: ConnectionTarget(host: "dev.example.com", username: "ahmad"),
+        target: ConnectionTarget(host: "dev.example.com", username: "dev"),
         auth: .passwordPrompt,
         environment: .dev
     )
