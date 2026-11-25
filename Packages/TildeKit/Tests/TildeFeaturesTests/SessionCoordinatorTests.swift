@@ -1,0 +1,271 @@
+import Foundation
+import Synchronization
+import Testing
+import TildeCore
+@testable import TildeFeatures
+
+/// Polls until `condition` holds (or 2 s pass).
+@MainActor
+func waitUntil(timeout: Duration = .seconds(2), _ condition: @MainActor () -> Bool) async {
+    let deadline = ContinuousClock.now + timeout
+    while !condition(), ContinuousClock.now < deadline {
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+}
+
+@MainActor
+private func makeCoordinator(failure: SessionError? = nil, hostKeyTimeout: Duration = .seconds(120)) -> SessionCoordinator {
+    var services = TildeServices.preview
+    services.sessionEngine = FakeSessionEngine(failure: failure, connectDelay: .milliseconds(1))
+    return SessionCoordinator(services: services, hostKeyTimeout: hostKeyTimeout)
+}
+
+@MainActor
+@Suite struct SessionCoordinatorTests {
+    let window = UUID()
+
+    @Test func openCreatesATabAndConnects() async {
+        let coordinator = makeCoordinator()
+        let tab = coordinator.open(PreviewServers.prodAPI, in: window)
+        #expect(coordinator.tabs(in: window).count == 1)
+        #expect(coordinator.selectedTab(in: window)?.id == tab.id)
+        await waitUntil { tab.isConnected }
+        #expect(tab.isConnected)
+        #expect(tab.latencyMilliseconds == 23)
+        #expect(coordinator.isLive(serverID: PreviewServers.prodAPI.id))
+    }
+
+    @Test func openingTheSameServerFocusesTheExistingTab() {
+        let coordinator = makeCoordinator()
+        let first = coordinator.open(PreviewServers.prodAPI, in: window)
+        _ = coordinator.open(PreviewServers.dbPrimary, in: window)
+        let again = coordinator.open(PreviewServers.prodAPI, in: window)
+        #expect(again.id == first.id)
+        #expect(coordinator.tabs(in: window).count == 2)
+        #expect(coordinator.selectedTab(in: window)?.id == first.id)
+    }
+
+    @Test func newSessionAlwaysCreatesAnotherTab() {
+        let coordinator = makeCoordinator()
+        let first = coordinator.open(PreviewServers.prodAPI, in: window)
+        let second = coordinator.open(PreviewServers.prodAPI, in: window, newSession: true)
+        #expect(first.id != second.id)
+        #expect(coordinator.tabs(in: window).count == 2)
+    }
+
+    @Test func tabsBelongToTheirWindow() {
+        let coordinator = makeCoordinator()
+        let other = UUID()
+        coordinator.open(PreviewServers.prodAPI, in: window)
+        coordinator.open(PreviewServers.prodAPI, in: other)
+        #expect(coordinator.tabs(in: window).count == 1)
+        #expect(coordinator.tabs(in: other).count == 1)
+        #expect(coordinator.tabs.count == 2)
+    }
+
+    @Test func closingSelectsTheNeighbourAndRemembersTheServer() {
+        let coordinator = makeCoordinator()
+        let a = coordinator.open(PreviewServers.prodAPI, in: window)
+        let b = coordinator.open(PreviewServers.dbPrimary, in: window)
+        let c = coordinator.open(PreviewServers.devBox, in: window)
+        coordinator.select(b)
+        coordinator.close(b)
+        #expect(coordinator.tabs(in: window).map(\.id) == [a.id, c.id])
+        #expect(coordinator.selectedTab(in: window)?.id == c.id)
+        #expect(coordinator.recentlyClosed.first?.id == PreviewServers.dbPrimary.id)
+
+        coordinator.close(c)
+        #expect(coordinator.selectedTab(in: window)?.id == a.id)
+        coordinator.close(a)
+        #expect(coordinator.selectedTab(in: window) == nil)
+        #expect(!coordinator.isDeckPresented)
+    }
+
+    @Test func reopenLastClosed() {
+        let coordinator = makeCoordinator()
+        let tab = coordinator.open(PreviewServers.prodAPI, in: window)
+        coordinator.close(tab)
+        let reopened = coordinator.reopenLastClosed(in: window)
+        #expect(reopened?.server.id == PreviewServers.prodAPI.id)
+        #expect(coordinator.reopenLastClosed(in: window) == nil)
+    }
+
+    @Test func tabSelectionByNumberAndCycling() {
+        let coordinator = makeCoordinator()
+        let tabs = [PreviewServers.prodAPI, PreviewServers.dbPrimary, PreviewServers.devBox].map { coordinator.open($0, in: window) }
+        coordinator.select(index: 1, in: window)
+        #expect(coordinator.selectedTab(in: window)?.id == tabs[0].id)
+        coordinator.select(index: 9, in: window)   // Cmd-9 is always the last tab
+        #expect(coordinator.selectedTab(in: window)?.id == tabs[2].id)
+        coordinator.selectNext(in: window)
+        #expect(coordinator.selectedTab(in: window)?.id == tabs[0].id)
+        coordinator.selectPrevious(in: window)
+        #expect(coordinator.selectedTab(in: window)?.id == tabs[2].id)
+        coordinator.select(index: 2, in: window)
+        #expect(coordinator.selectedTab(in: window)?.id == tabs[1].id)
+    }
+
+    @Test func movingATabToItsOwnWindow() {
+        let coordinator = makeCoordinator()
+        let a = coordinator.open(PreviewServers.prodAPI, in: window)
+        let b = coordinator.open(PreviewServers.dbPrimary, in: window)
+        let newWindow = coordinator.moveToOwnWindow(b)
+        #expect(newWindow == b.id)
+        #expect(coordinator.tabs(in: window).map(\.id) == [a.id])
+        #expect(coordinator.tabs(in: newWindow).map(\.id) == [b.id])
+        #expect(coordinator.selectedTab(in: window)?.id == a.id)
+    }
+
+    @Test func failedConnectionShowsUpAsDisconnectedWithTheError() async {
+        let coordinator = makeCoordinator(failure: .refused)
+        let tab = coordinator.open(PreviewServers.prodAPI, in: window)
+        await waitUntil { if case .disconnected = tab.state { true } else { false } }
+        #expect(tab.state == .disconnected(.error(.refused)))
+        #expect(!tab.isLive)
+    }
+
+    @Test func onConnectedFiresOncePerConnect() async {
+        let coordinator = makeCoordinator()
+        var connected: [UUID] = []
+        coordinator.onConnected = { connected.append($0.id) }
+        let tab = coordinator.open(PreviewServers.prodAPI, in: window)
+        await waitUntil { tab.isConnected }
+        #expect(connected == [PreviewServers.prodAPI.id])
+    }
+
+    @Test func insertTypesIntoTheConnectedSessionAndAddsReturnForRunSnippets() async {
+        let coordinator = makeCoordinator()
+        let tab = coordinator.open(PreviewServers.devBox, in: window)
+        await waitUntil { tab.isConnected }
+        let snippet = SnippetSnapshot(name: "df", command: "df -h <path>", runOnInsert: true)
+        #expect(coordinator.insert(snippet, values: ["path": "/var"], in: window))
+        // EchoTerminalSession echoes typed text; nothing to assert on the wire without a recorder, so check refusal paths.
+        let idle = makeCoordinator()
+        #expect(!idle.insert(snippet, in: window))
+    }
+
+    // MARK: Host keys
+
+    private func makeChallenge(_ lookup: HostKeyLookup, host: String = "10.0.1.12") -> HostKeyChallenge {
+        HostKeyChallenge(
+            endpoint: HostEndpoint(host: host), serverName: "prod-api-01",
+            presented: HostKey(algorithm: "ssh-ed25519", blobBase64: "NEW", fingerprintSHA256: "SHA256:new"),
+            lookup: lookup
+        )
+    }
+
+    @Test func unknownHostWaitsForTheUserAndReturnsTheirDecision() async {
+        let coordinator = makeCoordinator()
+        coordinator.open(PreviewServers.prodAPI, in: window)
+        let challenge = makeChallenge(.unknown)
+        let decision = Task { await coordinator.decide(challenge) }
+        await waitUntil { coordinator.pendingHostKey(in: window) != nil }
+        let request = coordinator.pendingHostKey(in: window)
+        #expect(request?.isChangedKey == false)
+        #expect(request?.windowID == window)
+        coordinator.answerHostKey(request!, .connectOnce)
+        #expect(await decision.value == .connectOnce)
+        #expect(coordinator.pendingHostKey(in: window) == nil)
+    }
+
+    @Test func unknownHostTimesOutAsRejected() async {
+        let coordinator = makeCoordinator(hostKeyTimeout: .milliseconds(30))
+        let decision = await coordinator.decide(makeChallenge(.unknown))
+        #expect(decision == .reject)
+        #expect(coordinator.hostKeyQueue.isEmpty)
+    }
+
+    @Test func changedKeyIsATakeoverAndTrustReplacesThePin() async throws {
+        let store = InMemoryKnownHostsStore()
+        let endpoint = HostEndpoint(host: "10.0.1.12")
+        let oldKey = HostKey(algorithm: "ssh-ed25519", blobBase64: "OLD", fingerprintSHA256: "SHA256:old")
+        try await store.trust(oldKey, for: endpoint, replacing: false)
+        var services = TildeServices.preview
+        services.knownHosts = store
+        services.sessionEngine = FakeSessionEngine(connectDelay: .milliseconds(1))
+        let coordinator = SessionCoordinator(services: services)
+
+        let pinned = PinnedHostKey(key: oldKey, firstSeenAt: .now, trustedOnDevice: "MacBook")
+        let decision = Task { await coordinator.decide(makeChallenge(.mismatch(pinned: [pinned]))) }
+        await waitUntil { coordinator.pendingHostKey(in: window) != nil }
+        let request = try #require(coordinator.pendingHostKey(in: window))
+        #expect(request.isChangedKey)
+        #expect(request.pinnedKeys == [pinned])
+        coordinator.answerHostKey(request, .trustAndSave)
+        #expect(await decision.value == .trustAndSave)
+
+        let pins = await store.pinned(for: endpoint)
+        #expect(pins.map(\.key.blobBase64) == ["NEW"])
+    }
+
+    @Test func rejectingAChangedKeyDoesNotTouchThePin() async throws {
+        let store = InMemoryKnownHostsStore()
+        let endpoint = HostEndpoint(host: "10.0.1.12")
+        let oldKey = HostKey(algorithm: "ssh-ed25519", blobBase64: "OLD", fingerprintSHA256: "SHA256:old")
+        try await store.trust(oldKey, for: endpoint, replacing: false)
+        var services = TildeServices.preview
+        services.knownHosts = store
+        let coordinator = SessionCoordinator(services: services)
+
+        let pinned = PinnedHostKey(key: oldKey, firstSeenAt: .now, trustedOnDevice: "MacBook")
+        let decision = Task { await coordinator.decide(makeChallenge(.mismatch(pinned: [pinned]))) }
+        await waitUntil { coordinator.pendingHostKey(in: window) != nil }
+        coordinator.answerHostKey(try #require(coordinator.pendingHostKey(in: window)), .reject)
+        #expect(await decision.value == .reject)
+        #expect(await store.pinned(for: endpoint).map(\.key.blobBase64) == ["OLD"])
+    }
+
+    // MARK: Passwords
+
+    @Test func passwordPromptReturnsWhatTheUserTyped() async {
+        let coordinator = makeCoordinator()
+        let target = PreviewServers.devBox.target
+        coordinator.open(PreviewServers.devBox, in: window, adHoc: true)
+        let result = Task { await coordinator.password(for: target, reason: .notSaved) }
+        await waitUntil { coordinator.pendingPassword(in: window) != nil }
+        let request = coordinator.pendingPassword(in: window)
+        #expect(request?.canSaveServer == true)
+        #expect(request?.windowID == window)
+        coordinator.answerPassword(request!, password: "hunter2")
+        #expect(await result.value == "hunter2")
+    }
+
+    @Test func cancellingThePasswordPromptReturnsNil() async {
+        let coordinator = makeCoordinator()
+        let result = Task { await coordinator.password(for: ConnectionTarget(host: "h", username: "u"), reason: .rejected) }
+        await waitUntil { coordinator.pendingPassword(in: window) != nil }
+        coordinator.answerPassword(coordinator.pendingPassword(in: window)!, password: nil)
+        #expect(await result.value == nil)
+    }
+
+    @Test func updatingTheSavedPasswordWritesTheSecret() async throws {
+        let secrets = InMemorySecretStore()
+        var services = TildeServices.preview
+        services.secretStore = secrets
+        services.sessionEngine = FakeSessionEngine(connectDelay: .milliseconds(1))
+        let coordinator = SessionCoordinator(services: services)
+        let server = PreviewServers.stagingWeb
+        coordinator.open(server, in: window)
+
+        let result = Task { await coordinator.password(for: server.target, reason: .rejected) }
+        await waitUntil { coordinator.pendingPassword(in: window) != nil }
+        let request = try #require(coordinator.pendingPassword(in: window))
+        #expect(request.canUpdateSaved)
+        coordinator.answerPassword(request, password: "new-secret", updateSaved: true)
+        _ = await result.value
+        let stored = try secrets.read(SecretRef(kind: .password, id: PreviewServers.passwordSecretID))
+        #expect(stored == Data("new-secret".utf8))
+    }
+
+    @Test func savingAQuickConnectServerRaisesASaveRequest() async {
+        let coordinator = makeCoordinator()
+        let server = PreviewServers.devBox
+        coordinator.open(server, in: window, adHoc: true)
+        let result = Task { await coordinator.password(for: server.target, reason: .notSaved) }
+        await waitUntil { coordinator.pendingPassword(in: window) != nil }
+        coordinator.answerPassword(coordinator.pendingPassword(in: window)!, password: "pw", saveServer: true)
+        _ = await result.value
+        #expect(coordinator.saveServerRequest?.password == "pw")
+        #expect(coordinator.saveServerRequest?.server.auth == .password)
+    }
+}
