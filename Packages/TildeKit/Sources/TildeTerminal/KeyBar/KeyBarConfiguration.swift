@@ -2,25 +2,14 @@ import Foundation
 
 /// How the key bar behaves when a hardware keyboard is attached (Settings > Keyboard).
 public enum HardwareKeyboardMode: String, Codable, Sendable, CaseIterable {
-    case slimStrip, hidden
+    /// A 32 pt strip with Esc, F-keys, snippets and a Ctrl lock.
+    case slimStrip
+    /// No key bar at all.
+    case hidden
 }
 
-/// Versioned, syncable key bar layout (`KeyBarLayout v1`, stored in `NSUbiquitousKeyValueStore`).
-/// Placeholder shape: WS4 owns the real definition (pages, 6 slots, flick alternates, pinned zone, presets).
-public struct KeyBarLayout: Codable, Hashable, Sendable {
-    public var version: Int
-    public var presetName: String
-
-    public init(version: Int = 1, presetName: String = "DevOps") {
-        self.version = version
-        self.presetName = presetName
-    }
-
-    public static let devOps = KeyBarLayout()
-}
-
-/// Everything `TerminalSurface` needs to build the key bar.
-public struct KeyBarConfiguration: Sendable {
+/// Everything `TerminalSurface` needs to build the key bar and to treat the keyboard.
+public struct KeyBarConfiguration: Sendable, Equatable {
     public var layout: KeyBarLayout
     public var hapticsEnabled: Bool
     public var hardwareKeyboardMode: HardwareKeyboardMode

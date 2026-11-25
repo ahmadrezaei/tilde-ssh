@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import TildeTerminal
 
 /// UserDefaults / `@AppStorage` keys and enums for the settings owned by the app shell.
 ///
@@ -7,7 +8,6 @@ import SwiftUI
 /// behind it. Views read them through `@AppStorage`, so the switch is local to this file and `SettingsRoot`.
 public enum TildeSettings {
     public static let appearanceKey = "settings.appearance"
-    public static let confirmPasteKey = "settings.confirmMultilinePaste"
     public static let serverSortKey = "settings.serverSort"
     public static let showOfflineKey = "settings.showOfflineServers"
     public static let defaultUserKey = "settings.defaultUsername"
@@ -16,7 +16,6 @@ public enum TildeSettings {
     public static let autoReconnectKey = "settings.autoReconnect"
     public static let probeReachabilityKey = "settings.probeReachability"
     public static let probeOnCellularKey = "settings.probeOnCellular"
-    public static let scrollbackKey = "settings.scrollbackLines"
     public static let defaultTermKey = "settings.defaultTerm"
     public static let defaultKeepAliveKey = "settings.defaultKeepAlive"
     public static let onboardingDoneKey = "onboarding.done"
@@ -26,7 +25,6 @@ public enum TildeSettings {
     public static let defaultConnectTimeout = 15
     public static let defaultTerm = "xterm-256color"
     public static let defaultKeepAlive = 30
-    public static let defaultScrollback = 10_000
 
     /// The stored default username, falling back to `root`.
     public static var currentDefaultUser: String {
@@ -40,8 +38,10 @@ public enum TildeSettings {
         return value > 0 ? value : defaultConnectTimeout
     }
 
+    /// The multi-line paste mode. Terminal behaviour (scrollback, paste confirmation) lives in
+    /// `TerminalSettings`; this reads that store so there is only one.
     public static var currentPasteMode: PasteConfirmMode {
-        PasteConfirmMode(rawValue: UserDefaults.standard.string(forKey: confirmPasteKey) ?? "") ?? .prodOnly
+        PasteConfirmMode(rawValue: TerminalSettings.storedPasteConfirmation().rawValue) ?? .prodOnly
     }
 
     public static var currentServerSort: ServerSortMode {
