@@ -4,6 +4,7 @@ import TildeCore
 import TildeDesign
 import TildeSecurity
 import TildeStore
+import TildeTerminal
 
 /// "Tilde > Lock Now": the app shell sets this to `appLock.lockNow` (the lock itself is owned by WS3).
 public struct LockNowAction: Sendable {
@@ -104,6 +105,17 @@ private struct WindowHostBody<Content: View>: View {
                 opener.open(SessionWindowValue(sessionID: id))
             }
         }
+        // View > Bigger / Smaller / Actual Size act on the selected tab's terminal; a size change there also updates
+        // the saved font size (`TerminalSurface` reports it). Themes are a saved setting, so any window can change them.
+        if let terminal = selected?.terminal {
+            actions.increaseFontSize = { terminal.increaseFontSize() }
+            actions.decreaseFontSize = { terminal.decreaseFontSize() }
+            actions.resetFontSize = { terminal.resetFontSize() }
+        }
+        let terminalSettings = TerminalSettings.shared
+        actions.themes = TerminalTheme.builtIn.map { ThemeChoice(id: $0.id, name: $0.name) }
+        actions.selectedThemeID = terminalSettings.theme.id
+        actions.selectTheme = { terminalSettings.themeID = $0 }
         actions.showKeys = { navigator.present(.keys) }
         actions.showSnippets = { navigator.present(.snippets) }
         if let lockNow { actions.lockNow = { lockNow() } }
@@ -117,7 +129,13 @@ private struct WindowHostBody<Content: View>: View {
         var actions = SessionCommandActions()
         actions.reconnect = { coordinator.reconnect(tab) }
         actions.disconnect = { coordinator.close(tab) }
-        actions.sendInterrupt = { tab.terminalIO.send(Data([0x03])) }
+        let terminal = tab.terminal
+        actions.clear = { terminal.clear() }
+        actions.clearScrollback = { terminal.clearScrollback() }
+        actions.sendInterrupt = { terminal.sendInterrupt() }
+        actions.find = { terminal.showFind() }
+        actions.findNext = { terminal.findNext() }
+        actions.findPrevious = { terminal.findPrevious() }
         if tab.isAdHoc {
             actions.editServer = { navigator.saveAsServer(tab) }
         } else {

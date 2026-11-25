@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import TildeCore
 import TildeDesign
+import TildeTerminal
 
 /// One open session, shown as a tab (iPad/Mac) or a card in the deck (iPhone).
 @MainActor
@@ -19,7 +20,11 @@ public final class SessionTab: Identifiable {
     public internal(set) var state: SessionState = .idle
     public internal(set) var latencyMilliseconds: Int?
     /// A multi-line paste waiting for confirmation (shown as a sheet over the session).
-    public internal(set) var pasteRequest: PasteRequest?
+    public internal(set) var pasteRequest: PendingPaste?
+
+    /// The handle on this tab's terminal (find, clear, font size, ...). One per tab, kept alive with it and passed to
+    /// `TerminalSurface(controller:)`; the menu bar acts on the selected tab's controller.
+    public let terminal = TerminalController()
 
     @ObservationIgnored var stateTask: Task<Void, Never>?
     @ObservationIgnored var latencyTask: Task<Void, Never>?
@@ -65,27 +70,24 @@ public final class SessionTab: Identifiable {
         return false
     }
 
-    /// The paste guard wraps the session's byte stream; hand this to `TerminalSurface(io:)`. Created once per tab.
-    @ObservationIgnored lazy var terminalIO: any TerminalIO = makeTerminalIO()
+    /// The terminal surface asks this before pasting text with a line break (`TerminalSurface(onConfirmPaste:)`). The
+    /// surface has already decided that the mode and environment require it.
+    func confirmPaste(_ request: TildeTerminal.PasteRequest) async -> Bool {
+        await requestPasteConfirmation(request.text)
+    }
 
-    private func makeTerminalIO() -> any TerminalIO {
-        PasteGuardIO(
-            base: session,
-            shouldConfirm: { [environment = server.environment] in
-                PasteGuardPolicy.requiresConfirmation(mode: TildeSettings.currentPasteMode, environment: environment)
-            },
-            confirm: { [weak self] text in
-                guard let self else { return false }
-                return await self.requestPasteConfirmation(text)
-            }
-        )
+    /// Whether typing `text` into this session should ask first: more than one non-empty line, and the paste mode
+    /// (Settings > Terminal) requires it for this server's environment. A one-line snippet never asks, with or without
+    /// "run on insert" (the trailing Return is not a second line).
+    func snippetNeedsConfirmation(_ text: String) -> Bool {
+        Self.lines(of: text).count > 1 && TildeSettings.currentPasteMode.requiresConfirmation(for: environment)
     }
 
     func requestPasteConfirmation(_ text: String) async -> Bool {
-        let lines = PasteGuardPolicy.lines(of: text)
+        let lines = Self.lines(of: text)
         return await withCheckedContinuation { continuation in
             pasteRequest?.resolve(false)
-            pasteRequest = PasteRequest(
+            pasteRequest = PendingPaste(
                 lineCount: max(lines.count, 1),
                 previewLines: Array(lines.prefix(5)),
                 truncated: lines.count > 5,
@@ -96,15 +98,20 @@ public final class SessionTab: Identifiable {
         }
     }
 
+    /// The non-empty lines of `text` (split on CR, LF or CRLF).
+    static func lines(of text: String) -> [String] {
+        text.split(omittingEmptySubsequences: true, whereSeparator: { $0 == "\n" || $0 == "\r" || $0 == "\r\n" }).map(String.init)
+    }
+
     public func answerPaste(_ approved: Bool) {
         pasteRequest?.resolve(approved)
         pasteRequest = nil
     }
 }
 
-/// "Paste 14 lines into prod-api-01?"
+/// "Paste 14 lines into prod-api-01?" (the sheet's model; `TildeTerminal.PasteRequest` is what the surface hands over).
 @MainActor
-public final class PasteRequest: Identifiable {
+public final class PendingPaste: Identifiable {
     public let id = UUID()
     public let lineCount: Int
     public let previewLines: [String]

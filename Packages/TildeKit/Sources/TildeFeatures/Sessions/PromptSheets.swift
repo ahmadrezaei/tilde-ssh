@@ -58,7 +58,7 @@ struct PasswordPromptSheet: View {
 
 /// "Paste 14 lines into prod-api-01?" with a preview of the first 5 lines. Red for production.
 struct PasteConfirmationSheet: View {
-    let request: PasteRequest
+    let request: PendingPaste
     let onAnswer: (Bool) -> Void
 
     var body: some View {
@@ -103,11 +103,11 @@ struct PasteConfirmationSheet: View {
 }
 
 #Preview("Paste confirmation") {
-    @Previewable @State var request: PasteRequest?
+    @Previewable @State var request: PendingPaste?
     Color.clear
         .task {
             _ = await withCheckedContinuation { (c: CheckedContinuation<Bool, Never>) in
-                request = PasteRequest(lineCount: 14, previewLines: ["sudo systemctl stop api", "rm -rf /var/cache/api", "git pull", "make deploy", "sudo systemctl start api"],
+                request = PendingPaste(lineCount: 14, previewLines: ["sudo systemctl stop api", "rm -rf /var/cache/api", "git pull", "make deploy", "sudo systemctl start api"],
                                        truncated: true, serverName: "prod-api-01", environment: .prod, continuation: c)
             }
         }

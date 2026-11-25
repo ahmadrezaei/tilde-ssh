@@ -12,7 +12,7 @@ import AppKit
 ///
 /// Shortcut notes:
 /// - ⌘N (New Window) is the system's own item for a `WindowGroup`; Tilde adds New Server on ⇧⌘N next to it.
-/// - ⌘K clears the scrollback, as in Terminal and iTerm2. Quick Connect is ⌘L and ⌘T opens a new tab.
+/// - ⌘K clears the screen and scrollback, as in Terminal and iTerm2. Quick Connect is ⌘L and ⌘T opens a new tab.
 /// - The terminal keeps ⌃C and ⌃D for itself; "Send Ctrl-C" in the Session menu exists for the pointer.
 public struct MacCommands: Commands {
     @FocusedValue(\.windowCommands) private var window
@@ -106,7 +106,8 @@ public struct MacCommands: Commands {
             item("Reconnect", session?.reconnect).keyboardShortcut("r")
             item("Disconnect", session?.disconnect).keyboardShortcut("w", modifiers: [.command, .option])
             Divider()
-            item("Clear Scrollback", session?.clearScrollback).keyboardShortcut("k")
+            item("Clear", session?.clear).keyboardShortcut("k")
+            item("Clear Scrollback", session?.clearScrollback)
             item("Send Ctrl-C", session?.sendInterrupt)
             item("Send Break", session?.sendBreak)
             Divider()
