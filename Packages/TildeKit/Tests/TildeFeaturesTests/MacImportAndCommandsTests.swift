@@ -91,6 +91,17 @@ private let ecdsaBlob = "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBD9
         #expect(direct.conflict == nil)
     }
 
+    @Test func invalidPortsAreNormalisedInTheEmittedHost() {
+        let hosts = [
+            SSHConfigHost(alias: "zero", hostName: "10.0.0.1", port: 0),
+            SSHConfigHost(alias: "huge", hostName: "10.0.0.2", port: 70000),
+            SSHConfigHost(alias: "ok", hostName: "10.0.0.3", port: 2222),
+        ]
+        let rows = SSHConfigImportPlanner.plan(hosts: hosts, existing: []).rows
+        #expect(rows.map(\.port) == [22, 22, 2222])
+        #expect(rows.map(\.host.port) == [nil, nil, 2222])
+    }
+
     @Test func differentUserOnSameHostIsNotAConflict() {
         let existing = [ServerSnapshot(name: "x", target: ConnectionTarget(host: "10.9.9.7", username: "someone-else"))]
         let host = SSHConfigHost(alias: "direct", hostName: "10.9.9.7", user: "deploy")
@@ -284,6 +295,27 @@ private let ecdsaBlob = "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBD9
         #expect(pins.map(\.key.blobBase64) == [String(other)])
     }
 
+    @Test func twoKeysForOneHostInTheFileAreConflictsAndNeverPinned() async {
+        let other = String(ed25519Blob.dropLast(2) + "xx")
+        let store = InMemoryKnownHostsStore()
+        let model = KnownHostsImportModel()
+        model.load(text: """
+        dup.example.com ssh-ed25519 \(ed25519Blob)
+        dup.example.com ssh-ed25519 \(other)
+        fine.example.com ssh-ed25519 \(ed25519Blob)
+        """, sourceName: "known_hosts")
+        await model.classify(using: store)
+        #expect(model.entries(.conflict).map(\.endpoint.host) == ["dup.example.com", "dup.example.com"])
+        #expect(model.entries(.new).map(\.endpoint.host) == ["fine.example.com"])
+        model.selection.formUnion(model.entries(.conflict).map(\.id))
+
+        let summary = await model.importSelected(using: store)
+
+        #expect(summary.imported == 1)
+        #expect(summary.conflicts == 2)
+        #expect(await store.pinned(for: HostEndpoint(host: "dup.example.com")).isEmpty)
+    }
+
     @Test func fullyHashedFileExplainsWhyNothingImports() {
         let model = KnownHostsImportModel()
         model.load(text: "|1|F1E1KeoE/eEWhi10WpGv4OdiO6Y=|3988QV0VbkuUlFskmfOfUZhJKxE= ssh-ed25519 \(ed25519Blob)", sourceName: "known_hosts")
@@ -292,45 +324,120 @@ private let ecdsaBlob = "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBD9
     }
 }
 
-@Suite struct TildeURLParserTests {
-    private let parser = TildeURLParser(quickConnect: FakeQuickConnectParser(defaultUser: "root"))
+/// A parser that, unlike the real link parser, hands back a jump host and a key name for anything it is given.
+private struct HostileQuickConnectParser: QuickConnectParsing {
+    func parse(_ input: String) -> QuickConnectResult? {
+        QuickConnectResult(
+            target: ConnectionTarget(host: "evil.example.com", port: 22, username: "root"),
+            keyName: "prod-key",
+            jump: ConnectionTarget(host: "attacker.example.com", port: 22, username: "root")
+        )
+    }
+}
 
-    @Test func sshLinksGoThroughQuickConnect() throws {
-        let action = parser.parse(try #require(URL(string: "ssh://deploy@10.0.4.12:2222")))
-        #expect(action == .connect(QuickConnectResult(target: ConnectionTarget(host: "10.0.4.12", port: 2222, username: "deploy"))))
+@Suite struct TildeURLParserTests {
+    private let parser = TildeURLParser(defaultUsername: "root")
+
+    /// `nil` when the text is not even a valid URL (Foundation rejects some malformed ports itself).
+    private func parse(_ text: String) throws -> TildeURLAction? {
+        guard let url = URL(string: text) else { return nil }
+        return parser.parse(url)
+    }
+
+    private func target(_ host: String, _ port: Int = 22, _ user: String) -> QuickConnectResult {
+        QuickConnectResult(target: ConnectionTarget(host: host, port: port, username: user))
+    }
+
+    @Test func sshLinks() throws {
+        #expect(try parse("ssh://deploy@10.0.4.12:2222") == .connect(target("10.0.4.12", 2222, "deploy")))
+        #expect(try parse("ssh://db.example.com") == .connect(target("db.example.com", 22, "root")))
+        #expect(try parse("ssh://db.example.com/") == .connect(target("db.example.com", 22, "root")))
+        #expect(try parse("ssh://de%70loy@db.example.com") == .connect(target("db.example.com", 22, "deploy")))
+    }
+
+    @Test func ipv6HostsLoseTheirBrackets() throws {
+        #expect(try parse("ssh://deploy@[2001:db8::1]:2200") == .connect(target("2001:db8::1", 2200, "deploy")))
+        #expect(try parse("ssh://[2001:db8::1]") == .connect(target("2001:db8::1", 22, "root")))
+    }
+
+    @Test func linksNeverCarryAJumpHostOrKeyName() throws {
+        // The hostile stub is accepted for source compatibility but never consulted.
+        let hostile = TildeURLParser(quickConnect: HostileQuickConnectParser())
+        for text in [
+            "ssh://deploy@db.example.com:2200",
+            "tilde://connect?host=db.example.com&user=pg",
+            "tilde://connect?host=db.example.com&jump=attacker.example.com&key=prod-key&keyName=prod-key&J=x",
+            "tilde://connect/pg@db.example.com:2200",
+            "tilde://new-server?host=db.example.com&jump=attacker.example.com&key=prod-key",
+        ] {
+            let action = hostile.parse(try #require(URL(string: text)))
+            switch action {
+            case .connect(let result), .newServer(let result, _):
+                #expect(result.jump == nil, "\(text)")
+                #expect(result.keyName == nil, "\(text)")
+                #expect(result.target.host == "db.example.com", "\(text)")
+            default:
+                Issue.record("expected a target from \(text)")
+            }
+        }
+    }
+
+    @Test func freeTextCommandLinesAreNotInterpreted() throws {
+        // `ssh -J evil ...` smuggled through a path or user must be rejected, not parsed.
+        #expect(try parse("ssh://host/-J%20evil%20user@target") == nil)
+        #expect(try parse("ssh://-J%20evil%20x@host") == nil)
+        #expect(try parse("tilde://connect/-J%20evil%20user@target") == nil)
     }
 
     @Test func tildeConnectWithQueryAndPath() throws {
-        let query = parser.parse(try #require(URL(string: "tilde://connect?host=db.example.com&port=2200&user=pg")))
-        #expect(query == .connect(QuickConnectResult(target: ConnectionTarget(host: "db.example.com", port: 2200, username: "pg"))))
-        let path = parser.parse(try #require(URL(string: "tilde://connect/pg@db.example.com:2200")))
-        #expect(path == query)
-        let defaults = parser.parse(try #require(URL(string: "tilde://connect?host=db.example.com")))
-        #expect(defaults == .connect(QuickConnectResult(target: ConnectionTarget(host: "db.example.com", port: 22, username: "root"))))
+        #expect(try parse("tilde://connect?host=db.example.com&port=2200&user=pg") == .connect(target("db.example.com", 2200, "pg")))
+        #expect(try parse("tilde://connect/pg@db.example.com:2200") == .connect(target("db.example.com", 2200, "pg")))
+        #expect(try parse("tilde://connect?host=db.example.com") == .connect(target("db.example.com", 22, "root")))
     }
 
     @Test func newServerCarriesTheName() throws {
-        let action = parser.parse(try #require(URL(string: "tilde://new-server?host=pi.local&user=pi&name=Pi%20hole")))
-        #expect(action == .newServer(QuickConnectResult(target: ConnectionTarget(host: "pi.local", port: 22, username: "pi")), name: "Pi hole"))
+        #expect(try parse("tilde://new-server?host=pi.local&user=pi&name=Pi%20hole") == .newServer(target("pi.local", 22, "pi"), name: "Pi hole"))
     }
 
     @Test func destinations() throws {
-        #expect(parser.parse(try #require(URL(string: "tilde://keys"))) == .show(.keys))
-        #expect(parser.parse(try #require(URL(string: "tilde://settings"))) == .show(.settings))
+        #expect(try parse("tilde://keys") == .show(.keys))
+        #expect(try parse("tilde://settings") == .show(.settings))
+    }
+
+    @Test func rejectsMalformedPorts() throws {
+        for text in [
+            "ssh://host.example.com:abc",
+            "ssh://host.example.com:0",
+            "ssh://host.example.com:70000",
+            "ssh://host.example.com:22:2",
+            "ssh://host.example.com:",
+            "tilde://connect?host=ok.example.com&port=abc",
+            "tilde://connect?host=ok.example.com&port=",
+            "tilde://connect?host=ok.example.com&port=0",
+            "tilde://connect?host=ok.example.com&port=70000",
+            "tilde://connect?host=ok.example.com&port=22.5",
+        ] {
+            #expect(try parse(text) == nil, "\(text) should be rejected")
+        }
     }
 
     @Test func rejectsHostileOrUnknownLinks() throws {
         for text in [
             "tilde://connect?host=-oProxyCommand%3Devil",
-            "tilde://connect?host=ok.example.com&port=0",
-            "tilde://connect?host=ok.example.com&port=70000",
             "tilde://connect?host=ok.example.com&user=-x",
             "tilde://connect?host=bad%20host",
+            "tilde://connect?host=a&host=b",
             "tilde://connect",
             "tilde://nope",
+            "ssh://user:secret@host.example.com",
+            "ssh://host.example.com/some/path",
+            "ssh://host.example.com?x=1",
+            "ssh://host.example.com#frag",
+            "ssh://a%20b@host.example.com",
+            "ssh://host%20name",
             "https://example.com",
         ] {
-            #expect(parser.parse(try #require(URL(string: text))) == nil, "\(text) should be rejected")
+            #expect(try parse(text) == nil, "\(text) should be rejected")
         }
     }
 }

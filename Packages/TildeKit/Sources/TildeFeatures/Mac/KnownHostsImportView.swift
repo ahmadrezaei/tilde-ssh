@@ -105,7 +105,9 @@ public struct KnownHostsImportView: View {
             if !conflicts.isEmpty {
                 Section {
                     ForEach(conflicts) { entry in
-                        entryLabel(entry, note: "A different key is pinned for this host. Not imported. Connect to the host to review the change.")
+                        entryLabel(entry, note: model.ambiguousIDs.contains(entry.id)
+                            ? "This file lists more than one key of this type for the host. Not imported."
+                            : "A different key is pinned for this host. Not imported. Connect to the host to review the change.")
                             .foregroundStyle(TildeColor.warn)
                     }
                 } header: {

@@ -60,7 +60,11 @@ public struct MacCommands: Commands {
     @CommandsBuilder private var editMenu: some Commands {
         CommandGroup(after: .pasteboard) {
             item("Paste Snippet…", session?.pasteSnippet).keyboardShortcut("s", modifiers: [.command, .shift])
-            Divider()
+        }
+
+        // `.textEditing` is where AppKit puts its own Find submenu (⌘F, ⌘G) for text views. Replacing the group
+        // means those shortcuts belong to the terminal find bar only and never appear twice in the Edit menu.
+        CommandGroup(replacing: .textEditing) {
             item("Find…", session?.find).keyboardShortcut("f")
             item("Find Next", session?.findNext).keyboardShortcut("g")
             item("Find Previous", session?.findPrevious).keyboardShortcut("g", modifiers: [.command, .shift])

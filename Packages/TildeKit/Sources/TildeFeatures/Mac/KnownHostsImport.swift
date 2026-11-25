@@ -185,6 +185,9 @@ public final class KnownHostsImportModel {
     public private(set) var result = KnownHostsParseResult(entries: [], skipped: [])
     /// Status per entry id, filled by `classify(using:)`.
     public private(set) var statuses: [Int: KnownHostsImportStatus] = [:]
+    /// Entries whose host has two different keys of the same type in this file. They are conflicts and never pinned,
+    /// since the file does not say which key is the real one.
+    public private(set) var ambiguousIDs: Set<Int> = []
     /// Checked entry ids. Only `.new` entries can be checked.
     public var selection: Set<Int> = []
     /// A user-facing error, if the file could not be used.
@@ -202,6 +205,7 @@ public final class KnownHostsImportModel {
         self.sourceName = sourceName
         result = KnownHostsParser.parse(text)
         statuses = [:]
+        ambiguousIDs = []
         selection = []
         summary = nil
         errorMessage = result.entries.isEmpty
@@ -219,7 +223,21 @@ public final class KnownHostsImportModel {
         isWorking = true
         defer { isWorking = false }
         var result: [Int: KnownHostsImportStatus] = [:]
+
+        // The same endpoint and key type with two different keys in one file: never guess which one to trust.
+        var keysBySlot: [String: Set<String>] = [:]
         for entry in self.result.entries {
+            keysBySlot["\(entry.endpoint.canonical)|\(entry.key.algorithm)", default: []].insert(entry.key.blobBase64)
+        }
+        ambiguousIDs = Set(self.result.entries.filter {
+            (keysBySlot["\($0.endpoint.canonical)|\($0.key.algorithm)"]?.count ?? 0) > 1
+        }.map(\.id))
+
+        for entry in self.result.entries {
+            if ambiguousIDs.contains(entry.id) {
+                result[entry.id] = .conflict
+                continue
+            }
             switch await store.lookup(entry.endpoint, presented: entry.key) {
             case .trusted: result[entry.id] = .alreadyTrusted
             case .unknown: result[entry.id] = .new

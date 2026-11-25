@@ -123,6 +123,8 @@ jobs:
           restore-keys: spm-pkg-${{ runner.os }}-
       - name: Start sshd
         # The script prints `export NAME=value` lines; GITHUB_ENV wants `NAME=value`.
+        # `shell: bash` runs with pipefail, so a failed sshd start fails the job instead of being swallowed by sed.
+        shell: bash
         run: scripts/ci-sshd.sh start | sed 's/^export //' >> "$GITHUB_ENV"
       - name: Integration tests
         working-directory: Packages/TildeKit

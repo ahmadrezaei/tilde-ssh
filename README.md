@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/OWNER/tilde-ssh/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/OWNER/tilde-ssh/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/ahmadrezaei/tilde-ssh/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ahmadrezaei/tilde-ssh/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
   <img alt="Platforms: iOS, iPadOS, macOS 26" src="https://img.shields.io/badge/platforms-iOS%20%7C%20iPadOS%20%7C%20macOS%2026-lightgrey">
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-orange">
@@ -55,7 +55,7 @@ Interactive mockups of every screen are in [`design/mockups.html`](design/mockup
 Requirements: Xcode 27.1 (Swift 6.4) and iOS / iPadOS / macOS 26 or later. [XcodeGen](https://github.com/yonaskolb/XcodeGen) is only needed if you change `project.yml`.
 
 ```sh
-git clone https://github.com/OWNER/tilde-ssh.git
+git clone https://github.com/ahmadrezaei/tilde-ssh.git
 cd tilde-ssh
 
 # Logic and tests, headless (no simulator needed)
@@ -103,6 +103,7 @@ Layout:
 ```
 App/                   iOS and macOS app targets, entitlements, Info.plists, assets, privacy manifest
 Config/Shared.xcconfig Bundle id, CloudKit container, keychain group, team (fork-friendly)
+project.yml            XcodeGen spec for Tilde.xcodeproj (repo root; only needed if you change targets)
 Packages/TildeKit/     All logic and tests
 docs/  design/         Design spec, mockups, icon source
 fastlane/metadata/     App Store listing text

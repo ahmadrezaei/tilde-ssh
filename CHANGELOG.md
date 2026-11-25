@@ -14,4 +14,4 @@ All notable changes to Tilde are documented here. The format follows [Keep a Cha
 - App icon with a tinted variant for iOS, and App Store listing text for en-US.
 - Open-source repository documents: README, CONTRIBUTING, SECURITY, TRADEMARKS, CODE_OF_CONDUCT, NOTICE.
 
-[Unreleased]: https://github.com/OWNER/tilde-ssh/commits/main
+[Unreleased]: https://github.com/ahmadrezaei/tilde-ssh/commits/main

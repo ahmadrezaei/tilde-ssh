@@ -15,7 +15,7 @@ By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md). Se
 Requirements: Xcode 27.1 (Swift 6.4), macOS 26 or later. [XcodeGen](https://github.com/yonaskolb/XcodeGen) only if you edit `project.yml`.
 
 ```sh
-git clone https://github.com/OWNER/tilde-ssh.git
+git clone https://github.com/ahmadrezaei/tilde-ssh.git
 cd tilde-ssh/Packages/TildeKit
 swift build
 swift test
@@ -90,6 +90,18 @@ swift test --filter TildeFeaturesTests  # one target
   swift test --filter TildeSSHTests
   scripts/ci-sshd.sh stop
   ```
+
+  Integration tests run only when `TILDE_SSH_INTEGRATION=1` is set, and read their target from these variables
+  (printed by `scripts/ci-sshd.sh start`):
+
+  | Variable | Meaning |
+  |---|---|
+  | `TILDE_SSH_INTEGRATION` | `1` enables the integration tests; without it they skip |
+  | `TILDE_TEST_SSH_HOST`, `TILDE_TEST_SSH_PORT`, `TILDE_TEST_SSH_USER` | Where to connect and as whom |
+  | `TILDE_TEST_SSH_KEY_ED25519`, `TILDE_TEST_SSH_KEY_ECDSA`, `TILDE_TEST_SSH_KEY_RSA` | Paths to throwaway private keys the server accepts |
+  | `TILDE_TEST_SSH_HOST_KEY` | Path to the server's public host key, for host key pinning tests |
+
+  The server only listens on `127.0.0.1` and is built from temporary keys, so nothing here touches your own `~/.ssh`.
 
 - Other checks CI runs: `scripts/validate-metadata.py` (App Store text limits), `scripts/check-dependencies.py`, `scripts/check-log-secrets.sh`.
 

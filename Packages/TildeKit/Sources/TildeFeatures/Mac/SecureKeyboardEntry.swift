@@ -60,6 +60,8 @@ public final class SecureKeyboardEntry {
     public func apply() {
         #if os(macOS)
         if isEnabled {
+            // Never take the system-wide lock while another app is in front; activation applies it later.
+            guard NSApp.isActive else { return }
             guard !holdingSystemLock else { return }
             EnableSecureEventInput()
             holdingSystemLock = true

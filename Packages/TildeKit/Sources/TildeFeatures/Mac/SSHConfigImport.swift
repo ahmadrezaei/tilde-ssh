@@ -33,7 +33,8 @@ public enum SSHConfigConflict: Equatable, Sendable {
 public struct SSHConfigImportRow: Identifiable, Equatable, Sendable {
     /// Position in the file, stable for the life of one import.
     public let id: Int
-    /// The parsed block. `proxyJump` is cleared for multi-hop chains, and `hostName` falls back to the alias.
+    /// The parsed block. `proxyJump` is cleared for multi-hop chains, `hostName` falls back to the alias and an
+    /// out-of-range `port` is dropped.
     public let host: SSHConfigHost
     /// `HostName`, or the alias when the block has none (that is what `ssh` connects to).
     public let displayHost: String
@@ -77,11 +78,14 @@ public enum SSHConfigImportPlanner {
                 continue
             }
             let displayHost = nonEmpty(host.hostName) ?? alias
-            let port = host.port.flatMap { (1...65535).contains($0) ? $0 : nil } ?? 22
+            // An out-of-range `Port` (0, 70000) is treated as unset, in the preview and in the emitted host.
+            let validPort = host.port.flatMap { (1...65535).contains($0) ? $0 : nil }
+            let port = validPort ?? 22
             let jump = classifyJump(host.proxyJump, aliases: aliases)
 
             var normalized = host
             normalized.hostName = displayHost
+            normalized.port = validPort
             if case .multiHop = jump { normalized.proxyJump = nil }
             if case .none = jump { normalized.proxyJump = nil }
 
