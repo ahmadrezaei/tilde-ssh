@@ -1,0 +1,4 @@
+module CTildeBcrypt {
+    header "CTildeBcrypt.h"
+    export *
+}

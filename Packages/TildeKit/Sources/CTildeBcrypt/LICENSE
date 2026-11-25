@@ -1,0 +1,18 @@
+CTildeBcrypt: origins and licences
+==================================
+
+This target is a trimmed copy of the Blowfish and bcrypt_pbkdf sources from OpenBSD, taken from the copy that ships
+inside the Citadel package (Sources/CCitadelBcrypt). Symbols were renamed from `citadel_*` to `tilde_*` so both copies
+can be linked into one binary, the SHA-512 function is supplied by the caller, and a cancellation flag was added.
+
+1. blf.c, blf.h  --  Blowfish block cipher
+   Copyright 1997 Niels Provos <provos@physnet.uni-hamburg.de>. All rights reserved.
+   BSD licence with the 4-clause advertising notice. The full text is kept at the top of blf.h and blf.c and applies
+   to those files unchanged. Required acknowledgement:
+   "This product includes software developed by Niels Provos."
+
+2. bcrypt-kdf.c  --  bcrypt_pbkdf (from OpenBSD bcrypt_pbkdf.c, v1.4)
+   Copyright (c) 2013 Ted Unangst <tedu@openbsd.org>
+   ISC licence. The full text is kept at the top of bcrypt-kdf.c.
+
+3. tilde_bcrypt_compat.h, include/CTildeBcrypt.h  --  glue written for Tilde (Apache-2.0, like the rest of the project).
