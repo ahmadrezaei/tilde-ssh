@@ -282,8 +282,14 @@ public final class Preferences {
 
     // MARK: Synced: security
 
+    /// App Lock setting. Default `.off`; an unrecognised stored value reads as `.immediately`.
     public var appLockTimeout: AppLockTimeout {
-        get { enumValue(.appLockTimeout, default: .off) }
+        get {
+            // Fail closed: nothing stored means the lock was never turned on, but a value this version does not
+            // recognise (written by a newer app) must not silently disable the lock.
+            guard let stored = raw(.appLockTimeout) as? String else { return .off }
+            return AppLockTimeout(rawValue: stored) ?? .immediately
+        }
         set { write(newValue.rawValue, .appLockTimeout) }
     }
 

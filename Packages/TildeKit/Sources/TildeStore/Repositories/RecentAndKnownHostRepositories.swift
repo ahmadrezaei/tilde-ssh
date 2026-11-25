@@ -75,7 +75,9 @@ public final class KnownHostRepository {
     /// Pins in the `conflicted` state (two devices pinned different keys).
     public func conflicts() throws -> [KnownHost] { try all().filter { $0.status == .conflicted } }
 
-    /// Forgets one pin ("Forget host key"). The deletion syncs to the other devices.
+    /// Forgets one pin ("Forget host key"). The deletion syncs to the other devices. If it was one of several
+    /// conflicting candidates, the remaining one stays `conflicted`: only `trust(replacing: true)` (the
+    /// changed-key screen) or forgetting the whole endpoint clears a conflict.
     public func forget(_ host: KnownHost) throws {
         context.delete(host)
         try context.save()
@@ -83,7 +85,7 @@ public final class KnownHostRepository {
 
     /// Forgets every pin of an endpoint.
     public func forget(endpoint: HostEndpoint) throws {
-        let canonical = endpoint.canonical
+        let canonical = endpoint.normalized.canonical
         for host in try context.fetch(FetchDescriptor<KnownHost>(predicate: #Predicate { $0.endpoint == canonical })) {
             context.delete(host)
         }
@@ -98,7 +100,7 @@ public final class KnownHostRepository {
     public func importPins(_ entries: [(endpoint: HostEndpoint, key: HostKey)], deviceName: String) throws -> Int {
         var added = 0
         for (endpoint, key) in entries {
-            let canonical = endpoint.canonical
+            let canonical = endpoint.normalized.canonical
             let algorithm = key.algorithm
             let existing = try context.fetch(FetchDescriptor<KnownHost>(predicate: #Predicate { $0.endpoint == canonical && $0.algorithm == algorithm }))
             guard existing.isEmpty else { continue }

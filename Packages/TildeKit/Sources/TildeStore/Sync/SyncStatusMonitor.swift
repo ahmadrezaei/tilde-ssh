@@ -61,36 +61,42 @@ public final class SyncStatusMonitor {
     public private(set) var accountStatus: ICloudAccountStatus = .unknown
     /// The end of the last successful import or export.
     public private(set) var lastSyncDate: Date?
-    /// `true` while an account is available but the store was opened local-only (sign-in happened after
-    /// launch, or sync was just switched on). The container is only created at launch, so Settings
-    /// shows "Restart Tilde to start syncing".
-    public private(set) var needsRestartToSync = false
+    /// The user's current "Sync on/off" choice. Update it when the switch changes; the container only reads it
+    /// at launch, so a difference from the launch value means a restart is needed.
+    public var syncPreference: Bool
+
+    /// `true` when `syncPreference` differs from what the store was opened with, so Settings shows
+    /// "Restart Tilde to apply". It does not depend on the iCloud account (a signed-out user already has the
+    /// CloudKit store, which syncs once they sign in) and cannot loop: a build without CloudKit, or a failed
+    /// CloudKit start, leaves both values equal.
+    public var needsRestartToSync: Bool { mode != .inMemory && syncPreference != launchSyncPreference }
 
     @ObservationIgnored private let mode: StoreMode
-    @ObservationIgnored private let syncEnabled: Bool
+    @ObservationIgnored private let launchSyncPreference: Bool
     @ObservationIgnored private let accountProvider: @Sendable () async -> ICloudAccountStatus
     @ObservationIgnored private var observers: [any NSObjectProtocol] = []
     @ObservationIgnored private var activeEvents = 0
 
     /// - Parameters:
     ///   - mode: the mode the container actually runs in (`StoreBootstrap.mode`).
-    ///   - syncEnabled: the user's sync switch, to tell "off" apart from "unavailable".
-    ///   - accountProvider: how to read the account status; defaults to `CKContainer.accountStatus`.
-    ///     It is only called when the store is a CloudKit store or CloudKit is usable, never in builds without
-    ///     the entitlement (creating a `CKContainer` there can abort).
+    ///   - syncEnabled: the user's sync switch at launch.
+    ///   - accountProvider: how to read the account status; defaults to `CKContainer.accountStatus`. The
+    ///     default never creates a `CKContainer` unless the store is a CloudKit store or
+    ///     `CloudKitAvailability` says this build is entitled (creating one without the entitlement can abort).
     public init(
         mode: StoreMode,
         syncEnabled: Bool = true,
         accountProvider: (@Sendable () async -> ICloudAccountStatus)? = nil
     ) {
         self.mode = mode
-        self.syncEnabled = syncEnabled
+        self.launchSyncPreference = syncEnabled
+        self.syncPreference = syncEnabled
         if let accountProvider {
             self.accountProvider = accountProvider
         } else {
             let containerID: String? = {
                 if case .cloudKit(let id) = mode { return id }
-                return CloudKitAvailability.isEntitled(to: ModelContainerFactory.defaultCloudKitContainerID) && !CloudKitAvailability.isDisabledByEnvironment
+                return CloudKitAvailability.canUseCloudKit(containerID: ModelContainerFactory.defaultCloudKitContainerID)
                     ? ModelContainerFactory.defaultCloudKitContainerID : nil
             }()
             self.accountProvider = { await Self.readAccountStatus(containerID: containerID) }
@@ -126,7 +132,6 @@ public final class SyncStatusMonitor {
 
     func apply(account: ICloudAccountStatus) {
         accountStatus = account
-        needsRestartToSync = syncEnabled && account == .available && !mode.isSyncing && mode != .inMemory
         recomputeStatus(lastError: nil)
     }
 
@@ -147,11 +152,7 @@ public final class SyncStatusMonitor {
 
     private func recomputeStatus(lastError: String?) {
         guard mode.isSyncing else {
-            switch accountStatus {
-            case .noAccount where syncEnabled: status = .noAccount
-            case .restricted where syncEnabled: status = .restricted
-            default: status = .disabled
-            }
+            status = .disabled
             return
         }
         switch accountStatus {

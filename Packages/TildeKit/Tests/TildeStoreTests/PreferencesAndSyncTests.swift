@@ -120,6 +120,17 @@ private final class Counter: @unchecked Sendable {
         #expect(externalInvalidations.value == 1 && prefs.cursorStyle == .bar)
     }
 
+    @Test func unrecognisedAppLockValueKeepsTheLockOn() {
+        let synced = InMemoryPreferenceBacking()
+        let prefs = Preferences(synced: synced, local: InMemoryPreferenceBacking())
+        #expect(prefs.appLockTimeout == .off, "never configured")
+        synced.set("everyHour", forKey: Preferences.Key.appLockTimeout.rawValue)
+        prefs.reload()
+        #expect(prefs.appLockTimeout == .immediately, "a value from a newer version must not disable the lock")
+        prefs.appLockTimeout = .fiveMinutes
+        #expect(prefs.appLockTimeout == .fiveMinutes)
+    }
+
     @Test func appLockTimeoutSeconds() {
         #expect(AppLockTimeout.off.seconds == nil)
         #expect(AppLockTimeout.immediately.seconds == 0)
@@ -141,27 +152,38 @@ private final class Counter: @unchecked Sendable {
         SyncStatusMonitor(mode: mode, syncEnabled: syncEnabled, accountProvider: { account })
     }
 
-    @Test func localStoreReportsDisabled() async {
-        let monitor = monitor(.local, syncEnabled: false)
-        #expect(monitor.status == .disabled)
-        await monitor.refreshAccountStatus()
-        #expect(monitor.status == .disabled && !monitor.needsRestartToSync)
+    @Test func localStoreReportsDisabledWhateverTheAccount() async {
+        for account in [ICloudAccountStatus.available, .noAccount, .restricted, .unknown] {
+            let monitor = monitor(.local, syncEnabled: false, account: account)
+            await monitor.refreshAccountStatus()
+            #expect(monitor.status == .disabled)
+            #expect(monitor.accountStatus == account)
+        }
     }
 
-    @Test func signedOutWhileSyncIsWantedShowsNoAccount() async {
-        let monitor = monitor(.local, account: .noAccount)
+    @Test func restartIsOnlyNeededWhenTheSyncSwitchChangesAfterLaunch() async {
+        let monitor = monitor(.local, syncEnabled: false, account: .available)
         await monitor.refreshAccountStatus()
-        #expect(monitor.status == .noAccount)
-    }
-
-    @Test func signingInAfterLaunchAsksForARestart() async {
-        let monitor = monitor(.local, account: .available)
-        await monitor.refreshAccountStatus()
+        #expect(!monitor.needsRestartToSync, "an available account alone never asks for a restart")
+        monitor.syncPreference = true
         #expect(monitor.needsRestartToSync)
-        #expect(monitor.status == .disabled)
-        let off = self.monitor(.local, syncEnabled: false, account: .available)
-        await off.refreshAccountStatus()
-        #expect(!off.needsRestartToSync, "no prompt when the user turned sync off")
+        monitor.syncPreference = false
+        #expect(!monitor.needsRestartToSync)
+
+        // CloudKit wanted but it could not start (local mode, preference still on): no endless banner.
+        let failed = self.monitor(.local, syncEnabled: true, account: .available)
+        await failed.refreshAccountStatus()
+        #expect(!failed.needsRestartToSync && failed.status == .disabled)
+
+        let syncing = self.monitor(.cloudKit(containerID: "iCloud.test"), syncEnabled: true)
+        syncing.syncPreference = false
+        #expect(syncing.needsRestartToSync, "switching sync off also takes effect after a restart")
+    }
+
+    @Test func signedOutUserWithTheCloudKitStoreSeesNoAccount() async {
+        let monitor = monitor(.cloudKit(containerID: "iCloud.test"), account: .noAccount)
+        await monitor.refreshAccountStatus()
+        #expect(monitor.status == .noAccount && !monitor.needsRestartToSync)
     }
 
     @Test func cloudKitStoreFollowsEvents() async {
@@ -205,6 +227,7 @@ private final class Counter: @unchecked Sendable {
 
     @Test func inMemoryStoreNeverAsksForRestart() async {
         let monitor = monitor(.inMemory)
+        monitor.syncPreference = false
         await monitor.refreshAccountStatus()
         #expect(!monitor.needsRestartToSync && monitor.status == .disabled)
     }
@@ -242,6 +265,14 @@ private final class Counter: @unchecked Sendable {
         }
         let reopened = try ModelContainerFactory.make(.local, storeURL: url)
         #expect(try ServerRepository(context: reopened.mainContext).all().map(\.name) == ["persisted"])
+    }
+
+    @Test func infoPlistFlagMustBeExplicitlyTrue() {
+        #expect(CloudKitAvailability.infoPlistEnabled(true))
+        #expect(CloudKitAvailability.infoPlistEnabled("YES"))
+        #expect(!CloudKitAvailability.infoPlistEnabled(nil), "a missing key means local mode")
+        #expect(!CloudKitAvailability.infoPlistEnabled(false))
+        #expect(!CloudKitAvailability.infoPlistEnabled("$(TILDE_CLOUDKIT_ENABLED)"), "an unexpanded build setting is not capable")
     }
 
     @Test func buildsWithoutTheICloudEntitlementAreNeverOfferedCloudKit() {

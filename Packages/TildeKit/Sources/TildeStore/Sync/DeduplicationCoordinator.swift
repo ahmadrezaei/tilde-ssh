@@ -8,15 +8,21 @@ import SwiftData
 public final class DeduplicationCoordinator {
     private let container: ModelContainer
     private let debounce: Duration
+    private let gracePeriod: TimeInterval
     private var observer: (any NSObjectProtocol)?
     private var pending: Task<Void, Never>?
 
     /// The result of the most recent pass.
     public private(set) var lastReport: DeduplicationReport?
 
-    public init(container: ModelContainer, debounce: Duration = .seconds(2)) {
+    /// - Parameters:
+    ///   - debounce: how long to wait after a change before running.
+    ///   - gracePeriod: tags and groups younger than this are not merged yet; another pass is scheduled for
+    ///     when they come of age.
+    public init(container: ModelContainer, debounce: Duration = .seconds(2), gracePeriod: TimeInterval = Deduplicator.defaultGracePeriod) {
         self.container = container
         self.debounce = debounce
+        self.gracePeriod = gracePeriod
     }
 
     isolated deinit {
@@ -42,10 +48,12 @@ public final class DeduplicationCoordinator {
     }
 
     /// Schedules a pass after the debounce interval, replacing a pass that is already waiting.
-    public func schedule() {
+    public func schedule() { schedule(after: debounce) }
+
+    private func schedule(after delay: Duration) {
         pending?.cancel()
-        pending = Task { [debounce] in
-            try? await Task.sleep(for: debounce)
+        pending = Task {
+            try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
             runNow()
         }
@@ -55,8 +63,9 @@ public final class DeduplicationCoordinator {
     @discardableResult
     public func runNow() -> DeduplicationReport? {
         do {
-            let report = try Deduplicator.run(in: container.mainContext)
+            let report = try Deduplicator.run(in: container.mainContext, gracePeriod: gracePeriod)
             lastReport = report
+            if report.deferred > 0 { schedule(after: .seconds(gracePeriod + 1)) }
             return report
         } catch {
             return nil

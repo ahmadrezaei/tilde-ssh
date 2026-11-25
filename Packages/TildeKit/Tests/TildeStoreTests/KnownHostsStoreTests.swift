@@ -235,6 +235,67 @@ import TildeCore
         #expect(try repo.all().isEmpty)
     }
 
+    @Test func lookupSeesChangesMadeThroughAnotherContextOnTheSameStore() async throws {
+        let (store, container) = try makeStore()
+        try await store.trust(.sample(), for: endpoint, replacing: false)
+        #expect(await store.lookup(endpoint, presented: .sample()) == .trusted)
+
+        // Another context (the main one, or a CloudKit import) marks the pin conflicted.
+        let context = ModelContext(container)
+        let row = try #require(try context.fetch(FetchDescriptor<KnownHost>()).first)
+        row.status = .conflicted
+        try context.save()
+        guard case .conflicted = await store.lookup(endpoint, presented: .sample()) else {
+            Issue.record("the store served a stale pin"); return
+        }
+
+        // ... and deletes it again.
+        context.delete(row)
+        try context.save()
+        #expect(await store.lookup(endpoint, presented: .sample()) == .unknown)
+    }
+
+    @Test func readFailureFailsClosed() async throws {
+        let (store, _) = try makeStore()
+        try await store.trust(.sample(), for: endpoint, replacing: false)
+        struct Boom: Error {}
+        await store.injectReadFailure(Boom())
+        #expect(await store.lookup(endpoint, presented: .sample()) == .conflicted(candidates: []), "never .unknown, which would offer trust-on-first-use")
+        await store.injectReadFailure(nil)
+        #expect(await store.lookup(endpoint, presented: .sample()) == .trusted)
+    }
+
+    @Test func unknownStatusFromANewerVersionFailsClosed() async throws {
+        let (store, container) = try makeStore()
+        let context = ModelContext(container)
+        let row = KnownHost(endpoint: endpoint.canonical, algorithm: "ssh-ed25519", publicKeyBase64: "AAAA", fingerprintSHA256: "SHA256:AAAA", trustedOnDevice: "d")
+        row.statusRaw = "pinned-with-certificate"
+        context.insert(row)
+        try context.save()
+        #expect(row.status == .conflicted)
+        guard case .conflicted = await store.lookup(endpoint, presented: .sample(blob: "AAAA")) else {
+            Issue.record("an unrecognised status must not read as trusted"); return
+        }
+        // Trusting the same key without replacing does not clear it either.
+        try await store.trust(.sample(blob: "AAAA"), for: endpoint, replacing: false)
+        guard case .conflicted = await store.lookup(endpoint, presented: .sample(blob: "AAAA")) else {
+            Issue.record("non-replacing trust must not clear a conflict"); return
+        }
+    }
+
+    @Test func ipv6EndpointsAreNormalised() async throws {
+        let (store, container) = try makeStore()
+        let key = HostKey.sample()
+        try await store.trust(key, for: HostEndpoint(host: "[FE80::1]", port: 2222), replacing: false)
+        #expect(try rows(container).first?.endpoint == "[fe80::1]:2222", "no double brackets")
+        #expect(await store.lookup(HostEndpoint(host: "fe80::1", port: 2222), presented: key) == .trusted)
+        #expect(await store.lookup(HostEndpoint(host: "  [fe80::1] ", port: 2222), presented: key) == .trusted)
+        try await store.trust(key, for: HostEndpoint(host: " [::1] "), replacing: false)
+        #expect(await store.lookup(HostEndpoint(host: "::1"), presented: key) == .trusted)
+        #expect(HostEndpoint(host: "[::1]").normalized == HostEndpoint(host: "::1"))
+        #expect(HostEndpoint(host: "[").normalized.host == "[")
+    }
+
     @Test func storeConformsToTheContract() {
         func accepts(_ store: any KnownHostsStore) {}
         let container = try! makeContainer()

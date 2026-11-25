@@ -77,9 +77,10 @@ public extension Server {
 }
 
 public extension KnownHost {
-    /// Typed `statusRaw`; unknown values read as `.trusted`.
+    /// Typed `statusRaw`. Fails closed: a status written by a newer app version that this version does not
+    /// understand reads as `.conflicted`, so lookups refuse to auto-trust the pin.
     var status: KnownHostStatus {
-        get { KnownHostStatus(rawValue: statusRaw) ?? .trusted }
+        get { KnownHostStatus(rawValue: statusRaw) ?? .conflicted }
         set { statusRaw = newValue.rawValue }
     }
 
@@ -160,6 +161,16 @@ public extension SSHKeyRecord {
 
     /// The Keychain reference of the private key.
     var privateSecretRef: SecretRef { SecretRef(kind: .privateKey, id: privateSecretID) }
+}
+
+extension HostEndpoint {
+    /// The endpoint as the store keys it: whitespace trimmed and IPv6 brackets removed (`[::1]` and `::1`
+    /// are the same host), so `canonical` never produces `[[::1]]:2222`.
+    var normalized: HostEndpoint {
+        var host = self.host.trimmingCharacters(in: .whitespacesAndNewlines)
+        if host.hasPrefix("["), host.hasSuffix("]"), host.count >= 2 { host = String(host.dropFirst().dropLast()) }
+        return HostEndpoint(host: host, port: port)
+    }
 }
 
 /// Orders by creation date, then by `id`, so every device picks the same survivor when it merges duplicates.
