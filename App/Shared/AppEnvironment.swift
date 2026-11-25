@@ -67,7 +67,7 @@ final class AppEnvironment {
 
         let services = LiveServices.make(container: boot.container, secretStore: KeychainSecretStore())
 
-        let syncMonitor = SyncStatusMonitor(mode: boot.mode, syncEnabled: preferences.syncEnabled)
+        let syncMonitor = SyncStatusMonitor(mode: boot.mode, syncEnabled: preferences.syncEnabled, containerID: containerID)
         syncMonitor.start()
         let deduplication = DeduplicationCoordinator(container: boot.container)
         deduplication.start()

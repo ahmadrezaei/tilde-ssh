@@ -132,11 +132,22 @@ struct InstallKeySheet: View {
         }
     }
 
+    /// Makes `key` the server's sign-in and removes the saved password it no longer uses (the `pw:` Keychain item
+    /// would otherwise stay behind with nothing referencing it).
+    static func switchToKey(_ server: Server, key: SSHKeyRecord, secrets: any SecretStore) {
+        let oldPassword = server.passwordSecretID
+        server.key = key
+        server.authMethodRaw = AuthMethod.key.rawValue
+        server.passwordSecretID = nil
+        server.updatedAt = .now
+        if let oldPassword { try? secrets.delete(SecretRef(kind: .password, id: oldPassword)) }
+    }
+
     private func install() async {
         guard let server = selected else { return }
         phase = .running
         let request = SessionRequest(server: ServerSnapshot(keyFlowModel: server), pty: PTYConfig(), connectTimeout: .seconds(15))
-        let resolver = InstallCredentialResolver(base: services.credentials, passwordOverride: password.isEmpty ? nil : password)
+        let resolver = InstallCredentialResolver(base: services.credentials, passwordOverride: password.isEmpty ? nil : password, target: request.server.target)
         do {
             let (stdout, status) = try await services.sessionEngine.runCommand(
                 AuthorizedKeysCommand.installCommand(publicKeyLine: key.publicKeyOpenSSH),
@@ -148,9 +159,7 @@ struct InstallKeySheet: View {
             }
             phase = .installed(already: output.contains(AuthorizedKeysCommand.alreadyInstalledMarker))
             if switchServerToKey {
-                server.key = key
-                server.authMethodRaw = AuthMethod.key.rawValue
-                server.updatedAt = .now
+                Self.switchToKey(server, key: key, secrets: services.secretStore)
                 try? context.save()
             }
         } catch let error as SessionError {
@@ -188,18 +197,24 @@ private struct ServerChoiceRow: View {
 }
 
 /// Supplies a password typed into the install sheet where the stored credentials cannot (ask-every-time servers, or a
-/// password that has not arrived from iCloud Keychain yet). Everything else goes to the real resolver.
-private struct InstallCredentialResolver: CredentialResolver {
+/// password that has not arrived from iCloud Keychain yet). It answers only for `target`, the server the key is being
+/// installed on: a jump host on the way gets the real resolver's answer or none, never the typed password.
+struct InstallCredentialResolver: CredentialResolver {
     let base: any CredentialResolver
     let passwordOverride: String?
+    let target: ConnectionTarget
 
-    func resolve(auth: AuthMethod, keyID: UUID?, passwordSecretID: UUID?, target: ConnectionTarget) async throws -> ResolvedCredential {
+    func resolve(auth: AuthMethod, keyID: UUID?, passwordSecretID: UUID?, target hop: ConnectionTarget) async throws -> ResolvedCredential {
         do {
-            return try await base.resolve(auth: auth, keyID: keyID, passwordSecretID: passwordSecretID, target: target)
+            return try await base.resolve(auth: auth, keyID: keyID, passwordSecretID: passwordSecretID, target: hop)
         } catch SessionError.secretUnavailable(let ref) where ref.kind == .password {
-            if let passwordOverride { return .password(passwordOverride) }
+            if let passwordOverride, Self.isSame(hop, target) { return .password(passwordOverride) }
             throw SessionError.secretUnavailable(ref)
         }
+    }
+
+    private static func isSame(_ a: ConnectionTarget, _ b: ConnectionTarget) -> Bool {
+        a.host.caseInsensitiveCompare(b.host) == .orderedSame && a.port == b.port && a.username == b.username
     }
 }
 

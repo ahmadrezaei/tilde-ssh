@@ -33,13 +33,19 @@ public final class AppLock: AppLocking {
     public private(set) var isAuthenticating = false
     /// `true` after a failed or cancelled attempt, until the next success. Drives the lock screen's hint.
     public private(set) var lastAttemptFailed = false
-    /// Current life-cycle phase, fed by `sceneDidChange(_:)`.
+    /// The app's life-cycle phase, combined from every scene that reports through `sceneDidChange(_:scene:)`: active
+    /// while any scene is active, background only when all of them are. (A second iPad window going to the
+    /// background must not cover or re-lock the one in front.)
     public private(set) var phase: AppLockPhase = .active
 
     public let settings: SecuritySettings
     @ObservationIgnored private let authenticator: any DeviceAuthenticating
     @ObservationIgnored private let now: @Sendable () -> Date
     @ObservationIgnored private var leftForegroundAt: Date?
+    /// The latest phase reported by each scene, keyed by the id its `AppLockGate` owns.
+    @ObservationIgnored private var scenePhases: [UUID: AppLockPhase] = [:]
+    /// Stands in for the scene when a caller has only one (tests, single-window apps).
+    public static let defaultScene = UUID()
 
     /// - Parameters:
     ///   - settings: the persisted preferences; defaults to `SecuritySettings.shared`.
@@ -113,11 +119,29 @@ public final class AppLock: AppLocking {
 
     // MARK: Scene phase
 
-    /// Reports a life-cycle change. Starts the re-lock clock when the app leaves the foreground and, on return,
-    /// locks if the timeout has elapsed. Changes during the system prompt are ignored (the prompt itself
-    /// deactivates the app).
-    public func sceneDidChange(_ newPhase: AppLockPhase) {
+    /// Reports a life-cycle change of one scene. The scene phases are combined into `phase`; when that leaves the
+    /// foreground the re-lock clock starts and, on return, the lock engages if the timeout has elapsed. Changes
+    /// during the system prompt are recorded but not acted on (the prompt itself deactivates the app).
+    public func sceneDidChange(_ newPhase: AppLockPhase, scene: UUID = AppLock.defaultScene) {
+        scenePhases[scene] = newPhase
         guard !isAuthenticating else { return }
+        apply(Self.combined(scenePhases))
+    }
+
+    /// A scene went away (its window closed): it no longer counts towards the combined phase.
+    public func sceneDidDisappear(_ scene: UUID) {
+        guard scenePhases.removeValue(forKey: scene) != nil, !scenePhases.isEmpty, !isAuthenticating else { return }
+        apply(Self.combined(scenePhases))
+    }
+
+    static func combined(_ phases: [UUID: AppLockPhase]) -> AppLockPhase {
+        let values = phases.values
+        if values.contains(.active) { return .active }
+        if values.contains(.inactive) { return .inactive }
+        return values.isEmpty ? .active : .background
+    }
+
+    private func apply(_ newPhase: AppLockPhase) {
         phase = newPhase
         switch newPhase {
         case .background:

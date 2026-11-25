@@ -31,9 +31,15 @@ struct SessionScreen: View {
             .opacity(isDimmed ? 0.6 : 1)
             .animation(.easeOut(duration: 0.2), value: isDimmed)
 
-            SessionStateOverlay(tab: tab, handle: handle)
-                .padding(.horizontal, TildeSpacing.m)
-                .padding(.top, TildeSpacing.s)
+            VStack(spacing: TildeSpacing.s) {
+                if let notice = tab.notice {
+                    Banner(.warning, headline: notice.headline, detail: notice.detail,
+                           actions: [.init("Dismiss") { tab.notice = nil }])
+                }
+                SessionStateOverlay(tab: tab, handle: handle)
+            }
+            .padding(.horizontal, TildeSpacing.m)
+            .padding(.top, TildeSpacing.s)
         }
         .background(TildeColor.bg)
         .sheet(item: pasteBinding) { request in

@@ -275,6 +275,15 @@ private final class Counter: @unchecked Sendable {
         #expect(!CloudKitAvailability.infoPlistEnabled("$(TILDE_CLOUDKIT_ENABLED)"), "an unexpanded build setting is not capable")
     }
 
+    @Test func macNeedsBothTheEntitlementAndThePlistFlag() {
+        let id = "iCloud.app.tildessh.Tilde"
+        #expect(CloudKitAvailability.isCapableOnMac(entitledContainers: [id], containerID: id, plistValue: "YES"))
+        #expect(!CloudKitAvailability.isCapableOnMac(entitledContainers: [id], containerID: id, plistValue: "NO"))
+        #expect(!CloudKitAvailability.isCapableOnMac(entitledContainers: [id], containerID: id, plistValue: nil))
+        #expect(!CloudKitAvailability.isCapableOnMac(entitledContainers: nil, containerID: id, plistValue: "YES"))
+        #expect(!CloudKitAvailability.isCapableOnMac(entitledContainers: ["iCloud.other"], containerID: id, plistValue: true))
+    }
+
     @Test func buildsWithoutTheICloudEntitlementAreNeverOfferedCloudKit() {
         // A container the test runner is not entitled to is never offered.
         #expect(!CloudKitAvailability.canUseCloudKit(containerID: "iCloud.nonexistent.\(UUID().uuidString)"))

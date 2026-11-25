@@ -4,6 +4,12 @@ import TildeCore
 import TildeDesign
 import TildeTerminal
 
+/// A dismissible message over a session.
+public struct TabNotice: Equatable, Sendable {
+    public var headline: String
+    public var detail: String?
+}
+
 /// One open session, shown as a tab (iPad/Mac) or a card in the deck (iPhone).
 @MainActor
 @Observable
@@ -21,6 +27,8 @@ public final class SessionTab: Identifiable {
     public internal(set) var latencyMilliseconds: Int?
     /// A multi-line paste waiting for confirmation (shown as a sheet over the session).
     public internal(set) var pasteRequest: PendingPaste?
+    /// A problem to show as a dismissible banner (for example a saved password that could not be updated).
+    public var notice: TabNotice?
 
     /// The handle on this tab's terminal (find, clear, font size, ...). One per tab, kept alive with it and passed to
     /// `TerminalSurface(controller:)`; the menu bar acts on the selected tab's controller.

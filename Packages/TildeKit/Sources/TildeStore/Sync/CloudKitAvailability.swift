@@ -30,18 +30,25 @@ public enum CloudKitAvailability {
 
     /// Whether this build may use CloudKit for `containerID`.
     ///
-    /// - macOS: the process's code-signing entitlement lists the container.
+    /// - macOS: the process's code-signing entitlement lists the container **and** the `TildeCloudKitEnabled`
+    ///   Info.plist key is `true` (so a signed build opts in the same way on both platforms).
     /// - iOS: there is no public API to read entitlements, so the `TildeCloudKitEnabled` Info.plist key
     ///   must be `true`. A missing key is `false`.
     public static func isEntitled(to containerID: String) -> Bool {
         #if os(macOS)
-        guard let task = SecTaskCreateFromSelf(nil),
-              let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.icloud-container-identifiers" as CFString, nil)
-        else { return false }
-        return (value as? [String])?.contains(containerID) ?? false
+        let task = SecTaskCreateFromSelf(nil)
+        let ids = task
+            .flatMap { SecTaskCopyValueForEntitlement($0, "com.apple.developer.icloud-container-identifiers" as CFString, nil) }
+            .flatMap { $0 as? [String] }
+        return isCapableOnMac(entitledContainers: ids, containerID: containerID, plistValue: Bundle.main.object(forInfoDictionaryKey: infoPlistKey))
         #else
         return infoPlistEnabled(Bundle.main.object(forInfoDictionaryKey: infoPlistKey))
         #endif
+    }
+
+    /// The macOS rule: the entitlement lists the container and the Info.plist flag is on.
+    static func isCapableOnMac(entitledContainers: [String]?, containerID: String, plistValue: Any?) -> Bool {
+        (entitledContainers?.contains(containerID) ?? false) && infoPlistEnabled(plistValue)
     }
 
     /// Interprets the Info.plist value: only a real `true` (Bool or the string `YES`/`true`) counts, so an

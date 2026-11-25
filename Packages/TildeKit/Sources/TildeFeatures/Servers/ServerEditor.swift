@@ -28,6 +28,7 @@ public struct ServerEditor: View {
     @State private var confirmsForgetKey = false
     @State private var confirmsDelete = false
     @State private var showsAdvanced = false
+    @State private var lastSaveConnects = false
 
     /// - Parameters:
     ///   - server: the server to edit, or `nil` to create one.
@@ -85,12 +86,15 @@ public struct ServerEditor: View {
             ToolbarItem(placement: .confirmationAction) { Button("Save") { save(model, connect: false) }.disabled(!model.canSave) }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Button { save(model, connect: true) } label: { Text("Save & Connect") }
-                .buttonStyle(.tildePrimary)
-                .disabled(!model.canSave)
-                .padding(.horizontal, TildeSpacing.l)
-                .padding(.vertical, TildeSpacing.m)
-                .background(.bar)
+            VStack(spacing: TildeSpacing.s) {
+                if let error = model.saveError { saveErrorBanner(error, model: model) }
+                Button { save(model, connect: true) } label: { Text("Save & Connect") }
+                    .buttonStyle(.tildePrimary)
+                    .disabled(!model.canSave)
+            }
+            .padding(.horizontal, TildeSpacing.l)
+            .padding(.vertical, TildeSpacing.m)
+            .background(.bar)
         }
         .onChange(of: model.host) { model.splitPastedCommand(using: services.quickConnect, servers: allServers) }
         .sheet(isPresented: $showsGenerateKey) { GenerateKeySheet() }
@@ -171,6 +175,7 @@ public struct ServerEditor: View {
                     SecureField(m.hasSavedPassword ? "Saved. Type to replace." : "Password", text: model.password)
                         .tildeMono(15)
                         .textContentType(.password)
+                    if let issue = m.issue(for: .password) { IssueText(issue) }
                 }
             }
         } header: {
@@ -285,9 +290,24 @@ public struct ServerEditor: View {
 
     private func save(_ model: ServerEditorModel, connect: Bool) {
         model.cancelTest()
+        lastSaveConnects = connect
         guard let saved = model.save(context: context, secrets: services.secretStore) else { return }
         dismiss()
         if connect { navigator.open(ServerMapper.snapshot(saved)) }
+    }
+
+    /// The editor stays open when the Keychain refuses the password; the user retries or stops saving one.
+    private func saveErrorBanner(_ error: ServerEditorModel.SaveError, model: ServerEditorModel) -> some View {
+        Banner(
+            .error, headline: error.message,
+            actions: [
+                .init("Try Again") { save(model, connect: lastSaveConnects) },
+                .init("Ask Every Time Instead") {
+                    model.useAskEveryTime()
+                    save(model, connect: lastSaveConnects)
+                },
+            ]
+        )
     }
 }
 

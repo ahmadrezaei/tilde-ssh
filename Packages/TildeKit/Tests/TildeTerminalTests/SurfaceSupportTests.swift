@@ -60,6 +60,14 @@ import TildeCore
         #expect(!PasteRequest.isMultiLine("ls -la"))
     }
 
+    @Test func aTrailingReturnDoesNotMakeASnippetMultiLine() {
+        #expect(!PasteRequest.hasMultipleLines("df -h"))
+        #expect(!PasteRequest.hasMultipleLines("df -h\r"))
+        #expect(!PasteRequest.hasMultipleLines("\n\n"))
+        #expect(PasteRequest.hasMultipleLines("a\nb"))
+        #expect(PasteRequest.hasMultipleLines("a\r\nb\r"))
+    }
+
     @Test func requestCountsLinesAndPreviews() {
         let text = (1...14).map { "line \($0)" }.joined(separator: "\n") + "\n"
         let request = PasteRequest(text: text, environment: .prod)

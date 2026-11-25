@@ -85,12 +85,15 @@ final class RecordingIO: TerminalIO {
 /// Feeds real escape sequences into a real SwiftTerm view and checks what the keys send back.
 @MainActor
 @Suite struct TerminalHostInputTests {
-    private func makeHost(_ io: RecordingIO) -> (TerminalHost, TerminalController) {
+    private func makeHost(
+        _ io: RecordingIO, environment: ServerEnvironment = .none, behavior: TerminalBehavior = .default,
+        onConfirmPaste: (@MainActor (PasteRequest) async -> Bool)? = nil
+    ) -> (TerminalHost, TerminalController) {
         let controller = TerminalController()
         let inputs = TerminalSurfaceInputs(
-            theme: .tildeNight, environment: .none, keyBar: .default, appearance: TerminalAppearance(),
-            behavior: .default, snippets: StaticSnippetProvider(), controller: controller,
-            onFontSizeChange: { _ in }, onConfirmPaste: nil, onTitleChange: nil
+            theme: .tildeNight, environment: environment, keyBar: .default, appearance: TerminalAppearance(),
+            behavior: behavior, snippets: StaticSnippetProvider(), controller: controller,
+            onFontSizeChange: { _ in }, onConfirmPaste: onConfirmPaste, onTitleChange: nil
         )
         let host = TerminalHost(io: io, inputs: inputs)
         host.view.frame = CGRect(x: 0, y: 0, width: 640, height: 400)
@@ -150,6 +153,64 @@ final class RecordingIO: TerminalIO {
         io.emit("\u{1B}]0;ev\u{202E}il title\u{07}")
         #expect(await waitUntil { controller.title != nil })
         #expect(controller.title == "evil title")
+    }
+
+    // MARK: Key-bar snippets go through the paste guard
+
+    @Test func multiLineSnippetOnProdAsksBeforeTyping() async throws {
+        let io = RecordingIO()
+        let asked = Mutex<[PasteRequest]>([])
+        let (host, _) = makeHost(io, environment: .prod) { request in
+            asked.withLock { $0.append(request) }
+            return true
+        }
+        defer { withExtendedLifetime(host) {} }
+        host.handleSnippet("git pull\nmake deploy", run: true)
+        #expect(await waitUntil { io.sentBytes == Array("git pull\nmake deploy\r".utf8) })
+        #expect(asked.withLock { $0.count } == 1)
+        #expect(asked.withLock { $0.first?.lineCount } == 2)
+    }
+
+    @Test func decliningAMultiLineSnippetOnProdTypesNothing() async throws {
+        let io = RecordingIO()
+        let asked = Mutex(0)
+        let (host, controller) = makeHost(io, environment: .prod) { _ in
+            asked.withLock { $0 += 1 }
+            return false
+        }
+        defer { withExtendedLifetime(host) {} }
+        host.handleSnippet("a\nb", run: false)
+        #expect(await waitUntil { asked.withLock { $0 } == 1 && !controller.isPasteConfirmationPending })
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(io.sentBytes.isEmpty)
+    }
+
+    @Test func oneLineSnippetNeverAsks() async throws {
+        let io = RecordingIO()
+        let asked = Mutex(0)
+        let (host, _) = makeHost(io, environment: .prod) { _ in
+            asked.withLock { $0 += 1 }
+            return false
+        }
+        defer { withExtendedLifetime(host) {} }
+        host.handleSnippet("df -h", run: true)
+        #expect(await waitUntil { io.sentBytes == Array("df -h\r".utf8) })
+        host.handleSnippet("ls", run: false)
+        #expect(await waitUntil { io.sentBytes == Array("df -h\rls".utf8) })
+        #expect(asked.withLock { $0 } == 0)
+    }
+
+    @Test func multiLineSnippetOnADevServerIsTypedWithoutAsking() async throws {
+        let io = RecordingIO()
+        let asked = Mutex(0)
+        let (host, _) = makeHost(io, environment: .staging) { _ in
+            asked.withLock { $0 += 1 }
+            return false
+        }
+        defer { withExtendedLifetime(host) {} }
+        host.handleSnippet("a\nb", run: false)
+        #expect(await waitUntil { io.sentBytes == Array("a\nb".utf8) })
+        #expect(asked.withLock { $0 } == 0)
     }
 
     @Test func controllerPassedToSurfaceIsTheOneThatDrivesTheTerminal() async throws {

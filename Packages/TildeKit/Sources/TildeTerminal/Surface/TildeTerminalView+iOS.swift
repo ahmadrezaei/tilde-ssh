@@ -11,6 +11,9 @@ import UIKit
 final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDelegate, UIGestureRecognizerDelegate {
     /// Receives pasted text instead of the view pasting it directly (the host applies the paste guard).
     var pasteHandler: ((String) -> Void)?
+    /// Receives a snippet chosen in the palette (command, run on insert) so the host can apply the paste guard before
+    /// anything is typed. Without a handler the snippet is typed directly.
+    var snippetHandler: ((String, Bool) -> Void)?
     var environment: ServerEnvironment = .none
     var snippets: (any SnippetProviding)?
 
@@ -323,9 +326,13 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
         palette = presenter
         presenter.present(from: source, snippets: snippets) { [weak self] command, run in
             guard let self else { return }
-            var bytes = Array(command.utf8)
-            if run { bytes.append(0x0D) }
-            self.sendInput(bytes)
+            if let snippetHandler = self.snippetHandler {
+                snippetHandler(command, run)
+            } else {
+                var bytes = Array(command.utf8)
+                if run { bytes.append(0x0D) }
+                self.sendInput(bytes)
+            }
             _ = self.becomeFirstResponder()
         }
     }
