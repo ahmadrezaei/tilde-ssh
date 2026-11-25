@@ -11,6 +11,12 @@ public struct OnboardingView: View {
     private let iCloudAvailable: Bool
     private let onOpenSettings: () -> Void
 
+    /// Height of the visible area (inside the safe area), so the content can centre itself when it fits and scroll when it doesn't.
+    @State private var viewportHeight: CGFloat = 0
+
+    /// Small phones get a smaller logo and tighter spacing so most of the content is on screen without scrolling.
+    private var isCompact: Bool { viewportHeight > 0 && viewportHeight < 560 }
+
     /// - Parameters:
     ///   - iCloudAvailable: pass `false` to show "Servers are stored on this device. Turn on iCloud sync in Settings." (from the sync status monitor).
     public init(
@@ -31,11 +37,11 @@ public struct OnboardingView: View {
 
     public var body: some View {
         ScrollView {
-            VStack(spacing: TildeSpacing.xl) {
-                Spacer(minLength: TildeSpacing.xl)
+            VStack(spacing: isCompact ? TildeSpacing.l : TildeSpacing.xl) {
                 HStack(alignment: .lastTextBaseline, spacing: 4) {
-                    Text("~").tildeMono(84, weight: .heavy, relativeTo: .largeTitle).foregroundStyle(TildeColor.accent)
-                    RoundedRectangle(cornerRadius: 3).fill(TildeColor.accent).frame(width: 26, height: 54)
+                    Text("~").tildeMono(isCompact ? 56 : 84, weight: .heavy, relativeTo: .largeTitle).foregroundStyle(TildeColor.accent)
+                    RoundedRectangle(cornerRadius: 3).fill(TildeColor.accent)
+                        .frame(width: isCompact ? 17 : 26, height: isCompact ? 36 : 54)
                 }
                 .accessibilityHidden(true)
 
@@ -68,9 +74,12 @@ public struct OnboardingView: View {
             }
             .padding(TildeSpacing.xl)
             .frame(maxWidth: 420)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, minHeight: viewportHeight)
         }
         .scrollBounceBehavior(.basedOnSize)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            max(0, proxy.size.height - proxy.safeAreaInsets.top - proxy.safeAreaInsets.bottom)
+        } action: { viewportHeight = $0 }
     }
 
     private var importTitle: String { Platform.isMac ? "Import ~/.ssh/config" : "Import from Files" }
