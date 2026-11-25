@@ -4,6 +4,10 @@ import SwiftUI
 public struct StatusDot: View {
     public enum Kind: Sendable, Equatable {
         case ok, slow, unreachable, unknown, live
+
+        /// `ok` under 150 ms, `slow` from 150 ms.
+        public init(latencyMilliseconds ms: Int) { self = ms < 150 ? .ok : .slow }
+
         var color: Color {
             switch self {
             case .ok: TildeColor.ok
@@ -13,6 +17,7 @@ public struct StatusDot: View {
             case .live: TildeColor.accent
             }
         }
+
         var label: String {
             switch self {
             case .ok: "Reachable"
@@ -26,6 +31,7 @@ public struct StatusDot: View {
 
     private let kind: Kind
     @State private var pulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(_ kind: Kind) { self.kind = kind }
 
@@ -33,14 +39,41 @@ public struct StatusDot: View {
         Circle()
             .fill(kind.color)
             .frame(width: TildeSpacing.statusDot, height: TildeSpacing.statusDot)
-            .opacity(kind == .live && pulse ? 0.35 : 1)
-            .animation(kind == .live ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true) : .default, value: pulse)
-            .onAppear { pulse = (kind == .live) }
+            .shadow(color: kind == .ok || kind == .live ? kind.color.opacity(0.55) : .clear, radius: 3)
+            .opacity(kind == .live && pulse ? 0.4 : 1)
+            .animation(kind == .live && !reduceMotion ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true) : .default, value: pulse)
+            .onAppear { pulse = (kind == .live && !reduceMotion) }
             .accessibilityLabel(kind.label)
     }
 }
 
+/// A status dot with the latency next to it: `● 23ms`. Pass `nil` latency to show just the dot.
+public struct LatencyLabel: View {
+    private let milliseconds: Int?
+    private let kind: StatusDot.Kind
+
+    public init(milliseconds: Int?, kind: StatusDot.Kind? = nil) {
+        self.milliseconds = milliseconds
+        self.kind = kind ?? milliseconds.map { StatusDot.Kind(latencyMilliseconds: $0) } ?? .unknown
+    }
+
+    public var body: some View {
+        HStack(spacing: 5) {
+            StatusDot(kind)
+            if let milliseconds {
+                Text("\(milliseconds)ms")
+                    .tildeMono(11, weight: .medium, relativeTo: .caption)
+                    .foregroundStyle(kind == .slow ? TildeColor.warn : TildeColor.text3)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 #Preview("StatusDot") {
-    HStack { StatusDot(.ok); StatusDot(.slow); StatusDot(.unreachable); StatusDot(.unknown); StatusDot(.live) }
-        .padding().background(TildeColor.bg)
+    VStack(alignment: .leading, spacing: 12) {
+        HStack { StatusDot(.ok); StatusDot(.slow); StatusDot(.unreachable); StatusDot(.unknown); StatusDot(.live) }
+        HStack(spacing: 16) { LatencyLabel(milliseconds: 23); LatencyLabel(milliseconds: 212); LatencyLabel(milliseconds: nil) }
+    }
+    .padding().background(TildeColor.bg)
 }

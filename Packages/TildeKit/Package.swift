@@ -6,7 +6,7 @@
 //   TildeFeatures -> TildeTerminal, TildeSSH, TildeSecurity, TildeStore, TildeDesign, TildeCore
 //   TildeTerminal -> TildeDesign, TildeCore, SwiftTerm
 //   TildeSSH      -> TildeCore, Citadel
-//   TildeSecurity -> TildeCore, Citadel (Crypto/BCrypt only)
+//   TildeSecurity -> TildeCore, TildeDesign, CTildeBcrypt (vendored OpenBSD bcrypt_pbkdf), Citadel
 //   TildeStore    -> TildeCore
 //   TildeDesign   -> (none)
 //   TildeCore     -> (none)
@@ -37,6 +37,8 @@ let package = Package(
         // MARK: Leaves
         .target(name: "TildeCore"),
         .target(name: "TildeDesign"),
+        // Vendored OpenBSD Blowfish + bcrypt_pbkdf (needed to decrypt `openssh-key-v1` keys). See Sources/CTildeBcrypt.
+        .target(name: "CTildeBcrypt"),
 
         // MARK: Mid-level
         .target(name: "TildeStore", dependencies: ["TildeCore"]),
@@ -44,6 +46,8 @@ let package = Package(
             name: "TildeSecurity",
             dependencies: [
                 "TildeCore",
+                "TildeDesign",
+                "CTildeBcrypt",
                 .product(name: "Citadel", package: "Citadel"),
             ]
         ),
@@ -79,7 +83,17 @@ let package = Package(
         // MARK: Tests (each workstream owns its own folder)
         .testTarget(name: "TildeCoreTests", dependencies: ["TildeCore"]),
         .testTarget(name: "TildeStoreTests", dependencies: ["TildeStore", "TildeCore"]),
-        .testTarget(name: "TildeSecurityTests", dependencies: ["TildeSecurity", "TildeCore"]),
+        .testTarget(
+            name: "TildeSecurityTests",
+            dependencies: [
+                "TildeSecurity",
+                "TildeCore",
+                // Interop checks: Citadel (used by WS2 for auth) must accept the keys this module writes.
+                .product(name: "Citadel", package: "Citadel"),
+            ],
+            exclude: ["generate-fixtures.sh"],
+            resources: [.copy("Fixtures")]
+        ),
         .testTarget(name: "TildeSSHTests", dependencies: ["TildeSSH", "TildeCore"]),
         .testTarget(name: "TildeTerminalTests", dependencies: ["TildeTerminal", "TildeCore"]),
         .testTarget(name: "TildeFeaturesTests", dependencies: ["TildeFeatures", "TildeCore", "TildeStore"]),

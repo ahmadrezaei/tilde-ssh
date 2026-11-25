@@ -1,0 +1,16 @@
+A fast, native SSH client and terminal for iPhone, iPad and Mac.
+Connect with a password or SSH key. Your servers sync over iCloud; your secrets stay in iCloud Keychain.
+Built for DevOps and SREs: dark, dense, keyboard-first. Free and open source.
+
+• Server list with groups, tags, search and live reachability
+• Quick Connect: type user@host:port and go
+• Ed25519 key generation, import Ed25519 / ECDSA / RSA keys, share public keys
+• Host key verification with loud warnings when a fingerprint changes
+• A real SSH keyboard: Esc, Ctrl, Alt, Tab, arrows, | ~ / -, F-keys, snippets
+• Sticky modifiers, swipe-for-arrows, flick for alternate symbols, fully customizable
+• Tabs on iPad and Mac, hardware keyboard shortcuts, Option-as-Meta
+• Auto-reconnect and one-switch tmux attach
+• Jump host (ProxyJump) support
+• Face ID / Touch ID app lock
+• Production servers are color-coded so you never type into the wrong box
+• Open source (Apache-2.0). No account. No analytics. Ever.
