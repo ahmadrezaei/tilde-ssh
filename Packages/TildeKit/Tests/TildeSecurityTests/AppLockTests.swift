@@ -121,6 +121,65 @@ import TildeCore
         #expect(lock.isPrivacyCoverVisible)
     }
 
+    // MARK: Several scenes (iPad windows)
+
+    @Test func aBackgroundedSceneDoesNotCoverOrRelockTheActiveOne() async {
+        let clock = Clock()
+        let lock = makeLock(makeSettings(timeout: .immediately), clock: clock)
+        _ = await lock.unlock()
+        let front = UUID(), back = UUID()
+        lock.sceneDidChange(.active, scene: front)
+        lock.sceneDidChange(.active, scene: back)
+
+        lock.sceneDidChange(.background, scene: back)
+        #expect(lock.phase == .active)
+        #expect(!lock.isPrivacyCoverVisible)
+        clock.advance(600)
+        lock.sceneDidChange(.active, scene: back)
+        #expect(!lock.isLocked)
+
+        lock.sceneDidChange(.background, scene: back)
+        lock.sceneDidChange(.inactive, scene: front)
+        #expect(lock.phase == .inactive)
+        #if os(iOS)
+        #expect(lock.isPrivacyCoverVisible)
+        #endif
+    }
+
+    @Test func theLockTimeoutRunsFromTheMomentEverySceneIsInTheBackground() async {
+        let clock = Clock()
+        let lock = makeLock(makeSettings(timeout: .oneMinute), clock: clock)
+        _ = await lock.unlock()
+        let a = UUID(), b = UUID()
+        lock.sceneDidChange(.active, scene: a)
+        lock.sceneDidChange(.active, scene: b)
+
+        lock.sceneDidChange(.background, scene: a)
+        clock.advance(120)                       // only one window is away: the app is still in use
+        lock.sceneDidChange(.background, scene: b)
+        #expect(lock.phase == .background)
+        clock.advance(30)
+        lock.sceneDidChange(.active, scene: a)   // back inside the minute
+        #expect(!lock.isLocked)
+
+        lock.sceneDidChange(.background, scene: a)
+        clock.advance(61)
+        lock.sceneDidChange(.active, scene: b)   // any window coming back is the app coming back
+        #expect(lock.isLocked)
+    }
+
+    @Test func aClosedSceneStopsCounting() async {
+        let lock = makeLock(makeSettings(enabled: false))
+        let a = UUID(), b = UUID()
+        lock.sceneDidChange(.active, scene: a)
+        lock.sceneDidChange(.background, scene: b)
+        #expect(lock.phase == .active)
+        lock.sceneDidDisappear(a)
+        #expect(lock.phase == .background)
+        lock.sceneDidDisappear(b)
+        #expect(lock.phase == .background)   // nothing left to report: unchanged
+    }
+
     @Test func settingsPersistAndHaveSensibleDefaults() {
         let suite = "tilde.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

@@ -67,6 +67,14 @@ public struct ServerImportReport: Equatable, Sendable {
     public var unresolvedKeys = 0
     /// Saved-password servers that became "ask every time".
     public var passwordsNotImported = 0
+    /// Entries that carried a startup command. It is never imported: a file from someone else could otherwise make
+    /// every connection run a command of their choosing. Set it again in the server's Advanced settings.
+    public var startupCommandsNotImported = 0
+    /// Entries whose jump host was kept because that server already exists on this device (it is routing, so
+    /// review these).
+    public var jumpHostsLinked = 0
+    /// Entries that named a jump host which does not already exist on this device. They connect directly.
+    public var jumpHostsNotImported = 0
 
     public init() {}
 }
@@ -131,6 +139,8 @@ public enum ServerExporter {
 
     /// Imports a file into `context`. Existing servers are never modified: duplicates are skipped, so importing
     /// the same file twice is a no-op. Groups and tags are reused by name; keys are re-linked by fingerprint.
+    /// Startup commands are not imported, and a jump host is kept only if that server already exists here (both are
+    /// counted in the report).
     @MainActor
     @discardableResult
     public static func `import`(_ data: Data, into context: ModelContext) throws -> ServerImportReport {
@@ -160,7 +170,8 @@ public enum ServerExporter {
             server.environment = ServerEnvironment(rawValue: entry.environment) ?? .none
             server.isFavorite = entry.isFavorite
             server.sortIndex = entry.sortIndex
-            server.startupCommand = entry.startupCommand
+            // Never imported: it runs on every connection. See `ServerImportReport.startupCommandsNotImported`.
+            if entry.startupCommand?.nilIfBlank != nil { report.startupCommandsNotImported += 1 }
             server.autoTmux = entry.autoTmux
             server.tmuxSessionName = entry.tmuxSessionName
             server.keepAliveSeconds = entry.keepAliveSeconds
@@ -194,11 +205,17 @@ public enum ServerExporter {
             report.imported += 1
         }
 
-        // Second pass: jump hosts, which may refer to servers created above or already present.
-        let lookup = Dictionary(existingServers.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }).merging(created) { _, new in new }
+        // Second pass: jump hosts. A jump host decides which machine carries the connection, so only a server that
+        // already exists on this device is linked; one that arrives in the same file is not trusted as a route.
+        let existingByID = Dictionary(existingServers.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for entry in document.servers {
             guard let server = created[entry.id], let jumpID = entry.jumpServerID, jumpID != entry.id else { continue }
-            server.jumpServer = lookup[jumpID]
+            if let jump = existingByID[jumpID] {
+                server.jumpServer = jump
+                report.jumpHostsLinked += 1
+            } else {
+                report.jumpHostsNotImported += 1
+            }
         }
         try context.save()
         return report

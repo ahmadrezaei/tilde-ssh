@@ -96,6 +96,6 @@ let package = Package(
         ),
         .testTarget(name: "TildeSSHTests", dependencies: ["TildeSSH", "TildeCore"]),
         .testTarget(name: "TildeTerminalTests", dependencies: ["TildeTerminal", "TildeCore"]),
-        .testTarget(name: "TildeFeaturesTests", dependencies: ["TildeFeatures", "TildeCore", "TildeStore"]),
+        .testTarget(name: "TildeFeaturesTests", dependencies: ["TildeFeatures", "TildeCore", "TildeStore", "TildeSecurity"]),
     ]
 )

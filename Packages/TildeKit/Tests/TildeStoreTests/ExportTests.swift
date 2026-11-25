@@ -69,12 +69,15 @@ import TildeCore
         #expect(api.id == original.id)
         #expect(api.connectionTarget == original.connectionTarget)
         #expect(api.environment == .prod && api.isFavorite && api.autoTmux)
-        #expect(api.startupCommand == "tmux new -A -s api" && api.notes == "Primary API, handle with care")
+        #expect(api.startupCommand == nil, "a startup command runs on every connection, so it is not imported")
+        #expect(api.autoTmux && api.notes == "Primary API, handle with care")
+        #expect(report.startupCommandsNotImported == 1)
         #expect(api.envVars == ["LANG": "en_US.UTF-8"])
         #expect(api.group?.name == "Production" && api.group?.symbol == "bolt.fill")
         #expect(api.tagList.map(\.name).sorted() == ["edge", "k8s"])
         #expect(api.key?.fingerprintSHA256 == "SHA256:fp1")
-        #expect(api.jumpServer?.name == "bastion", "jump hosts are re-linked by id")
+        #expect(api.jumpServer == nil, "a jump host that arrives in the same file is not trusted as a route")
+        #expect(report.jumpHostsNotImported == 1 && report.jumpHostsLinked == 0)
         #expect(api.sortIndex == original.sortIndex)
 
         let staging = try #require(try targetRepos.servers.all().first { $0.name == "staging" })
@@ -83,8 +86,29 @@ import TildeCore
         // Snapshots of both sides agree, apart from the secret reference that is deliberately dropped.
         var expected = ServerSnapshot(model: original)
         expected.keyID = api.key?.privateSecretID
-        expected.jump?.keyID = api.jumpServer?.key?.privateSecretID
+        expected.jump = nil
+        expected.startupCommand = nil
         #expect(ServerSnapshot(model: api) == expected)
+    }
+
+    @Test func aJumpHostThatAlreadyExistsIsLinked() throws {
+        let (source, _) = try populatedContainer()
+        let data = try ServerExporter.exportAll(from: source.mainContext)
+
+        // This device already has the bastion (same id) but not the server behind it.
+        var document = try ServerExporter.decode(data)
+        let bastionEntry = try #require(document.servers.first { $0.name == "bastion" })
+        document.servers.removeAll { $0.name == "bastion" }
+        let target = try makeContainer()
+        let targetRepos = StoreRepositories(container: target)
+        let bastion = Server(name: "bastion", host: "bastion.example.com", username: "ops")
+        bastion.id = bastionEntry.id
+        try targetRepos.servers.add(bastion)
+
+        let report = try ServerExporter.import(JSONEncoder.iso.encode(document), into: target.mainContext)
+        let api = try #require(try targetRepos.servers.all().first { $0.name == "prod-api" })
+        #expect(api.jumpServer?.id == bastion.id)
+        #expect(report.jumpHostsLinked == 1 && report.jumpHostsNotImported == 0)
     }
 
     @Test func exportIsDeterministic() throws {

@@ -1,7 +1,9 @@
 import Foundation
 import Observation
+import Security
 import SwiftData
 import TildeCore
+import TildeSecurity
 import TildeStore
 
 /// The draft behind the Add / Edit Server form (design section 4.2). Plain `@Observable` state plus validation, saving
@@ -9,7 +11,23 @@ import TildeStore
 @MainActor
 @Observable
 final class ServerEditorModel {
-    enum Field: Hashable { case host, port, username, key, envVars, jump }
+    enum Field: Hashable { case host, port, username, key, password, envVars, jump }
+
+    /// Why a save did not go through. The editor stays open and shows `message`.
+    enum SaveError: Error, Equatable {
+        /// The Keychain refused to store the password.
+        case keychain(OSStatus)
+
+        var message: String {
+            switch self {
+            case .keychain(let status): "Couldn't save the password in the Keychain (OSStatus \(status))."
+            }
+        }
+
+        static func from(_ error: any Error) -> SaveError {
+            .keychain((error as? KeychainError)?.status ?? errSecInternalError)
+        }
+    }
 
     enum TestState: Equatable {
         case idle
@@ -49,6 +67,8 @@ final class ServerEditorModel {
     // State
     var testState: TestState = .idle
     private(set) var showsValidation = false
+    /// Set when the last `save` failed after validation passed; cleared by the next attempt.
+    private(set) var saveError: SaveError?
     let original: Server?
     let hasSavedPassword: Bool
     let isNew: Bool
@@ -142,6 +162,8 @@ final class ServerEditorModel {
             return nil   // empty falls back to the default user
         case .key:
             return auth == .key && key == nil ? "Choose a key, or switch to password" : nil
+        case .password:
+            return auth == .password && !hasSavedPassword && password.isEmpty ? "Enter a password, or choose Ask every time" : nil
         case .envVars:
             return parsedEnvVars == nil ? "Use KEY=value, one per line" : nil
         case .jump:
@@ -152,7 +174,7 @@ final class ServerEditorModel {
     }
 
     var canSave: Bool {
-        [Field.host, .port, .key, .envVars, .jump].allSatisfy { issue(for: $0) == nil }
+        [Field.host, .port, .key, .password, .envVars, .jump].allSatisfy { issue(for: $0) == nil }
     }
 
     func showValidation() { showsValidation = true }
@@ -218,7 +240,7 @@ final class ServerEditorModel {
         guard let (snapshot, typed) = testSnapshot() else { return }
         testTask?.cancel()
         testState = .running
-        let prompter = TestPasswordPrompter(typed: typed, fallback: coordinator)
+        let prompter = TestPasswordPrompter(typed: typed, target: snapshot.target, fallback: coordinator)
         let keyName = key?.name
         testTask = Task { [weak self] in
             let request = SessionRequest(server: snapshot, connectTimeout: .seconds(TildeSettings.currentConnectTimeout))
@@ -259,11 +281,32 @@ final class ServerEditorModel {
         return trimmed.isEmpty ? TildeSettings.currentDefaultUser : trimmed
     }
 
-    /// Writes the draft to the store (and the password to the secret store). Returns `nil` if invalid.
+    /// Switches to "Ask every time" and drops a typed password; the way out of a failed Keychain write.
+    func useAskEveryTime() {
+        saveError = nil
+        password = ""
+        auth = .passwordPrompt
+    }
+
+    /// Writes the draft to the store (and the password to the secret store). Returns `nil` if the draft is invalid or
+    /// the password could not be stored (see `saveError`); in that case nothing is changed.
     @discardableResult
     func save(context: ModelContext, secrets: any SecretStore) -> Server? {
         showsValidation = true
+        saveError = nil
         guard canSave, let port else { return nil }
+
+        // The secret goes first: if the Keychain refuses, the store is untouched and the user can retry or choose
+        // "Ask every time". A server is never linked to a password id with nothing behind it.
+        let previousSecretID = original?.passwordSecretID
+        let passwordSecretID: UUID?
+        do {
+            passwordSecretID = try storePassword(reusing: previousSecretID, secrets: secrets)
+        } catch {
+            saveError = .from(error)
+            return nil
+        }
+
         let actions = ServerActions(context: context, secrets: secrets)
         let server = original ?? Server()
         let groupChanged = isNew || server.group?.id != group?.id
@@ -288,34 +331,26 @@ final class ServerEditorModel {
         server.notes = notes.isEmpty ? nil : notes
         server.updatedAt = .now
         if groupChanged { server.sortIndex = actions.nextSortIndex(in: group) }
-
-        applyPassword(to: server, secrets: secrets)
+        server.passwordSecretID = passwordSecretID
 
         if isNew { context.insert(server) }
         actions.save()
+
+        // Ask every time / key auth keeps no password: drop the one that was saved before.
+        if let previousSecretID, passwordSecretID == nil {
+            try? secrets.delete(SecretRef(kind: .password, id: previousSecretID))
+        }
         return server
     }
 
-    private func applyPassword(to server: Server, secrets: any SecretStore) {
-        switch auth {
-        case .password:
-            guard !password.isEmpty else { return }   // keep the saved one
-            let id = server.passwordSecretID ?? UUID()
-            let label = "Tilde: \(server.username)@\(server.host)"
-            do {
-                try secrets.write(Data(password.utf8), for: SecretRef(kind: .password, id: id), label: label, synchronizable: true)
-                server.passwordSecretID = id
-            } catch {
-                // The Keychain refused the write: never link an id with nothing behind it. The server asks for the
-                // password at each connection instead of failing later with "secret not on this device".
-                server.authMethodRaw = AuthMethod.passwordPrompt.rawValue
-                server.passwordSecretID = nil
-            }
-        case .passwordPrompt, .key:
-            // Ask every time stores nothing; key auth does not need a password.
-            if let id = server.passwordSecretID { try? secrets.delete(SecretRef(kind: .password, id: id)) }
-            server.passwordSecretID = nil
-        }
+    /// The password secret id the server should link to after saving, writing a newly typed password first.
+    private func storePassword(reusing existingID: UUID?, secrets: any SecretStore) throws -> UUID? {
+        guard auth == .password else { return nil }
+        guard !password.isEmpty else { return existingID }   // keep the saved one (`canSave` guarantees there is one)
+        let id = existingID ?? UUID()
+        let label = "Tilde: \(effectiveUsername)@\(trimmedHost.lowercased())"
+        try secrets.write(Data(password.utf8), for: SecretRef(kind: .password, id: id), label: label, synchronizable: true)
+        return id
     }
 
     // MARK: Helpers
@@ -330,20 +365,27 @@ final class ServerEditorModel {
     }
 }
 
-/// Answers password prompts during "Test connection": with the password typed in the form, or (when none was typed)
-/// by asking the user through the coordinator's sheet.
+/// Answers password prompts during "Test connection": the password typed in the form for the server under test, and
+/// only for it. Any other hop (a jump host) and any prompt when nothing was typed go to the coordinator's sheet, so a
+/// typed password is never offered to a different host.
 @MainActor
 final class TestPasswordPrompter: PasswordPrompter {
     private let typed: String?
-    private let fallback: SessionCoordinator
+    private let target: ConnectionTarget
+    private let fallback: any PasswordPrompter
 
-    init(typed: String?, fallback: SessionCoordinator) {
+    init(typed: String?, target: ConnectionTarget, fallback: any PasswordPrompter) {
         self.typed = typed
+        self.target = target
         self.fallback = fallback
     }
 
     func password(for target: ConnectionTarget, reason: PromptReason) async -> String? {
-        if let typed, reason != .rejected { return typed }
+        if let typed, reason != .rejected, Self.matches(target, self.target) { return typed }
         return await fallback.password(for: target, reason: reason)
+    }
+
+    private static func matches(_ a: ConnectionTarget, _ b: ConnectionTarget) -> Bool {
+        a.host.caseInsensitiveCompare(b.host) == .orderedSame && a.port == b.port && a.username == b.username
     }
 }

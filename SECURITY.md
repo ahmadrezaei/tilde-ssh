@@ -61,4 +61,4 @@ The full threat model is in [`docs/DESIGN.md`](docs/DESIGN.md#64-security-model)
 
 ## Dependencies
 
-All dependencies are pinned to exact versions and checked against an allowlist in CI. Citadel currently builds on a maintained fork of `swift-nio-ssh`; its diffs are reviewed on every bump. If you find a vulnerability in an upstream package, please report it upstream as well.
+All dependencies are pinned to exact versions and checked against an allowlist in CI. Citadel currently builds on a maintained fork of `swift-nio-ssh` (`Wellz26/swift-nio-ssh`, pinned at commit `d88989f`, version 0.3.7), which is the SSH transport Tilde runs on. We review the fork's diff against upstream `apple/swift-nio-ssh` and the Citadel changes on every bump before updating the pin. If you find a vulnerability in an upstream package, please report it upstream as well.

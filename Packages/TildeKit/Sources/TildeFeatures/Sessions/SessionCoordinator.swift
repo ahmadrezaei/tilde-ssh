@@ -1,6 +1,8 @@
 import Foundation
 import Observation
+import Security
 import TildeCore
+import TildeSecurity
 
 /// Owns every open session (tabs), creates them through `SessionEngine.makeSession`, and answers the engine's
 /// questions: it is the app's `HostKeyPrompter` and `PasswordPrompter`.
@@ -316,10 +318,17 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         passwordQueue.removeAll { $0.id == request.id }
         if let password, let owner = request.tabID.flatMap(tab(id:)) {
             if updateSaved, let secretID = owner.server.passwordSecretID {
-                try? services.secretStore.write(
-                    Data(password.utf8), for: SecretRef(kind: .password, id: secretID),
-                    label: "Tilde: \(request.target.username)@\(request.target.host)", synchronizable: true
-                )
+                do {
+                    try services.secretStore.write(
+                        Data(password.utf8), for: SecretRef(kind: .password, id: secretID),
+                        label: "Tilde: \(request.target.username)@\(request.target.host)", synchronizable: true
+                    )
+                } catch {
+                    owner.notice = TabNotice(
+                        headline: "Couldn't update the saved password in the Keychain (OSStatus \(Self.status(of: error))).",
+                        detail: "This connection uses the password you typed, but the saved one is unchanged."
+                    )
+                }
             }
             if saveServer {
                 var server = owner.server
@@ -331,6 +340,10 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
     }
 
     // MARK: Helpers
+
+    static func status(of error: any Error) -> OSStatus {
+        (error as? KeychainError)?.status ?? errSecInternalError
+    }
 
     /// Two snapshots are the same server for "focus the existing session": same saved id, or (Quick Connect) same target.
     static func sameServer(_ a: ServerSnapshot, _ b: ServerSnapshot) -> Bool {

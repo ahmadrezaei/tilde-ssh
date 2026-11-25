@@ -53,6 +53,9 @@ final class TerminalHost: TerminalViewDelegate {
         view = TildeTerminalView(frame: .zero, font: TerminalFonts.font(inputs.appearance.font, size: inputs.appearance.fontSize))
         view.terminalDelegate = self
         view.pasteHandler = { [weak self] text in self?.handlePaste(text) }
+        #if os(iOS)
+        view.snippetHandler = { [weak self] command, run in self?.handleSnippet(command, run: run) }
+        #endif
         view.onPinchEnded = { [weak self] in self?.flushPendingResize() }
         startPump(io)
         update(inputs)
@@ -136,7 +139,27 @@ final class TerminalHost: TerminalViewDelegate {
             view.pasteText(text)
             return
         }
-        let request = PasteRequest(text: text, environment: inputs.environment)
+        confirm(PasteRequest(text: text, environment: inputs.environment)) { [weak self] in self?.view.pasteText(text) }
+    }
+
+    /// A snippet chosen from the key bar's palette. It is typed into the session like a paste, so a multi-line snippet
+    /// asks first when the paste rules say so (always on PROD in the default mode). A one-line snippet never asks,
+    /// with or without "run on insert" (the trailing Return is not a second line).
+    func handleSnippet(_ command: String, run: Bool) {
+        var bytes = Array(command.utf8)
+        if run { bytes.append(0x0D) }
+        guard !bytes.isEmpty else { return }
+        let needsConfirmation = inputs.behavior.pasteConfirmation.requiresConfirmation(for: inputs.environment)
+            && PasteRequest.hasMultipleLines(command)
+        guard needsConfirmation else {
+            view.sendInput(bytes)
+            return
+        }
+        confirm(PasteRequest(text: command, environment: inputs.environment)) { [weak self] in self?.view.sendInput(bytes) }
+    }
+
+    /// Asks the user (through the session's sheet, or the view's own alert) and runs `approved` only on a yes.
+    private func confirm(_ request: PasteRequest, approved perform: @escaping @MainActor () -> Void) {
         let confirm = inputs.onConfirmPaste
         let controller = inputs.controller
         controller.isPasteConfirmationPending = true
@@ -148,7 +171,7 @@ final class TerminalHost: TerminalViewDelegate {
                 approved = await self?.view.presentDefaultPasteConfirmation(request) ?? false
             }
             controller.isPasteConfirmationPending = false
-            if approved { self?.view.pasteText(text) }
+            if approved { perform() }
         }
     }
 

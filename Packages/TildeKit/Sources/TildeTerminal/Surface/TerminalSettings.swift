@@ -177,6 +177,12 @@ public struct PasteRequest: Sendable, Equatable {
     public static func isMultiLine(_ text: String) -> Bool {
         text.contains(where: { $0 == "\n" || $0 == "\r" || $0 == "\r\n" })
     }
+
+    /// Whether the text has more than one non-empty line. A trailing Return (a snippet that runs on insert) does not
+    /// make a one-line command multi-line.
+    public static func hasMultipleLines(_ text: String) -> Bool {
+        text.split(omittingEmptySubsequences: true, whereSeparator: { $0 == "\n" || $0 == "\r" || $0 == "\r\n" }).count > 1
+    }
 }
 
 // MARK: - Observable store

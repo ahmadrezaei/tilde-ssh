@@ -80,12 +80,15 @@ public final class SyncStatusMonitor {
     /// - Parameters:
     ///   - mode: the mode the container actually runs in (`StoreBootstrap.mode`).
     ///   - syncEnabled: the user's sync switch at launch.
+    ///   - containerID: the CloudKit container the app is configured with (used when `mode` is not already a
+    ///     CloudKit mode, to read the account status of the right container).
     ///   - accountProvider: how to read the account status; defaults to `CKContainer.accountStatus`. The
     ///     default never creates a `CKContainer` unless the store is a CloudKit store or
     ///     `CloudKitAvailability` says this build is entitled (creating one without the entitlement can abort).
     public init(
         mode: StoreMode,
         syncEnabled: Bool = true,
+        containerID: String = ModelContainerFactory.defaultCloudKitContainerID,
         accountProvider: (@Sendable () async -> ICloudAccountStatus)? = nil
     ) {
         self.mode = mode
@@ -94,12 +97,11 @@ public final class SyncStatusMonitor {
         if let accountProvider {
             self.accountProvider = accountProvider
         } else {
-            let containerID: String? = {
+            let accountContainerID: String? = {
                 if case .cloudKit(let id) = mode { return id }
-                return CloudKitAvailability.canUseCloudKit(containerID: ModelContainerFactory.defaultCloudKitContainerID)
-                    ? ModelContainerFactory.defaultCloudKitContainerID : nil
+                return CloudKitAvailability.canUseCloudKit(containerID: containerID) ? containerID : nil
             }()
-            self.accountProvider = { await Self.readAccountStatus(containerID: containerID) }
+            self.accountProvider = { await Self.readAccountStatus(containerID: accountContainerID) }
         }
         self.status = mode.isSyncing ? .upToDate : .disabled
     }

@@ -23,6 +23,8 @@ public struct AppLockGate<Content: View>: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasAutoPrompted = false
     @State private var presenter: LockOverlayPresenter?
+    /// Identifies this scene to the lock, which combines the phase of every scene (iPad windows, Mac windows).
+    @State private var sceneID = UUID()
 
     public init(lock: any AppLocking, @ViewBuilder content: () -> Content) {
         self.lock = lock
@@ -46,7 +48,7 @@ public struct AppLockGate<Content: View>: View {
             }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
-            concreteLock?.sceneDidChange(AppLockPhase(phase))
+            concreteLock?.sceneDidChange(AppLockPhase(phase), scene: sceneID)
             syncOverlay()
         }
         .onChange(of: isCovered, initial: true) { _, _ in syncOverlay() }
@@ -62,7 +64,10 @@ public struct AppLockGate<Content: View>: View {
             hasAutoPrompted = true
             Task { _ = await lock.unlock() }
         }
-        .onDisappear { presenter?.setVisible(false) }
+        .onDisappear {
+            concreteLock?.sceneDidDisappear(sceneID)
+            presenter?.setVisible(false)
+        }
     }
 
     /// Shows or removes the overlay window to match the lock state (and picks up scenes that appeared since).
