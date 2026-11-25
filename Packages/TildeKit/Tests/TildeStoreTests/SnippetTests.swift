@@ -9,7 +9,7 @@ import TildeCore
     @Test func seedsMatchTheDesignExamples() {
         #expect(SnippetSeeds.all.count == 8)
         #expect(Set(SnippetSeeds.all.map(\.seedID)).count == 8)
-        // The seeded names and commands equal the mock provider's list that other workstreams build against.
+        // The seeded names and commands equal the mock provider's list that other modules build against.
         let mock = StaticSnippetProvider.seeded
         #expect(SnippetSeeds.all.map(\.name) == mock.map(\.name))
         #expect(SnippetSeeds.all.map(\.command) == mock.map(\.command))

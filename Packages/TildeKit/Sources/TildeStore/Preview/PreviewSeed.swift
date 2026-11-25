@@ -45,7 +45,28 @@ public enum PreviewSeed {
             if snap.name == "prod-api-01" { server.tags = [k8s, edge] }
             context.insert(server)
         }
+        seedKnownHosts(context)
         _ = try? SnippetSeeds.seedMissing(in: context)
         try? context.save()
+    }
+
+    /// Demo pins for the Known Hosts screen. The fingerprints are made-up values, not real keys.
+    @MainActor
+    private static func seedKnownHosts(_ context: ModelContext) {
+        let day: TimeInterval = 24 * 60 * 60
+        let pins: [(endpoint: String, algorithm: String, fingerprint: String, device: String, firstSeenDaysAgo: Double, status: KnownHostStatus)] = [
+            ("10.0.1.12", "ssh-ed25519", "SHA256:p3Kc9yFQ2nL0e1x7XvR8bq0M4aZ+u5Jd2YH6sTgVwE0", "iPhone", 41, .trusted),
+            ("10.0.1.12", "ecdsa-sha2-nistp256", "SHA256:Hq7uY1m0Zr3bN8cVd4Ls9WfKxT2eA6pGjR5oUiBvC1k", "iPhone", 41, .trusted),
+            ("10.0.2.5", "ssh-ed25519", "SHA256:Zt4eR9vB2xW7kLq0NcY5mUa8Jd1HsGfP3oTiVbE6wXn", "MacBook Pro", 18, .trusted),
+            ("pi.local", "ssh-ed25519", "SHA256:Wn2xK8dQ5vLr1BcYt7Ua0MfJe4HsGpZ9oTiVbE3gRkA", "MacBook Pro", 9, .trusted),
+            ("[staging.example.com]:2222", "ssh-ed25519", "SHA256:Lc8aN3vB6xW1kQr5ZtY0mUe7Jd2HsGfP4oTiVbR9wXn", "iPad", 3, .conflicted),
+        ]
+        for pin in pins {
+            let host = KnownHost(endpoint: pin.endpoint, algorithm: pin.algorithm, publicKeyBase64: "AAAAPreview", fingerprintSHA256: pin.fingerprint, trustedOnDevice: pin.device)
+            host.firstSeenAt = Date.now.addingTimeInterval(-pin.firstSeenDaysAgo * day)
+            host.lastSeenAt = Date.now.addingTimeInterval(-min(pin.firstSeenDaysAgo, 2) * day)
+            host.status = pin.status
+            context.insert(host)
+        }
     }
 }

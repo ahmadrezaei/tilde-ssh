@@ -26,7 +26,8 @@ public struct SessionContainer: View {
                 }
             }
         }
-        .background(TildeColor.bg)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(TildeColor.bg.ignoresSafeArea())
     }
 }
 

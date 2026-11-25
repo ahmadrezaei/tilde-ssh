@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Focused command actions
 //
 // `MacCommands` (the menu bar on macOS and iPadOS 26) does not know about sessions, tabs or windows.
-// The scene that does (WS5's `SessionCoordinator` owner) publishes two plain value types through
+// The scene that does (the `SessionCoordinator` owner) publishes two plain value types through
 // `FocusedValues`, and the menus read them:
 //
 //     .windowCommandActions(WindowCommandActions(newTab: { ... }, selectTab: { ... }, tabCount: tabs.count))
@@ -159,8 +159,6 @@ public struct SessionCommandActions: Sendable {
     public var clearScrollback: CommandAction?
     /// Session > Send Ctrl-C. Writes `0x03` to the PTY.
     public var sendInterrupt: CommandAction?
-    /// Session > Send Break. Sends an SSH `break` request.
-    public var sendBreak: CommandAction?
     /// Session > Edit Server…
     public var editServer: CommandAction?
     /// Session > Copy SSH Command (⌥⌘C), e.g. `ssh -p 2222 -J bastion deploy@10.0.4.12`.
@@ -181,7 +179,6 @@ public struct SessionCommandActions: Sendable {
         clear: CommandAction? = nil,
         clearScrollback: CommandAction? = nil,
         sendInterrupt: CommandAction? = nil,
-        sendBreak: CommandAction? = nil,
         editServer: CommandAction? = nil,
         copySSHCommand: CommandAction? = nil,
         pasteSnippet: CommandAction? = nil,
@@ -194,7 +191,6 @@ public struct SessionCommandActions: Sendable {
         self.clear = clear
         self.clearScrollback = clearScrollback
         self.sendInterrupt = sendInterrupt
-        self.sendBreak = sendBreak
         self.editServer = editServer
         self.copySSHCommand = copySSHCommand
         self.pasteSnippet = pasteSnippet

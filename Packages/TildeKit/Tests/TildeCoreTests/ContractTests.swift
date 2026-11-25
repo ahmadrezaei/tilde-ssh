@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TildeCore
 
-/// Extra checks on the frozen contracts and the mocks the other workstreams build against.
+/// Extra checks on the frozen contracts and the mocks the other modules build against.
 @Suite struct ContractTests {
     @Test func endpointCanonicalFormHandlesIPv6AndCase() {
         #expect(HostEndpoint(host: "::1").canonical == "::1")

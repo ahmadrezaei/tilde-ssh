@@ -5,7 +5,7 @@ import TildeTerminal
 
 /// UserDefaults / `@AppStorage` keys and enums for the settings owned by the app shell.
 ///
-/// Interim storage: once `Preferences` (WS1, `NSUbiquitousKeyValueStore` + `UserDefaults`) lands, these keys move
+/// Interim storage: once `Preferences` (`NSUbiquitousKeyValueStore` + `UserDefaults`) is adopted, these keys move
 /// behind it. Views read them through `@AppStorage`, so the switch is local to this file and `SettingsRoot`.
 public enum TildeSettings {
     public static let appearanceKey = "settings.appearance"

@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 import TildeCore
 
-/// CRUD for `SSHKeyRecord` (metadata only; private material lives in the Keychain, written by WS3's
+/// CRUD for `SSHKeyRecord` (metadata only; private material lives in the Keychain, written by the security module's
 /// `SecretStore`).
 @MainActor
 public final class KeyRecordRepository {

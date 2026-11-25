@@ -3,7 +3,7 @@ import TildeCore
 
 /// Turns a server's authentication settings into usable credentials by reading the Keychain.
 ///
-/// Behaviour contract for the session engine (WS2):
+/// Behaviour contract for the session engine:
 /// - `.password` with a stored secret returns `.password`.
 /// - A secret that is **not on this device (yet)** throws `SessionError.secretUnavailable(ref)`. For a password
 ///   ref the engine should ask the user (`PromptReason.secretNotSynced`); for a key ref it shows "waiting for

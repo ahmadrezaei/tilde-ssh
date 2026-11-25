@@ -6,8 +6,8 @@ import TildeTerminal
 
 /// Settings root: Appearance, Keyboard, Terminal, Connections, Security, Sync, Data, About (design section 4.7).
 ///
-/// Each sub-section is its own view. Security is `SecuritySettingsSection` (WS3). Appearance, Keyboard and the terminal
-/// behaviour rows (scrollback, paste confirmation, OSC 52, ...) are WS4's section views over `TerminalSettings`.
+/// Each sub-section is its own view. Security is `SecuritySettingsSection`. Appearance, Keyboard and the terminal
+/// behaviour rows (scrollback, paste confirmation, OSC 52, ...) are section views over `TerminalSettings`.
 public struct SettingsRoot: View {
     @Environment(\.dismiss) private var dismiss
     private let showsDone: Bool
@@ -25,7 +25,7 @@ public struct SettingsRoot: View {
                     TerminalSettingsSection()
                 } header: { Text("Terminal").tildeSectionHeader() }
                 Section { ConnectionSettingsSection() } header: { Text("Connections").tildeSectionHeader() }
-                Section { SecuritySettingsSection() } header: { Text("Security").tildeSectionHeader() }
+                Section { SecuritySettingsSection(knownHosts: { KnownHostsListView() }) } header: { Text("Security").tildeSectionHeader() }
                 SyncSettingsSection()
                 DataSettingsSection()
                 AboutSettingsSection()

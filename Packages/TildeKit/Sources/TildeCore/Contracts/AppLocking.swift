@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-// MARK: - App lock (WS3)
+// MARK: - App lock
 
 /// The app-level biometric lock. Implementations are `@Observable` so SwiftUI tracks `isLocked`.
 @MainActor public protocol AppLocking: AnyObject, Observable {

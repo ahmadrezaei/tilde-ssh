@@ -12,6 +12,10 @@ public struct ServerList: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(SessionCoordinator.self) private var coordinator
     @Environment(AppNavigator.self) private var navigator
+    @Environment(\.tildeSyncMonitor) private var syncMonitor
+    #if os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
 
     @Query(sort: [SortDescriptor(\Server.sortIndex), SortDescriptor(\Server.name)]) private var servers: [Server]
     @Query(sort: [SortDescriptor(\ServerGroup.sortIndex), SortDescriptor(\ServerGroup.name)]) private var groups: [ServerGroup]
@@ -354,15 +358,34 @@ public struct ServerList: View {
                 .background(TildeColor.bg)
             } else {
                 OnboardingView(
+                    iCloudAvailable: iCloudAvailable,
                     onAddServer: { navigator.present(.newServer) },
                     onImport: { navigator.present(.importSSHConfig) },
                     onGenerateKey: { navigator.present(.generateKey) },
-                    onSkip: { onboardingDone = true }
+                    onSkip: { onboardingDone = true },
+                    onOpenSettings: openSettingsScreen
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(TildeColor.bg)
             }
         }
+    }
+
+    /// Whether servers are being synced: the store is a CloudKit store and the iCloud account can use it.
+    private var iCloudAvailable: Bool {
+        guard let syncMonitor else { return false }
+        switch syncMonitor.status {
+        case .disabled, .noAccount, .restricted: return false
+        case .temporarilyUnavailable, .upToDate, .syncing, .error: return true
+        }
+    }
+
+    private func openSettingsScreen() {
+        #if os(macOS)
+        openSettings()
+        #else
+        navigator.present(.settings)
+        #endif
     }
 
     // MARK: Actions

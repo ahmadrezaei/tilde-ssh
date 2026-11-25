@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Keys (WS3)
+// MARK: - Keys
 
 /// SSH public-key algorithms Tilde can generate, import and authenticate with.
 public enum SSHKeyAlgorithm: String, Codable, Sendable {

@@ -15,7 +15,7 @@ public struct SessionWindowValue: Codable, Hashable, Sendable {
 
 /// A single detached session window (`WindowGroup(id: "session", for: SessionWindowValue.self)`).
 ///
-/// Until the session coordinator can resolve `value.sessionID` to a live session (WS5), the window shows the
+/// Until the session coordinator can resolve `value.sessionID` to a live session, the window shows the
 /// shared session container.
 public struct SessionWindow: View {
     private let value: SessionWindowValue?

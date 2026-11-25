@@ -138,7 +138,7 @@ The UI and the terminal share a palette, and the app is **dark by default regard
 ### 2.3 Typography
 
 - **Data and terminal:** **SF Mono** (`.monospaced` design / `monospacedSystemFont`) for hostnames, usernames, ports, fingerprints, key material, and the terminal.
-- **Bundled alternative:** **JetBrains Mono Nerd Font Mono** (OFL), so Powerline/Starship/p10k prompt glyphs render. Users can pick SF Mono, JetBrains Mono NF, or Menlo.
+- **Alternatives:** Menlo (ships with the OS). **JetBrains Mono Nerd Font Mono** (OFL), so Powerline/Starship/p10k prompt glyphs render, is planned for v1.1 (§8); the font picker only lists typefaces that are present on the device, so until the files are bundled it shows SF Mono and Menlo.
 - **Chrome:** SF Pro (system) for labels, buttons and section headers. Section headers are caps, 11 pt, +0.6 tracking, `text3`.
 - **Sizes:** terminal default 12 pt on iPhone, 13 pt on iPad, 13 pt on Mac. Pinch, or ⌘+/⌘−, adjusts it per device, and the value is stored per device (not synced) because screens differ.
 - **Dynamic Type:** chrome follows Dynamic Type. Terminal font size is independent but respects a minimum of 9 pt.
@@ -700,7 +700,7 @@ Rules:
 | swift-nio, swift-crypto, swift-log, swift-collections | via Citadel | Apache-2.0 | |
 | BigInt (attaswift), ColorizeSwift | via Citadel | MIT | RSA math; console colors (dead weight, harmless) |
 | [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) | 2.x exact | MIT | VT100/xterm emulator + UIKit/AppKit views |
-| JetBrains Mono Nerd Font Mono (font files) | 3.x | OFL-1.1 | optional terminal font |
+| JetBrains Mono Nerd Font Mono (font files) | 3.x | OFL-1.1 | terminal font, planned for v1.1 (not bundled in v1.0) |
 | Apple: SwiftUI, SwiftData, CloudKit, CryptoKit, Security, LocalAuthentication, Network, GameController, UniformTypeIdentifiers | OS | — | |
 
 **Verified in Citadel's source (commit `ae8562f`):**
@@ -788,7 +788,7 @@ Bundle prefix: **`app.tildessh`** (recommended: register `tildessh.app`; all val
 - Quick Connect (parser, recents, save-as-server), `ssh://` URL handler
 - Auth: password (stored or prompt), Ed25519 / ECDSA keys, RSA keys (with the SHA-2 signing fix)
 - Key manager: generate Ed25519 (and ECDSA/RSA), import OpenSSH/PEM incl. encrypted, copy/share public key, install key on server, export private key
-- Terminal: SwiftTerm, xterm-256color, truecolor, resize, scrollback, select/copy/paste, find (iPad/Mac), pinch/⌘± font, 3 themes, bundled Nerd Font
+- Terminal: SwiftTerm, xterm-256color, truecolor, resize, scrollback, select/copy/paste, find (iPad/Mac), pinch/⌘± font, 3 themes
 - **Key bar** with sticky/locked modifiers, Ctrl combos, flick alternates, arrow joystick, pages, presets and editor. Hardware keyboard: Option-as-Meta, ⌘.=Esc, slim strip
 - Multiple sessions: iPhone SessionDeck, iPad/Mac tab strip, ⌘ shortcuts, command palette, multi-window on iPad and Mac
 - Host key TOFU, the changed-key takeover, a known hosts list, synced pins, `known_hosts` import
@@ -801,7 +801,7 @@ Bundle prefix: **`app.tildessh`** (recommended: register `tildessh.app`; all val
 - Multi-line paste guard, PROD color system
 
 ### v1.1
-Split panes (iPad/Mac) · local/remote/dynamic (SOCKS) port forwarding · keyboard-interactive / 2FA · agent forwarding · Secure Enclave P-256 keys + per-key Face ID · passphrase-kept-encrypted mode · SFTP file browser (Citadel SFTP) · iTerm2 theme import · per-server key-bar layouts · App Intents / Shortcuts ("Connect to…", "Run snippet on…") + Spotlight · MenuBarExtra quick connect (Mac) · "don't sync this server" · hashed known_hosts lookup.
+Bundled JetBrains Mono Nerd Font (Powerline / Starship glyphs) · split panes (iPad/Mac) · local/remote/dynamic (SOCKS) port forwarding · keyboard-interactive / 2FA · agent forwarding · Secure Enclave P-256 keys + per-key Face ID · passphrase-kept-encrypted mode · SFTP file browser (Citadel SFTP) · iTerm2 theme import · per-server key-bar layouts · App Intents / Shortcuts ("Connect to…", "Run snippet on…") + Spotlight · MenuBarExtra quick connect (Mac) · "don't sync this server" · hashed known_hosts lookup.
 
 ### v1.2+
 Mosh (needs a C/Swift Mosh client; licensing check: mosh is GPLv3, so a clean-room or separate-process approach would be needed, possibly a blocker) · multi-hop ProxyJump chains · OpenSSH certificates · FIDO2 `sk-ssh-ed25519` (YubiKey via NFC/USB-C) · team/shared vaults (CloudKit shared DB) · visionOS · session recording (asciinema, local only) · Live Activity for long-running commands · localization.

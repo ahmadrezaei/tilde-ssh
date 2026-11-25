@@ -80,7 +80,7 @@ let package = Package(
             ]
         ),
 
-        // MARK: Tests (each workstream owns its own folder)
+        // MARK: Tests (one folder per module)
         .testTarget(name: "TildeCoreTests", dependencies: ["TildeCore"]),
         .testTarget(name: "TildeStoreTests", dependencies: ["TildeStore", "TildeCore"]),
         .testTarget(
@@ -88,7 +88,7 @@ let package = Package(
             dependencies: [
                 "TildeSecurity",
                 "TildeCore",
-                // Interop checks: Citadel (used by WS2 for auth) must accept the keys this module writes.
+                // Interop checks: Citadel (used for auth) must accept the keys this module writes.
                 .product(name: "Citadel", package: "Citadel"),
             ],
             exclude: ["generate-fixtures.sh"],

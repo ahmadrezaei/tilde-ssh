@@ -1,7 +1,7 @@
 import Foundation
 
 /// A bundle of the Sendable service contracts, so views and coordinators receive one value instead of
-/// nine parameters. Built once by `AppEnvironment` (WS5) and injected into the SwiftUI environment
+/// nine parameters. Built once by `AppEnvironment` and injected into the SwiftUI environment
 /// (`EnvironmentValues.tildeServices` in TildeFeatures). Not part of the §10.2 list; see CONTRACTS-NOTES.md.
 public struct TildeServices: Sendable {
     public var secretStore: any SecretStore

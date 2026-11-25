@@ -79,6 +79,8 @@ public struct MacCommands: Commands {
                 .keyboardShortcut("s", modifiers: [.command, .control])
             Divider()
             item("Bigger", window?.increaseFontSize).keyboardShortcut("+")
+            // US layouts type ⌘= for "bigger" (⌘+ needs Shift); both reach the same action.
+            item("Bigger", window?.increaseFontSize).keyboardShortcut("=")
             item("Smaller", window?.decreaseFontSize).keyboardShortcut("-")
             item("Actual Size", window?.resetFontSize).keyboardShortcut("0")
             Divider()
@@ -109,7 +111,6 @@ public struct MacCommands: Commands {
             item("Clear", session?.clear).keyboardShortcut("k")
             item("Clear Scrollback", session?.clearScrollback)
             item("Send Ctrl-C", session?.sendInterrupt)
-            item("Send Break", session?.sendBreak)
             Divider()
             #if os(macOS)
             Toggle("Secure Keyboard Entry", isOn: Binding(

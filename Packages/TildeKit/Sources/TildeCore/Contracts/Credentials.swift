@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Credentials resolution (WS3 implements, WS2 consumes)
+// MARK: - Credentials resolution
 
 public enum ResolvedCredential: Sendable {
     case password(String)
@@ -11,7 +11,7 @@ public enum PromptReason: Sendable, Equatable {
     case notSaved, rejected, secretNotSynced
 }
 
-/// Asks the user for a password (implemented by WS5's session coordinator).
+/// Asks the user for a password (implemented by the session coordinator).
 @MainActor public protocol PasswordPrompter: AnyObject {
     func password(for target: ConnectionTarget, reason: PromptReason) async -> String?
 }
