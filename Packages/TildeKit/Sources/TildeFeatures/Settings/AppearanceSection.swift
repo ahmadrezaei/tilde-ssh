@@ -25,7 +25,8 @@ public struct AppearanceSettingsSection: View {
             ForEach(AppAppearance.allCases) { Text($0.title).tag($0.rawValue) }
         }
         Picker("Font", selection: $settings.font) {
-            ForEach(TerminalFontChoice.allCases) { choice in
+            // Only typefaces this device can draw. A saved choice that is gone stays listed so the picker shows it.
+            ForEach(TerminalFontChoice.allCases.filter { $0.isAvailable || $0 == settings.font }) { choice in
                 Text(choice.isAvailable ? choice.displayName : "\(choice.displayName) (not installed)").tag(choice)
             }
         }

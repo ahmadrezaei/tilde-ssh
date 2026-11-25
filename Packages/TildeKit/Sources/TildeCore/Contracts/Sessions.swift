@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Sessions (WS2 implements CitadelSessionEngine; mocks: FakeSessionEngine / EchoTerminalSession)
+// MARK: - Sessions (CitadelSessionEngine; mocks: FakeSessionEngine / EchoTerminalSession)
 
 public struct PTYConfig: Sendable, Equatable {
     public var term: String

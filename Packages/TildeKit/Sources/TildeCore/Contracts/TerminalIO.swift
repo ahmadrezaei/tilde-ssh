@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Terminal I/O (WS2 implements via TerminalSession; WS4 consumes)
+// MARK: - Terminal I/O (implemented by TerminalSession)
 
 public protocol TerminalIO: AnyObject, Sendable {
     /// Remote to screen bytes.

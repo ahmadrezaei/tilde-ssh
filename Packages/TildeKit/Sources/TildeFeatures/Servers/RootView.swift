@@ -118,13 +118,13 @@ private struct LiveSessionsPill: View {
 private struct SplitRoot: View {
     @Environment(SessionCoordinator.self) private var coordinator
     @Environment(AppNavigator.self) private var navigator
-    @State private var columns = NavigationSplitViewVisibility.all
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columns) {
+        @Bindable var navigator = navigator
+        NavigationSplitView(columnVisibility: $navigator.columnVisibility) {
             ServerList()
                 .safeAreaInset(edge: .bottom, spacing: 0) { SidebarFooter() }
-                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 420)
+                .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 460)
         } detail: {
             SessionContainer()
                 .toolbar { detailToolbar }

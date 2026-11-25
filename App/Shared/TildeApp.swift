@@ -33,6 +33,7 @@ struct TildeApp: App {
         // The menu bar (Mac and iPadOS 26). It reads the actions each window publishes through `WindowHost`; while the
         // app is locked a window publishes none, so every item that acts on content is disabled.
         .commands { MacCommands() }
+        .defaultSize(width: 1180, height: 760)
 
         // "Open in New Window" on a tab: one tab, one window (iPadOS Stage Manager and Mac).
         WindowGroup("Session", id: "session", for: SessionWindowValue.self) { $value in

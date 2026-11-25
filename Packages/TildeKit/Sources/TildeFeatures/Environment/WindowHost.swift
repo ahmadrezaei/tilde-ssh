@@ -6,7 +6,7 @@ import TildeSecurity
 import TildeStore
 import TildeTerminal
 
-/// "Tilde > Lock Now": the app shell sets this to `appLock.lockNow` (the lock itself is owned by WS3).
+/// "Tilde > Lock Now": the app shell sets this to `appLock.lockNow` (the lock itself is owned by the security module).
 public struct LockNowAction: Sendable {
     private let run: @MainActor @Sendable () -> Void
     public init(_ run: @escaping @MainActor @Sendable () -> Void) { self.run = run }
@@ -116,6 +116,10 @@ private struct WindowHostBody<Content: View>: View {
         actions.themes = TerminalTheme.builtIn.map { ThemeChoice(id: $0.id, name: $0.name) }
         actions.selectedThemeID = terminalSettings.theme.id
         actions.selectTheme = { terminalSettings.themeID = $0 }
+        #if !os(macOS)
+        // On the Mac the system's own sidebar toggle handles this; on iPad the split view column is ours to flip.
+        if !navigator.isCompact { actions.toggleSidebar = { navigator.toggleSidebar() } }
+        #endif
         actions.showKeys = { navigator.present(.keys) }
         actions.showSnippets = { navigator.present(.snippets) }
         if let lockNow { actions.lockNow = { lockNow() } }

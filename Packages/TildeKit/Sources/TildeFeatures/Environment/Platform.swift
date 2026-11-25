@@ -15,7 +15,7 @@ enum Platform {
         #endif
     }
 
-    /// Copies plain text (fingerprints, SSH commands, public keys). For secrets, use WS3's expiring clipboard.
+    /// Copies plain text (fingerprints, SSH commands, public keys). For secrets, use the expiring clipboard.
     @MainActor
     static func copy(_ string: String) {
         #if canImport(UIKit)

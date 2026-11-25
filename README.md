@@ -17,32 +17,52 @@
   <a href="CODE_OF_CONDUCT.md"><img alt="Contributor Covenant 2.1" src="https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa"></a>
 </p>
 
-Tilde is an **SSH client** and **terminal** built for the people who get paged: SREs, sysadmins, homelab tinkerers and anyone who has typed `cd ~` today. It runs natively on **iOS**, **iPad** and **macOS**, syncs your server list with **iCloud sync**, and keeps passwords and keys in iCloud Keychain, which is end-to-end encrypted. There is no account to create and no analytics.
+Tilde is an **SSH client** and **terminal** built for the people who get paged: SREs, sysadmins, homelab tinkerers and anyone who has typed `cd ~` today. It runs natively on **iPhone**, **iPad** and **Mac**, syncs your server list with **iCloud sync**, and keeps passwords and keys in iCloud Keychain, which is end-to-end encrypted. There is no account to create and no analytics.
 
-> **Status:** pre-release. The design is settled and the modules are being built. See [`docs/DESIGN.md`](docs/DESIGN.md) for the full spec and the [roadmap](#roadmap) for what ships when.
+> **Status:** version 1.0. Everything listed under Features is implemented and covered by the test suite. The [roadmap](#roadmap) lists what is not in 1.0 yet (port forwarding, SFTP, Mosh and two-factor prompts among them).
+
+<p align="center">
+  <img src="design/screenshots/iphone-terminal.png" alt="Tilde on iPhone: a terminal session on a production server with the SSH key bar above the keyboard" width="260">
+  &nbsp;
+  <img src="design/screenshots/iphone-servers.png" alt="Tilde on iPhone: the server list with favorites, groups, environment badges and latency" width="260">
+  &nbsp;
+  <img src="design/screenshots/iphone-known-hosts.png" alt="Tilde on iPhone: the Known Hosts list with SHA256 fingerprints and a conflicted key marked in red" width="260">
+</p>
 
 ## Features
 
 - **Servers** with groups, tags, favorites, search and live reachability. Production servers are color-coded so you never type into the wrong box.
 - **Quick Connect:** type `user@host:port` (or paste `ssh -p 2222 -J bastion deploy@10.0.4.12`) and go.
 - **A real SSH keyboard** on iPhone and iPad: Esc, Ctrl, Alt, Tab, arrows, `| ~ / -`, F-keys and snippets, with sticky modifiers and flick-for-alternates. Hardware keyboards get Option-as-Meta and slim shortcuts.
+- **Terminal:** xterm-256color and truecolor, scrollback, find, three themes (Tilde Night, Tilde Day and a high-contrast one), SF Mono or Menlo, and pinch or ⌘+ / ⌘- to resize the font.
 - **Tabs and a full menu bar** on iPad and Mac, with ⌘1 to ⌘9, find in scrollback, multiple windows and Settings.
-- **Keys:** generate Ed25519 (or ECDSA / RSA), import OpenSSH and PEM keys including passphrase-protected ones, copy or share the public key, install it on a server.
-- **Host key verification** that stops loudly: a changed fingerprint aborts the connection before any credential is sent.
-- **Jump host** (ProxyJump), auto-reconnect with backoff, and one-switch tmux attach.
-- **Import** `~/.ssh/config` and `known_hosts` on the Mac, with a preview and duplicate detection.
-- **Face ID / Touch ID** app lock, a privacy cover in the app switcher, and multi-line paste confirmation.
+- **Keys:** generate Ed25519 (or ECDSA / RSA), import OpenSSH and PEM keys including passphrase-protected ones, copy or share the public key, install it on a server, export it behind device authentication.
+- **Host key verification** that stops loudly: a changed fingerprint aborts the connection before any credential is sent. A **Known Hosts** list shows every pinned key, and pins sync across your devices.
+- **Snippets** with placeholders, a palette to insert or run them, and a few examples to start from.
+- **Jump host** (ProxyJump, single hop), auto-reconnect with backoff, and one-switch tmux attach.
+- **Import** `~/.ssh/config` and `known_hosts` files, with a preview and duplicate detection.
+- **Face ID / Touch ID** app lock, a privacy cover in the app switcher, multi-line paste confirmation and a clipboard that clears itself.
 - **iCloud sync** for server metadata (CloudKit private database). Passwords and private keys never touch CloudKit.
 
 ## Screenshots
 
-<!-- Replace with real captures from design/screenshots/ before the first release. -->
+| iPhone: terminal and key bar | iPhone: servers | iPhone: key manager |
+|---|---|---|
+| <img src="design/screenshots/iphone-terminal.png" alt="iPhone terminal with the SSH key bar" width="240"> | <img src="design/screenshots/iphone-servers.png" alt="iPhone server list" width="240"> | <img src="design/screenshots/iphone-keys.png" alt="iPhone key manager" width="240"> |
 
-| Terminal and key bar | Server list | iPad tabs | Mac |
-|---|---|---|---|
-| _coming soon_ | _coming soon_ | _coming soon_ | _coming soon_ |
+| iPhone: Known Hosts | iPhone: Settings |
+|---|---|
+| <img src="design/screenshots/iphone-known-hosts.png" alt="iPhone Known Hosts list" width="240"> | <img src="design/screenshots/iphone-settings.png" alt="iPhone Settings" width="240"> |
 
-Interactive mockups of every screen are in [`design/mockups.html`](design/mockups.html); open the file in a browser.
+**iPad** (server list in the sidebar, tabs and the key bar in the detail column):
+
+<img src="design/screenshots/ipad-terminal.png" alt="Tilde on iPad: sidebar with servers, a terminal tab and the SSH key bar above the keyboard" width="720">
+
+**Mac** (sidebar, tab strip and a terminal per tab):
+
+<img src="design/screenshots/mac-window.png" alt="Tilde on Mac: sidebar with servers and two terminal tabs" width="720">
+
+The screenshots use demo servers (`prod-api-01`, `db-primary` and so on) and a mock session, not real hosts. Interactive mockups of every screen are in [`design/mockups.html`](design/mockups.html); open the file in a browser.
 
 ## Install
 
@@ -125,9 +145,9 @@ Found a vulnerability? Please follow [`SECURITY.md`](SECURITY.md) instead of ope
 
 ## Roadmap
 
-**v1.0:** servers, Quick Connect, Ed25519 / ECDSA / RSA keys, the key bar, tabs and menus, host key verification, iCloud sync, app lock, snippets, jump host (single hop), Mac config import.
+**v1.0 (current):** servers, Quick Connect, Ed25519 / ECDSA / RSA keys, the key bar, tabs and menus, host key verification and the Known Hosts list, iCloud sync, app lock, snippets, jump host (single hop), `~/.ssh/config` and `known_hosts` import.
 
-**v1.1:** split panes, port forwarding, keyboard-interactive (2FA) auth, agent forwarding, Secure Enclave keys, SFTP browser, iTerm2 theme import, Shortcuts and Spotlight, menu bar quick connect.
+**v1.1:** a bundled Nerd Font (Powerline and Starship glyphs), split panes, port forwarding, keyboard-interactive (2FA) auth, agent forwarding, Secure Enclave keys, SFTP browser, iTerm2 theme import, Shortcuts and Spotlight, menu bar quick connect.
 
 **Later:** multi-hop ProxyJump, OpenSSH certificates, FIDO2 keys, shared vaults, Live Activities.
 

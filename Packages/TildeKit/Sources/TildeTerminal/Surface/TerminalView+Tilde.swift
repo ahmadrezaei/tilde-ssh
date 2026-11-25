@@ -33,6 +33,8 @@ extension TerminalView {
     func applyTheme(_ theme: TerminalTheme, environment: ServerEnvironment) {
         installColors(theme.ansi.map(Self.termColor))
         nativeForegroundColor = Self.nativeColor(theme.foreground)
+        // Only `nativeBackgroundColor`: SwiftTerm paints the view background through its layer, and assigning the
+        // UIKit `backgroundColor` as well would leave that layer colour nil, which renders black.
         nativeBackgroundColor = Self.nativeColor(theme.background)
         caretColor = Self.nativeColor(Self.cursorRGB(theme: theme, environment: environment))
         // The theme stores the selection as 0xRRGGBBAA.
@@ -44,7 +46,6 @@ extension TerminalView {
         #if canImport(UIKit)
         indicatorStyle = theme.isDark ? .white : .black
         keyboardAppearance = theme.isDark ? .dark : .light
-        backgroundColor = Self.nativeColor(theme.background)
         #endif
     }
 

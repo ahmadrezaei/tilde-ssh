@@ -1,7 +1,6 @@
 import UIKit
 
 /// iOS app/scene glue: push registration for CloudKit silent notifications, background task hooks.
-/// Placeholder (WS6).
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(
         _ application: UIApplication,

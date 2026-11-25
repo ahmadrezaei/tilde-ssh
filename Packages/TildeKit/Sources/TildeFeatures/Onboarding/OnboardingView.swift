@@ -12,7 +12,7 @@ public struct OnboardingView: View {
     private let onOpenSettings: () -> Void
 
     /// - Parameters:
-    ///   - iCloudAvailable: pass `false` to show "iCloud is off. Servers will stay on this device." (from WS1's account observer).
+    ///   - iCloudAvailable: pass `false` to show "Servers are stored on this device. Turn on iCloud sync in Settings." (from the sync status monitor).
     public init(
         iCloudAvailable: Bool = true,
         onAddServer: @escaping () -> Void = {},
@@ -46,7 +46,8 @@ public struct OnboardingView: View {
                     .accessibilityAddTraits(.isHeader)
 
                 if !iCloudAvailable {
-                    Banner(.info, headline: "iCloud is off", detail: "Servers will stay on this device.",
+                    Banner(.info, headline: "iCloud sync is off",
+                           detail: "Servers are stored on this device. Turn on iCloud sync in Settings.",
                            actions: [.init("Settings", handler: onOpenSettings)])
                 }
 
@@ -56,10 +57,12 @@ public struct OnboardingView: View {
                     Button("Generate an SSH key", action: onGenerateKey).buttonStyle(.tildeSecondary)
                 }
 
-                Text("Servers sync with iCloud. Secrets stay in iCloud Keychain.")
-                    .tildeText(13, relativeTo: .footnote)
-                    .foregroundStyle(TildeColor.text3)
-                    .multilineTextAlignment(.center)
+                if iCloudAvailable {
+                    Text("Servers sync with iCloud. Secrets stay in iCloud Keychain.")
+                        .tildeText(13, relativeTo: .footnote)
+                        .foregroundStyle(TildeColor.text3)
+                        .multilineTextAlignment(.center)
+                }
 
                 Button("Skip", action: onSkip).buttonStyle(.plain).tildeText(13, weight: .semibold, relativeTo: .footnote).foregroundStyle(TildeColor.text2)
             }

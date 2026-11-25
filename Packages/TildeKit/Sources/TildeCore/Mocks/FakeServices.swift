@@ -3,7 +3,7 @@ import Foundation
 import Observation
 
 /// A `KeyService` that fabricates plausible-looking (but not usable) keys, so key-manager UI can be built
-/// before WS3 lands. `fingerprintSHA256` is real (SHA-256 + unpadded base64).
+/// before the real services are wired. `fingerprintSHA256` is real (SHA-256 + unpadded base64).
 public struct FakeKeyService: KeyService {
     public init() {}
 
@@ -56,7 +56,7 @@ private extension String {
     var hashValueStable: Int { unicodeScalars.reduce(5381) { ($0 &* 33) &+ Int($1.value) } & 0x7FFF_FFFF }
 }
 
-/// A deliberately simple `user@host[:port]` / `ssh://user@host:port` parser. The real one (WS2) handles
+/// A deliberately simple `user@host[:port]` / `ssh://user@host:port` parser. The real one handles
 /// the full grammar from section 4.4; use this only for previews.
 public struct FakeQuickConnectParser: QuickConnectParsing {
     public var defaultUser: String

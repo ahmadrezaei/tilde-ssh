@@ -134,7 +134,7 @@ import TildeCore
         }
     }
 
-    // MARK: Citadel interop (what WS2 will feed the SSH engine)
+    // MARK: Citadel interop (what the SSH engine is fed)
 
     @Test func citadelAcceptsOurEd25519AndRSABytes() async throws {
         let (edInfo, edMaterial) = try await service.generate(.ed25519, bits: nil, comment: "interop")

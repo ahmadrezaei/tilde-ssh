@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Key bar (WS4) <-> snippets (WS1 data, WS5 palette)
+// MARK: - Key bar <-> snippets
 
 public protocol SnippetProviding: Sendable {
     func snippets(matching query: String) async -> [SnippetSnapshot]

@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Reachability and parsers (WS2)
+// MARK: - Reachability and parsers
 
 public enum ProbeResult: Equatable, Sendable {
     case reachable(Duration)

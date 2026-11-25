@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Host keys (store: WS1; validator: WS2; prompt UI: WS5)
+// MARK: - Host keys (store, validator, prompt UI)
 
 /// A host and port, with OpenSSH `known_hosts` canonicalisation.
 public struct HostEndpoint: Hashable, Sendable {
@@ -80,7 +80,7 @@ public enum HostKeyDecision: Sendable, Equatable {
     case trustAndSave, connectOnce, reject
 }
 
-/// Implemented by WS5 (sheet / takeover).
+/// Implemented by the app shell (sheet / takeover).
 @MainActor public protocol HostKeyPrompter: AnyObject {
     /// For a mismatch the engine has already aborted; `.trustAndSave` means "reconnect with the new pin".
     func decide(_ challenge: HostKeyChallenge) async -> HostKeyDecision

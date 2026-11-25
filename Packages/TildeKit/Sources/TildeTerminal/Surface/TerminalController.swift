@@ -25,8 +25,15 @@ final class TerminalInputState {
         return parts.joined(separator: "+")
     }
 
+    /// Seconds on a monotonic clock, for double-tap timing.
+    private static let clockOrigin = ContinuousClock.now
+    private static func clockSeconds() -> TimeInterval {
+        let elapsed = clockOrigin.duration(to: .now).components
+        return TimeInterval(elapsed.seconds) + TimeInterval(elapsed.attoseconds) / 1e18
+    }
+
     func tap(_ modifier: KeyModifiers) {
-        latch.tap(modifier, now: ProcessInfo.processInfo.systemUptime)
+        latch.tap(modifier, now: Self.clockSeconds())
         onChange?()
     }
 

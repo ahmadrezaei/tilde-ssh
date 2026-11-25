@@ -108,7 +108,7 @@ struct ServerActions {
         ((try? context.fetch(FetchDescriptor<Server>())) ?? []).map { ServerSnapshot(model: $0) }
     }
 
-    /// Creates servers from parsed `~/.ssh/config` hosts (the import UI is WS6's; this stores what the user chose).
+    /// Creates servers from parsed `~/.ssh/config` hosts (the import UI lives elsewhere; this stores what the user chose).
     /// Skips hosts that already exist (same host, port and user). A key is attached only when a key named like the
     /// identity file exists; otherwise the server asks for a password.
     @discardableResult

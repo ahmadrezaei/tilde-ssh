@@ -69,6 +69,8 @@ public final class AppNavigator {
     public var isCompact = false
     /// Whether the full-screen session deck is up in this window. Only ever `true` in the compact layout.
     public var isDeckPresented = false
+    /// Which columns the iPad / Mac split view shows. "Toggle Sidebar" flips it between all and detail only.
+    public var columnVisibility: NavigationSplitViewVisibility = .all
 
     init(coordinator: SessionCoordinator, windowID: UUID) {
         self.coordinator = coordinator
@@ -79,6 +81,10 @@ public final class AppNavigator {
     public var tabs: [SessionTab] { coordinator.tabs(in: windowID) }
 
     public func present(_ sheet: AppSheet) { self.sheet = sheet }
+
+    public func toggleSidebar() {
+        columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
+    }
 
     public func focusSearch() {
         phoneTab = .servers

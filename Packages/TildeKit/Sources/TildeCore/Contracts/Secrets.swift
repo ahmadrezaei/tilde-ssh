@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Secrets (implemented by WS3: KeychainSecretStore; mock: InMemorySecretStore)
+// MARK: - Secrets (KeychainSecretStore; mock: InMemorySecretStore)
 
 /// The kind of secret; the raw value is the `<kind>` prefix of the Keychain account (`pw:<uuid>`).
 public enum SecretKind: String, Sendable {
