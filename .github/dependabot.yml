@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Dependencies are pinned exactly (see Packages/TildeKit/Package.swift). Dependabot proposes bumps;
+  # a human reviews the diff, especially for SSH, crypto and the swift-nio-ssh fork. See SECURITY.md.
+  - package-ecosystem: swift
+    directory: /Packages/TildeKit
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencies]

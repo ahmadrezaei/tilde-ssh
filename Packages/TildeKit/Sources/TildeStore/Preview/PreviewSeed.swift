@@ -45,6 +45,7 @@ public enum PreviewSeed {
             if snap.name == "prod-api-01" { server.tags = [k8s, edge] }
             context.insert(server)
         }
+        _ = try? SnippetSeeds.seedMissing(in: context)
         try? context.save()
     }
 }

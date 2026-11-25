@@ -1,0 +1,112 @@
+Tilde: SSH Client & Terminal
+Copyright 2026 Ahmad Rezaei and contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+The name "Tilde" and the app icon are not covered by that license (see TRADEMARKS.md).
+
+This product includes software developed by third parties. Their notices follow.
+The same text is shown in the app under Settings > About > Acknowledgements.
+Dependency versions are pinned in Packages/TildeKit/Package.resolved.
+
+================================================================================
+Apache License 2.0 components
+================================================================================
+
+The following packages are licensed under the Apache License, Version 2.0, a copy of
+which is in the LICENSE file and at http://www.apache.org/licenses/LICENSE-2.0
+Each is used unmodified.
+
+  swift-nio-ssh (fork maintained at https://github.com/Wellz26/swift-nio-ssh; original
+      https://github.com/apple/swift-nio-ssh)
+      Copyright (c) Apple Inc. and the SwiftNIO project authors
+
+  swift-nio (https://github.com/apple/swift-nio)
+      Copyright (c) Apple Inc. and the SwiftNIO project authors
+
+  swift-crypto (https://github.com/apple/swift-crypto)
+      Copyright (c) Apple Inc. and the SwiftCrypto project authors
+
+  swift-log (https://github.com/apple/swift-log)
+      Copyright (c) Apple Inc. and the SwiftLog project authors
+
+  swift-collections (https://github.com/apple/swift-collections)
+      Copyright (c) Apple Inc. and the Swift project authors
+
+  swift-atomics (https://github.com/apple/swift-atomics)
+      Copyright (c) Apple Inc. and the Swift project authors
+
+  swift-asn1 (https://github.com/apple/swift-asn1)
+      Copyright (c) Apple Inc. and the SwiftASN1 project authors
+
+  swift-system (https://github.com/apple/swift-system)
+      Copyright (c) Apple Inc. and the Swift System project authors
+
+  swift-argument-parser (https://github.com/apple/swift-argument-parser)
+      Copyright (c) Apple Inc. and the Swift project authors
+
+  swift-png (https://github.com/tayloraswift/swift-png)
+      Copyright 2026 Diana Ma (@tayloraswift)
+
+  h (https://github.com/rarestype/h)
+      Copyright 2026 Diana Ma (@tayloraswift)
+
+Upstream NOTICE files for swift-nio, swift-crypto, swift-log and swift-asn1 apply to those
+packages and are available in their repositories.
+
+================================================================================
+MIT License components
+================================================================================
+
+  Citadel (https://github.com/orlandos-nl/Citadel)
+      Copyright (c) 2022 Orlandos
+
+  BigInt (https://github.com/attaswift/BigInt)
+      Copyright (c) 2016-2017 Karoly Lorentey
+
+  SwiftTerm (https://github.com/migueldeicaza/SwiftTerm)
+      Copyright (c) 2019-2026 Miguel de Icaza (https://github.com/migueldeicaza)
+      Copyright (c) 2017-2019, The xterm.js authors (https://github.com/xtermjs/xterm.js)
+      Copyright (c) 2014-2016, SourceLair Private Company (https://www.sourcelair.com)
+      Copyright (c) 2012-2013, Christopher Jeffrey (https://github.com/chjj/)
+      Copyright (c) 2016 Ryan L McIntyre (Powerline Extra Symbols flame silhouette,
+          https://github.com/ryanoasis/powerline-extra-symbols)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+(SwiftTerm and Citadel each license under these MIT terms; see their repositories for the
+exact text of each license.)
+
+================================================================================
+SIL Open Font License 1.1 (only when the font files are bundled)
+================================================================================
+
+  JetBrains Mono Nerd Font Mono
+      JetBrains Mono: Copyright 2020 The JetBrains Mono Project Authors
+          (https://github.com/JetBrains/JetBrainsMono)
+      Nerd Fonts patches: Copyright (c) 2014, Ryan McIntyre (https://github.com/ryanoasis/nerd-fonts)
+      Licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+
+  The font files are optional and are added to App/Resources/Fonts when the terminal font
+  picker ships. Keep this section only if they are bundled, together with the OFL text.
+
+================================================================================
+Apple frameworks
+================================================================================
+
+Tilde uses system frameworks supplied by the operating system (SwiftUI, SwiftData, CloudKit,
+CryptoKit, Security, LocalAuthentication, Network and others), which are not redistributed
+with the app.

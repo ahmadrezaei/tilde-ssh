@@ -1,0 +1,3 @@
+# Forks: change the bundle identifier in Config/Shared.xcconfig and set the same value here (or via the environment).
+app_identifier(ENV["TILDE_BUNDLE_ID"] || "app.tildessh.Tilde")
+# apple_id and team_id are deliberately not set here. Use an App Store Connect API key (see Fastfile).

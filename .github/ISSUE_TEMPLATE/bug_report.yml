@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in Tilde does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. **Do not paste passwords, private keys or full `known_hosts` files.**
+        Host names and IPs can be replaced with `example.com` and `192.0.2.x`.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add a server with key auth
+        2. Connect
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [iPhone, iPad, Mac]
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Tilde and OS version
+      placeholder: Tilde 1.0 (12), iPadOS 26.1
+    validations:
+      required: true
+  - type: input
+    id: server
+    attributes:
+      label: Server
+      description: OS and OpenSSH version if you know it (`ssh -V` on the server).
+      placeholder: Ubuntu 24.04, OpenSSH_9.6p1
+  - type: dropdown
+    id: auth
+    attributes:
+      label: Authentication
+      options: [Ed25519 key, ECDSA key, RSA key, Password, Not applicable]
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed secrets and private hostnames from everything I pasted
+          required: true
+        - label: I searched existing issues
+          required: true
