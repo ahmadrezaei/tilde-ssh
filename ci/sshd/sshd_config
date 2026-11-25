@@ -1,0 +1,15 @@
+# Deliberately close to a stock OpenSSH 9.x configuration: ssh-rsa (SHA-1) signatures are NOT accepted,
+# which is exactly what the RSA SHA-2 test needs to prove.
+Port 22
+HostKey /etc/ssh/ssh_host_ed25519_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_rsa_key
+PasswordAuthentication yes
+PubkeyAuthentication yes
+KbdInteractiveAuthentication no
+PermitRootLogin no
+AllowTcpForwarding yes
+LogLevel VERBOSE
+# Tests rely on `ClientAliveInterval` not killing idle sessions.
+ClientAliveInterval 0
+Include /etc/ssh/sshd_config.d/*.conf
