@@ -1,0 +1,38 @@
+# Integration fixtures for TildeSSH (run ./generate-keys.sh first, then `docker compose up -d --build`).
+#
+#   target   2201  plain OpenSSH 9.7: password user, ed25519 / ecdsa / rsa key users
+#   bastion  2202  same image; reaches `target` on the internal network (jump host tests)
+#   legacy   2203  only AES-CTR + DH group 14 SHA-256 (exercises the Citadel algorithm extras)
+#   nokex    2204  only a kex algorithm Tilde does not implement (no-common-algorithm error)
+#
+# Tests run with TILDE_SSH_INTEGRATION=1 (see Tests/TildeSSHTests/IntegrationTests.swift).
+services:
+  target:
+    build: .
+    hostname: target
+    ports: ["2201:22"]
+    volumes: ["./keys:/keys:ro"]
+    networks: [lab]
+  bastion:
+    build: .
+    hostname: bastion
+    ports: ["2202:22"]
+    volumes: ["./keys:/keys:ro"]
+    networks: [lab]
+  legacy:
+    build: .
+    ports: ["2203:22"]
+    volumes: ["./keys:/keys:ro"]
+    environment:
+      SSHD_EXTRA: "KexAlgorithms diffie-hellman-group14-sha256;Ciphers aes128-ctr;MACs hmac-sha2-256"
+    networks: [lab]
+  nokex:
+    build: .
+    ports: ["2204:22"]
+    volumes: ["./keys:/keys:ro"]
+    environment:
+      SSHD_EXTRA: "KexAlgorithms diffie-hellman-group-exchange-sha256"
+    networks: [lab]
+
+networks:
+  lab: {}
