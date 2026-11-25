@@ -348,13 +348,19 @@ public struct ServerList: View {
     private var emptyOverlay: some View {
         if servers.isEmpty && !isFiltering {
             if onboardingDone {
-                EmptyState("No servers yet.", message: "Add one, or type user@host in the search field and press return.") {
-                    VStack(spacing: TildeSpacing.s) {
-                        Button("Add server") { navigator.present(.newServer) }.buttonStyle(.tildePrimary)
-                        Button("Quick connect") { navigator.focusSearch() }.buttonStyle(.tildeSecondary)
+                // A scroll view (like the onboarding view) gives the large "Servers" title content to track; a
+                // plain centred view makes the title disappear on iPhone.
+                ScrollView {
+                    EmptyState("No servers yet.", message: "Add one, or type user@host in the search field and press return.") {
+                        VStack(spacing: TildeSpacing.s) {
+                            Button("Add server") { navigator.present(.newServer) }.buttonStyle(.tildePrimary)
+                            Button("Quick connect") { navigator.focusSearch() }.buttonStyle(.tildeSecondary)
+                        }
                     }
+                    .frame(maxWidth: .infinity)
+                    .containerRelativeFrame(.vertical, alignment: .center)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .scrollBounceBehavior(.basedOnSize)
                 .background(TildeColor.bg)
             } else {
                 OnboardingView(
