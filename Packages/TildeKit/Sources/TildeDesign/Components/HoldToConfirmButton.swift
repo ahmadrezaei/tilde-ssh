@@ -17,7 +17,7 @@ public struct HoldToConfirmButton: View {
 
     public var body: some View {
         Text(title)
-            .font(.system(size: 15, weight: .semibold))
+            .tildeText(15, weight: .semibold, relativeTo: .body)
             .foregroundStyle(TildeColor.danger)
             .frame(maxWidth: .infinity, minHeight: 44)
             .background(alignment: .leading) {

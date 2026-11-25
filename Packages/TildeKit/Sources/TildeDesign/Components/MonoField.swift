@@ -12,7 +12,7 @@ public struct MonoField: View {
 
     public var body: some View {
         TextField(title, text: $text)
-            .font(TildeFont.mono(15))
+            .tildeMono(15, relativeTo: .body)
             .autocorrectionDisabled()
             #if os(iOS)
             .textInputAutocapitalization(.never)
