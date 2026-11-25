@@ -9,14 +9,22 @@ public final class HardwareKeyboardMonitor {
     /// A shared monitor; observers are installed on first use.
     public static let shared = HardwareKeyboardMonitor()
 
-    /// Whether a hardware keyboard is connected.
-    public private(set) var isAttached: Bool
+    /// Whether a hardware keyboard is connected (or `overrideAttached`, when set).
+    public var isAttached: Bool { overrideAttached ?? detectedAttached }
+
+    /// Pretends a keyboard is (or is not) attached. For demos and tests: the iOS Simulator always reports the Mac's
+    /// keyboard, which would otherwise keep the key bar in its slim strip form. Leave nil in the app.
+    public var overrideAttached: Bool? {
+        didSet { for callback in onChange.values { callback() } }
+    }
+
+    private var detectedAttached: Bool
 
     @ObservationIgnored private var tokens: [NSObjectProtocol] = []
     @ObservationIgnored var onChange: [UUID: () -> Void] = [:]
 
     public init() {
-        isAttached = GCKeyboard.coalesced != nil
+        detectedAttached = GCKeyboard.coalesced != nil
         let center = NotificationCenter.default
         for name in [Notification.Name.GCKeyboardDidConnect, .GCKeyboardDidDisconnect] {
             tokens.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
@@ -31,8 +39,8 @@ public final class HardwareKeyboardMonitor {
 
     private func refresh() {
         let attached = GCKeyboard.coalesced != nil
-        guard attached != isAttached else { return }
-        isAttached = attached
+        guard attached != detectedAttached else { return }
+        detectedAttached = attached
         for callback in onChange.values { callback() }
     }
 
