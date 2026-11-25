@@ -227,7 +227,7 @@ NavigationSplitView (2 columns)
 | ⌘P | Command palette (servers, sessions, snippets, actions) |
 | ⌘⇧S | Snippets palette |
 | ⌘R | Reconnect current session |
-| ⌘K | Clear scrollback (Terminal.app/iTerm2 convention) |
+| ⌘K | Clear screen and scrollback (Terminal.app/iTerm2 convention) |
 | ⌘F | Find in scrollback |
 | ⌘+ / ⌘− / ⌘0 | Font bigger / smaller / reset |
 | ⌘N | New window |

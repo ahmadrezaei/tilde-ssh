@@ -112,7 +112,7 @@ struct SessionStateOverlay: View {
     private func connecting(phase: ConnectPhase?) -> some View {
         VStack(spacing: TildeSpacing.m) {
             ProgressView().controlSize(.regular).tint(TildeColor.accent)
-            Text("Connecting to \(tab.server.target.username)@\(tab.server.target.host):\(tab.server.target.port) …")
+            Text("Connecting to \(tab.server.target.username)@\(tab.server.target.host):\(String(tab.server.target.port)) …")
                 .tildeMono(13, weight: .medium, relativeTo: .footnote)
                 .foregroundStyle(TildeColor.text)
                 .multilineTextAlignment(.center)

@@ -302,8 +302,15 @@ final class ServerEditorModel {
             guard !password.isEmpty else { return }   // keep the saved one
             let id = server.passwordSecretID ?? UUID()
             let label = "Tilde: \(server.username)@\(server.host)"
-            try? secrets.write(Data(password.utf8), for: SecretRef(kind: .password, id: id), label: label, synchronizable: true)
-            server.passwordSecretID = id
+            do {
+                try secrets.write(Data(password.utf8), for: SecretRef(kind: .password, id: id), label: label, synchronizable: true)
+                server.passwordSecretID = id
+            } catch {
+                // The Keychain refused the write: never link an id with nothing behind it. The server asks for the
+                // password at each connection instead of failing later with "secret not on this device".
+                server.authMethodRaw = AuthMethod.passwordPrompt.rawValue
+                server.passwordSecretID = nil
+            }
         case .passwordPrompt, .key:
             // Ask every time stores nothing; key auth does not need a password.
             if let id = server.passwordSecretID { try? secrets.delete(SecretRef(kind: .password, id: id)) }
