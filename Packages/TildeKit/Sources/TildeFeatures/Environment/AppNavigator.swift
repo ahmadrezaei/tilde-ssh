@@ -107,6 +107,24 @@ public final class AppNavigator {
         if coordinator.reopenLastClosed(in: windowID) != nil { showDeckIfCompact() }
     }
 
+    /// Handles an incoming `ssh://` or `tilde://` link. **A link never connects by itself**: a connect link raises a
+    /// confirmation sheet, and only the user's "Connect" opens a session (password prompt only, see
+    /// `QuickConnectResolver.linkServer`).
+    public func handleLink(_ url: URL) {
+        let parser = TildeURLParser(defaultUsername: TildeSettings.currentDefaultUser)
+        switch parser.parse(url) {
+        case .connect(let result):
+            present(.confirmLink(result))
+        case .newServer(let result, let name):
+            let snapshot = ServerSnapshot(name: name ?? result.target.host, target: result.target, auth: .passwordPrompt)
+            present(.saveServer(SaveServerRequest(server: snapshot, password: nil)))
+        case .show(let destination):
+            show(destination)
+        case nil:
+            break
+        }
+    }
+
     /// Shows a `tilde://` destination: a tab on iPhone, a sheet elsewhere.
     public func show(_ destination: TildeURLDestination) {
         switch destination {

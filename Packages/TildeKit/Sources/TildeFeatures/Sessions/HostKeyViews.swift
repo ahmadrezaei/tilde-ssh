@@ -262,7 +262,7 @@ private struct TakeoverPreviewHost: View {
         }
         .task {
             _ = await withCheckedContinuation { (continuation: CheckedContinuation<HostKeyDecision, Never>) in
-                request = HostKeyRequest(challenge: challenge, windowID: nil, continuation: continuation)
+                request = HostKeyRequest(challenge: challenge, tabID: nil, windowID: nil, continuation: continuation)
             }
         }
     }

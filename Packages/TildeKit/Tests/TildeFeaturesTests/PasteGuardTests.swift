@@ -55,13 +55,35 @@ private let esc = "\u{1B}"
 
     private func settle() async { try? await Task.sleep(for: .milliseconds(150)) }
 
-    @Test func keystrokesAndOneLineCommandsPassStraightThrough() {
+    @Test func keystrokesAndEscapeSequencesPassStraightThrough() {
         let io = RecordingIO()
         let guarded = makeGuard(io)
         guarded.send(Data("a".utf8))
         guarded.send(Data("\r".utf8))
-        guarded.send(Data("ls -la\r".utf8))
-        #expect(io.sent == ["a", "\r", "ls -la\r"])
+        guarded.send(Data("\(esc)[A".utf8))        // arrow up
+        guarded.send(Data("\(esc)\r".utf8))        // Meta-Return
+        guarded.send(Data("ls -la".utf8))          // a multi-byte chunk without a newline
+        #expect(io.sent == ["a", "\r", "\(esc)[A", "\(esc)\r", "ls -la"])
+    }
+
+    @Test func aOneLinePasteWithATrailingNewlineIsGated() async {
+        // `rm -rf /` plus a newline runs the moment it arrives, so it must ask even though it is a single line.
+        let io = RecordingIO()
+        let asked = AskedLog()
+        let guarded = makeGuard(io, asked: asked)
+        guarded.send(Data("rm -rf /\n".utf8))
+        #expect(io.sent.isEmpty)
+        await settle()
+        #expect(asked.all == ["rm -rf /\n"])
+        #expect(io.sent == ["rm -rf /\n"])
+    }
+
+    @Test func aRejectedOneLinePasteNeverRuns() async {
+        let io = RecordingIO()
+        let guarded = makeGuard(io, confirms: false)
+        guarded.send(Data("rm -rf /\r".utf8))
+        await settle()
+        #expect(io.sent.isEmpty)
     }
 
     @Test func multiLinePasteIsHeldUntilApproved() async {
@@ -100,6 +122,44 @@ private let esc = "\u{1B}"
         guarded.send(Data("x".utf8))
         await settle()
         #expect(io.sent == ["x"])
+    }
+
+    @Test func aPasteQueuedBehindAConfirmationIsAskedAboutToo() async {
+        // Chunks that wait behind a confirmation are classified again when their turn comes: a second paste must not
+        // slip through unchecked just because it arrived while the first question was open.
+        let io = RecordingIO()
+        let asked = AskedLog()
+        let guarded = makeGuard(io, asked: asked)
+        guarded.send(Data("first\nfirst2".utf8))
+        guarded.send(Data("rm -rf /\n".utf8))
+        guarded.send(Data("y".utf8))
+        #expect(io.sent.isEmpty)
+        await settle()
+        await settle()
+        #expect(asked.all == ["first\nfirst2", "rm -rf /\n"])
+        #expect(io.sent == ["first\nfirst2", "rm -rf /\n", "y"])
+    }
+
+    @Test func aRejectedQueuedPasteIsDroppedButItsNeighboursSurvive() async {
+        // Answers are per paste; here the user rejects everything: only plain keystrokes arrive, in order.
+        let io = RecordingIO()
+        let guarded = makeGuard(io, confirms: false)
+        guarded.send(Data("one\ntwo".utf8))
+        guarded.send(Data("a".utf8))
+        guarded.send(Data("rm -rf /\n".utf8))
+        guarded.send(Data("b".utf8))
+        await settle()
+        await settle()
+        #expect(io.sent == ["a", "b"])
+    }
+
+    @Test func keystrokesNeverOvertakeAnApprovedPaste() async {
+        let io = RecordingIO()
+        let guarded = makeGuard(io, delay: .milliseconds(20))
+        guarded.send(Data("one\ntwo".utf8))
+        for key in ["a", "b", "c"] { guarded.send(Data(key.utf8)) }
+        await settle()
+        #expect(io.sent == ["one\ntwo", "a", "b", "c"])
     }
 
     @Test func bracketedPasteSplitAcrossSendsIsOneConfirmation() async {

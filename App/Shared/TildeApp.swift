@@ -56,7 +56,7 @@ private extension View {
         self
             .environment(\.tildeServices, environment.services)
             .environment(environment.coordinator)
-            .environment(\.lockNowAction, { environment.appLock.lockNow() })
+            .environment(\.lockNowAction, LockNowAction { environment.appLock.lockNow() })
             .modelContainer(environment.modelContainer)
     }
 }

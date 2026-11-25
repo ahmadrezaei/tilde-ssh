@@ -4,9 +4,15 @@ import TildeCore
 import TildeDesign
 import TildeStore
 
+/// "Tilde > Lock Now": the app shell sets this to `appLock.lockNow` (the lock itself is owned by WS3).
+public struct LockNowAction: Sendable {
+    private let run: @MainActor @Sendable () -> Void
+    public init(_ run: @escaping @MainActor @Sendable () -> Void) { self.run = run }
+    @MainActor public func callAsFunction() { run() }
+}
+
 public extension EnvironmentValues {
-    /// "Tilde > Lock Now": set by the app shell to `appLock.lockNow` (the lock itself is owned by WS3).
-    @Entry var lockNowAction: (@MainActor @Sendable () -> Void)?
+    @Entry var lockNowAction: LockNowAction?
 }
 
 /// Wraps one window's content with everything every window needs: its `AppNavigator`, the sheet host, host-key
@@ -39,8 +45,6 @@ private struct WindowHostBody<Content: View>: View {
     let navigator: AppNavigator
     let content: Content
 
-    @Environment(\.modelContext) private var context
-    @Environment(\.tildeServices) private var services
     @Environment(\.openWindow) private var openWindow
     @Environment(\.lockNowAction) private var lockNow
 
@@ -58,27 +62,9 @@ private struct WindowHostBody<Content: View>: View {
                 coordinator.saveServerRequest = nil
                 navigator.present(.saveServer(request))
             }
-            .onOpenURL(perform: handle)
+            .onOpenURL { navigator.handleLink($0) }
             // Outermost, so every modifier above (and the sheets) can read the navigator.
             .environment(navigator)
-    }
-
-    // MARK: Links
-
-    /// `ssh://` and `tilde://` links never connect by themselves: they raise a confirmation first.
-    private func handle(_ url: URL) {
-        let parser = TildeURLParser(defaultUsername: TildeSettings.currentDefaultUser)
-        switch parser.parse(url) {
-        case .connect(let result):
-            navigator.present(.confirmLink(result))
-        case .newServer(let result, let name):
-            let snapshot = ServerSnapshot(name: name ?? result.target.host, target: result.target, auth: .passwordPrompt)
-            navigator.present(.saveServer(SaveServerRequest(server: snapshot, password: nil)))
-        case .show(let destination):
-            navigator.show(destination)
-        case nil:
-            break
-        }
     }
 
     // MARK: Menu bar actions
@@ -88,44 +74,62 @@ private struct WindowHostBody<Content: View>: View {
         let coordinator = coordinator
         let window = navigator.windowID
         let tabs = navigator.tabs
-        let openWindow = openWindow
         let selected = navigator.selectedTab
-        return WindowCommandActions(
-            newTab: { navigator.present(.palette(.newTab)) },
-            reopenClosedTab: coordinator.recentlyClosed.isEmpty ? nil : { navigator.reopenLastClosed() },
-            closeTab: tabs.isEmpty ? nil : { coordinator.closeSelected(in: window) },
-            newServer: { navigator.present(.newServer) },
-            quickConnect: { navigator.focusSearch() },
-            commandPalette: { navigator.present(.palette(.all)) },
-            importSSHConfig: { navigator.present(.importSSHConfig) },
-            importKnownHosts: { navigator.present(.importKnownHosts) },
-            tabCount: tabs.count,
-            selectedTabIndex: selected.flatMap { tab in tabs.firstIndex { $0.id == tab.id } },
-            selectTab: { coordinator.select(index: $0 + 1, in: window) },
-            selectPreviousTab: tabs.count > 1 ? { coordinator.selectPrevious(in: window) } : nil,
-            selectNextTab: tabs.count > 1 ? { coordinator.selectNext(in: window) } : nil,
-            moveTabToNewWindow: selected.map { tab in
-                { let id = coordinator.moveToOwnWindow(tab); openWindow(id: "session", value: SessionWindowValue(sessionID: id)) }
-            },
-            showKeys: { navigator.present(.keys) },
-            showSnippets: { navigator.present(.snippets) },
-            lockNow: lockNow
-        )
+        let opener = WindowOpener(action: openWindow)
+
+        var actions = WindowCommandActions()
+        actions.newTab = { navigator.present(.palette(.newTab)) }
+        if !coordinator.recentlyClosed.isEmpty { actions.reopenClosedTab = { navigator.reopenLastClosed() } }
+        if !tabs.isEmpty { actions.closeTab = { coordinator.closeSelected(in: window) } }
+        actions.newServer = { navigator.present(.newServer) }
+        actions.quickConnect = { navigator.focusSearch() }
+        actions.commandPalette = { navigator.present(.palette(.all)) }
+        actions.importSSHConfig = { navigator.present(.importSSHConfig) }
+        actions.importKnownHosts = { navigator.present(.importKnownHosts) }
+        actions.tabCount = tabs.count
+        actions.selectedTabIndex = selected.flatMap { tab in tabs.firstIndex { $0.id == tab.id } }
+        actions.selectTab = { coordinator.select(index: $0 + 1, in: window) }
+        if tabs.count > 1 {
+            actions.selectPreviousTab = { coordinator.selectPrevious(in: window) }
+            actions.selectNextTab = { coordinator.selectNext(in: window) }
+        }
+        if let tab = selected {
+            actions.moveTabToNewWindow = {
+                let id = coordinator.moveToOwnWindow(tab)
+                opener.open(SessionWindowValue(sessionID: id))
+            }
+        }
+        actions.showKeys = { navigator.present(.keys) }
+        actions.showSnippets = { navigator.present(.snippets) }
+        if let lockNow { actions.lockNow = { lockNow() } }
+        return actions
     }
 
     private var sessionActions: SessionCommandActions? {
         guard let tab = navigator.selectedTab else { return nil }
         let navigator = navigator
         let coordinator = coordinator
-        return SessionCommandActions(
-            reconnect: { coordinator.reconnect(tab) },
-            disconnect: { coordinator.close(tab) },
-            sendInterrupt: { tab.terminalIO.send(Data([0x03])) },
-            editServer: tab.isAdHoc ? { navigator.saveAsServer(tab) } : { navigator.present(.editServer(tab.server.id)) },
-            copySSHCommand: { Platform.copy(SSHCommand.string(for: tab.server)) },
-            pasteSnippet: { navigator.present(.palette(.snippets)) }
-        )
+        var actions = SessionCommandActions()
+        actions.reconnect = { coordinator.reconnect(tab) }
+        actions.disconnect = { coordinator.close(tab) }
+        actions.sendInterrupt = { tab.terminalIO.send(Data([0x03])) }
+        if tab.isAdHoc {
+            actions.editServer = { navigator.saveAsServer(tab) }
+        } else {
+            actions.editServer = { navigator.present(.editServer(tab.server.id)) }
+        }
+        actions.copySSHCommand = { Platform.copy(SSHCommand.string(for: tab.server)) }
+        actions.pasteSnippet = { navigator.present(.palette(.snippets)) }
+        return actions
     }
+}
+
+/// `OpenWindowAction` is only ever called on the main actor (from menu actions); the box lets a `@Sendable` closure hold it.
+private struct WindowOpener: @unchecked Sendable {
+    let action: OpenWindowAction
+
+    @MainActor
+    func open(_ value: SessionWindowValue) { action(id: "session", value: value) }
 }
 
 // MARK: - Prompts
