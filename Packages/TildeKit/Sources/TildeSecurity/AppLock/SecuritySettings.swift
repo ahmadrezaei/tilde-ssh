@@ -24,7 +24,7 @@ public enum AppLockTimeout: Int, CaseIterable, Identifiable, Sendable {
 /// The security preferences from Settings > Security. Stored per device in `UserDefaults` (biometrics differ
 /// per device, and nothing here is sensitive).
 ///
-/// `strictHostChecking` is read by the SSH layer; `clipboardClearSeconds` by `SecureClipboard`.
+/// `strictHostChecking` and `allowLegacySSHRSA` are read by the SSH layer; `clipboardClearSeconds` by `SecureClipboard`.
 @MainActor
 @Observable
 public final class SecuritySettings {
@@ -40,6 +40,7 @@ public final class SecuritySettings {
         static let hideContent = "tilde.security.hideContentInSwitcher"
         static let strictHostChecking = "tilde.security.strictHostChecking"
         static let clipboardClear = "tilde.security.clipboardClearSeconds"
+        static let allowLegacySSHRSA = "tilde.security.allowLegacySSHRSA"
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -65,9 +66,25 @@ public final class SecuritySettings {
         didSet { defaults.set(strictHostChecking, forKey: Key.strictHostChecking) }
     }
 
+    /// Let RSA keys also sign with SHA-1 (`ssh-rsa`) after the SHA-2 variants fail. Some Dropbear/OpenWrt servers need
+    /// it; SHA-1 signatures are weak, so it is off by default. Read by the SSH engine when a session is created.
+    public var allowLegacySSHRSA: Bool {
+        didSet { defaults.set(allowLegacySSHRSA, forKey: Key.allowLegacySSHRSA) }
+    }
+
     /// Seconds before a copied secret is removed from the pasteboard; 0 disables clearing. Default 60.
     public var clipboardClearSeconds: Int {
         didSet { defaults.set(clipboardClearSeconds, forKey: Key.clipboardClear) }
+    }
+
+    /// The stored values, readable off the main actor (the SSH engine builds sessions from any context and must see the
+    /// latest choice without holding the observable object).
+    public nonisolated static func storedStrictHostChecking(in defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: Key.strictHostChecking)
+    }
+
+    public nonisolated static func storedAllowLegacySSHRSA(in defaults: UserDefaults = .standard) -> Bool {
+        defaults.bool(forKey: Key.allowLegacySSHRSA)
     }
 
     public init(defaults: UserDefaults = .standard) {
@@ -76,6 +93,7 @@ public final class SecuritySettings {
         lockTimeout = AppLockTimeout(rawValue: defaults.object(forKey: Key.lockTimeout) as? Int ?? 0) ?? .immediately
         hideContentInSwitcher = defaults.object(forKey: Key.hideContent) as? Bool ?? true
         strictHostChecking = defaults.bool(forKey: Key.strictHostChecking)
+        allowLegacySSHRSA = defaults.bool(forKey: Key.allowLegacySSHRSA)
         clipboardClearSeconds = defaults.object(forKey: Key.clipboardClear) as? Int ?? 60
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import TildeCore
 import TildeTerminal
 
 /// UserDefaults / `@AppStorage` keys and enums for the settings owned by the app shell.
@@ -86,6 +87,15 @@ public enum PasteConfirmMode: String, CaseIterable, Identifiable, Sendable {
         case .prodOnly: "Production only"
         case .always: "Always"
         case .never: "Never"
+        }
+    }
+
+    /// Whether a multi-line paste to a server in `environment` must be confirmed (design section 4.5).
+    public func requiresConfirmation(for environment: ServerEnvironment) -> Bool {
+        switch self {
+        case .always: true
+        case .never: false
+        case .prodOnly: environment == .prod
         }
     }
 }

@@ -190,17 +190,25 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
     // MARK: Snippets
 
     /// Types a snippet into the window's active session (and presses Return for run-on-insert snippets).
-    /// Goes through the paste guard, so a multi-line snippet to a PROD server asks first.
+    ///
+    /// A one-line snippet is the user's explicit action and goes straight to the session. A multi-line one asks first
+    /// when the paste rules (Settings > Terminal, always for PROD in the default mode) say so, through the same sheet
+    /// the terminal uses for pastes.
     @discardableResult
     public func insert(_ snippet: SnippetSnapshot, values: [String: String] = [:], in window: UUID) -> Bool {
         guard let tab = selectedTab(in: window), tab.isConnected else { return false }
         var text = SnippetTemplate.fill(snippet.command, values: values)
+        let needsConfirmation = tab.snippetNeedsConfirmation(text)
         if snippet.runOnInsert { text += "\r" }
-        // A one-line snippet is the user's explicit action and goes straight to the session. A multi-line one goes
-        // through the paste guard, so a PROD server asks first.
-        let multiline = PasteGuardPolicy.lines(of: text).count > 1
-        let io: any TerminalIO = multiline ? tab.terminalIO : tab.session
-        io.send(Data(text.utf8))
+        let bytes = Data(text.utf8)
+        guard needsConfirmation else {
+            tab.session.send(bytes)
+            return true
+        }
+        Task { [weak tab] in
+            guard let tab, await tab.requestPasteConfirmation(text), tab.isConnected else { return }
+            tab.session.send(bytes)
+        }
         return true
     }
 

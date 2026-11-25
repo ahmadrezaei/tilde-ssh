@@ -2,43 +2,25 @@ import Foundation
 import TildeCore
 import TildeStore
 
-/// Maps SwiftData `Server` rows to the Sendable `ServerSnapshot` the engine consumes.
+/// Maps SwiftData `Server` rows to the Sendable `ServerSnapshot` the engine consumes, via TildeStore's
+/// `ServerSnapshot(model:)`, and holds the small display helpers the lists share.
 ///
-/// Interim: WS1 ships `ServerSnapshot(model:)` in `TildeStore/Seeding`. When it lands, delete this file and call
-/// that mapper from `ServerMapper.snapshot(_:)`'s call sites. Conventions (shared with `PreviewSeed`):
 /// `ServerSnapshot.keyID` is the key's `privateSecretID` (the Keychain `key:<uuid>` item), not `SSHKeyRecord.id`.
 enum ServerMapper {
     static func snapshot(_ server: Server) -> ServerSnapshot {
-        ServerSnapshot(
-            id: server.id,
-            name: displayName(server),
-            target: target(server),
-            auth: AuthMethod(rawValue: server.authMethodRaw) ?? .key,
-            keyID: server.key?.privateSecretID,
-            passwordSecretID: server.passwordSecretID,
-            environment: ServerEnvironment(rawValue: server.environmentRaw) ?? .none,
-            jump: server.jumpServer.map(jump),
-            startupCommand: nonEmpty(server.startupCommand),
-            autoTmux: server.autoTmux,
-            tmuxSessionName: server.tmuxSessionName.isEmpty ? "tilde" : server.tmuxSessionName,
-            keepAliveSeconds: server.keepAliveSeconds,
-            termType: server.termType.isEmpty ? "xterm-256color" : server.termType,
-            envVars: envVars(json: server.envVarsJSON)
-        )
+        var snapshot = ServerSnapshot(model: server)
+        // Hand-edited or half-synced rows can leave these blank; the engine needs real values.
+        if snapshot.name.isEmpty { snapshot.name = server.host }
+        if snapshot.tmuxSessionName.isEmpty { snapshot.tmuxSessionName = "tilde" }
+        if snapshot.termType.isEmpty { snapshot.termType = "xterm-256color" }
+        return snapshot
     }
 
     static func target(_ server: Server) -> ConnectionTarget {
         ConnectionTarget(host: server.host, port: server.port, username: server.username)
     }
 
-    static func jump(_ server: Server) -> JumpSnapshot {
-        JumpSnapshot(
-            target: target(server),
-            auth: AuthMethod(rawValue: server.authMethodRaw) ?? .key,
-            keyID: server.key?.privateSecretID,
-            passwordSecretID: server.passwordSecretID
-        )
-    }
+    static func jump(_ server: Server) -> JumpSnapshot { JumpSnapshot(model: server) }
 
     static func displayName(_ server: Server) -> String {
         server.name.isEmpty ? server.host : server.name

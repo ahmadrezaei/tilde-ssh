@@ -52,6 +52,9 @@ private struct SecurityRows<KnownHosts: View>: View {
             Toggle(isOn: Bindable(settings).strictHostChecking) {
                 row("Strict host checking", detail: "Refuse servers whose host key is not already trusted.")
             }
+            Toggle(isOn: Bindable(settings).allowLegacySSHRSA) {
+                row("Allow legacy ssh-rsa (SHA-1) signatures", detail: "Needed for RSA keys on some Dropbear/OpenWrt servers. Less secure.")
+            }
             Picker(selection: Bindable(settings).clipboardClearSeconds) {
                 ForEach(SecuritySettings.clipboardClearChoices, id: \.self) { seconds in
                     Text(Self.clipboardTitle(seconds)).tag(seconds)

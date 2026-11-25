@@ -2,7 +2,9 @@ import SwiftData
 import SwiftUI
 import TildeCore
 import TildeDesign
+import TildeSecurity
 import TildeStore
+import TildeTerminal
 
 /// "Tilde > Lock Now": the app shell sets this to `appLock.lockNow` (the lock itself is owned by WS3).
 public struct LockNowAction: Sendable {
@@ -47,6 +49,9 @@ private struct WindowHostBody<Content: View>: View {
 
     @Environment(\.openWindow) private var openWindow
     @Environment(\.lockNowAction) private var lockNow
+    /// Set by `AppLockGate`. While it is locked the menu bar offers nothing that acts on content: the cover blocks
+    /// pointer and touch input, but menu shortcuts and menu items would still reach the actions published below.
+    @Environment(\.tildeAppLock) private var appLock
 
     private var coordinator: SessionCoordinator { navigator.coordinator }
 
@@ -78,6 +83,7 @@ private struct WindowHostBody<Content: View>: View {
         let opener = WindowOpener(action: openWindow)
 
         var actions = WindowCommandActions()
+        if appLock?.isLocked == true { return actions }
         actions.newTab = { navigator.present(.palette(.newTab)) }
         if !coordinator.recentlyClosed.isEmpty { actions.reopenClosedTab = { navigator.reopenLastClosed() } }
         if !tabs.isEmpty { actions.closeTab = { coordinator.closeSelected(in: window) } }
@@ -99,6 +105,17 @@ private struct WindowHostBody<Content: View>: View {
                 opener.open(SessionWindowValue(sessionID: id))
             }
         }
+        // View > Bigger / Smaller / Actual Size act on the selected tab's terminal; a size change there also updates
+        // the saved font size (`TerminalSurface` reports it). Themes are a saved setting, so any window can change them.
+        if let terminal = selected?.terminal {
+            actions.increaseFontSize = { terminal.increaseFontSize() }
+            actions.decreaseFontSize = { terminal.decreaseFontSize() }
+            actions.resetFontSize = { terminal.resetFontSize() }
+        }
+        let terminalSettings = TerminalSettings.shared
+        actions.themes = TerminalTheme.builtIn.map { ThemeChoice(id: $0.id, name: $0.name) }
+        actions.selectedThemeID = terminalSettings.theme.id
+        actions.selectTheme = { terminalSettings.themeID = $0 }
         actions.showKeys = { navigator.present(.keys) }
         actions.showSnippets = { navigator.present(.snippets) }
         if let lockNow { actions.lockNow = { lockNow() } }
@@ -106,13 +123,19 @@ private struct WindowHostBody<Content: View>: View {
     }
 
     private var sessionActions: SessionCommandActions? {
-        guard let tab = navigator.selectedTab else { return nil }
+        guard appLock?.isLocked != true, let tab = navigator.selectedTab else { return nil }
         let navigator = navigator
         let coordinator = coordinator
         var actions = SessionCommandActions()
         actions.reconnect = { coordinator.reconnect(tab) }
         actions.disconnect = { coordinator.close(tab) }
-        actions.sendInterrupt = { tab.terminalIO.send(Data([0x03])) }
+        let terminal = tab.terminal
+        actions.clear = { terminal.clear() }
+        actions.clearScrollback = { terminal.clearScrollback() }
+        actions.sendInterrupt = { terminal.sendInterrupt() }
+        actions.find = { terminal.showFind() }
+        actions.findNext = { terminal.findNext() }
+        actions.findPrevious = { terminal.findPrevious() }
         if tab.isAdHoc {
             actions.editServer = { navigator.saveAsServer(tab) }
         } else {

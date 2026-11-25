@@ -82,8 +82,8 @@ import TildeCore
 
         // Snapshots of both sides agree, apart from the secret reference that is deliberately dropped.
         var expected = ServerSnapshot(model: original)
-        expected.keyID = api.key?.id
-        expected.jump?.keyID = api.jumpServer?.key?.id
+        expected.keyID = api.key?.privateSecretID
+        expected.jump?.keyID = api.jumpServer?.key?.privateSecretID
         #expect(ServerSnapshot(model: api) == expected)
     }
 

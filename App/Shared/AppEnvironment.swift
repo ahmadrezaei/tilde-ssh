@@ -3,13 +3,14 @@ import Observation
 import SwiftData
 import TildeCore
 import TildeFeatures
+import TildeSecurity
 import TildeStore
 
-/// Dependency-injection container. Owned by WS5; wired to real implementations in Phase 2.
+/// Dependency-injection container for the app.
 ///
-/// Today every service is a mock from `TildeCore/Mocks`, and the store is in-memory with preview data, so the app runs
-/// end-to-end with no network, Keychain or iCloud. Each service is one line in `mock()`; to plug in a real
-/// implementation, replace that line (the comment on it names the owner), and nothing else in the app changes.
+/// `live()` wires the real implementations (SwiftData + CloudKit store, Keychain, SSH engine, App Lock).
+/// `mock()` keeps the in-memory mocks from `TildeCore/Mocks` for SwiftUI previews and for running without a network,
+/// Keychain or iCloud (launch with `TILDE_MOCK_ENVIRONMENT=1`).
 @MainActor
 @Observable
 final class AppEnvironment {
@@ -21,6 +22,12 @@ final class AppEnvironment {
     /// Owns every open session and answers host-key and password prompts. Built from `services`.
     let coordinator: SessionCoordinator
 
+    /// Settings > Sync. `nil` with the mocks.
+    let preferences: Preferences?
+    let syncMonitor: SyncStatusMonitor?
+    /// Kept alive for the app's lifetime: it merges duplicate tags and groups that CloudKit sync can create.
+    @ObservationIgnored private let deduplication: DeduplicationCoordinator?
+
     /// Identifiers from `Config/Shared.xcconfig`, surfaced through Info.plist so forks change one file.
     let cloudKitContainerID: String
     let keychainAccessGroup: String?
@@ -29,34 +36,68 @@ final class AppEnvironment {
         services: TildeServices,
         appLock: any AppLocking,
         modelContainer: ModelContainer,
+        preferences: Preferences? = nil,
+        syncMonitor: SyncStatusMonitor? = nil,
+        deduplication: DeduplicationCoordinator? = nil,
         cloudKitContainerID: String = AppEnvironment.infoString("TildeCloudKitContainer") ?? ModelContainerFactory.defaultCloudKitContainerID,
         keychainAccessGroup: String? = AppEnvironment.infoString("TildeKeychainAccessGroup")
     ) {
         self.services = services
         self.appLock = appLock
         self.modelContainer = modelContainer
+        self.preferences = preferences
+        self.syncMonitor = syncMonitor
+        self.deduplication = deduplication
         self.cloudKitContainerID = cloudKitContainerID
         self.keychainAccessGroup = keychainAccessGroup
         self.coordinator = SessionCoordinator(services: services)
         coordinator.recordConnections(in: modelContainer.mainContext)
     }
 
+    // MARK: Live
+
+    /// The real app. Throws only when the on-disk store itself cannot be opened (the app shows that, rather than
+    /// silently running on an empty in-memory store and losing what the user adds).
+    static func live() throws -> AppEnvironment {
+        let preferences = Preferences.live()
+        let containerID = infoString("TildeCloudKitContainer") ?? ModelContainerFactory.defaultCloudKitContainerID
+        // `makeBestAvailable` falls back to the local store when the build has no iCloud entitlement
+        // (the `TildeCloudKitEnabled` Info.plist key on iOS) or the user turned sync off.
+        let boot = try ModelContainerFactory.makeBestAvailable(syncEnabled: preferences.syncEnabled, containerID: containerID)
+
+        let services = LiveServices.make(container: boot.container, secretStore: KeychainSecretStore())
+
+        let syncMonitor = SyncStatusMonitor(mode: boot.mode, syncEnabled: preferences.syncEnabled)
+        syncMonitor.start()
+        let deduplication = DeduplicationCoordinator(container: boot.container)
+        deduplication.start()
+        _ = try? SnippetSeeds.seedIfNeeded(in: boot.container.mainContext)
+
+        return AppEnvironment(
+            services: services,
+            appLock: AppLock(),
+            modelContainer: boot.container,
+            preferences: preferences,
+            syncMonitor: syncMonitor,
+            deduplication: deduplication,
+            cloudKitContainerID: containerID
+        )
+    }
+
+    /// `live()` unless `TILDE_MOCK_ENVIRONMENT=1` asks for the mocks (demos, UI tests).
+    static func launch() -> Result<AppEnvironment, Error> {
+        if ProcessInfo.processInfo.environment["TILDE_MOCK_ENVIRONMENT"] == "1" { return .success(mock()) }
+        return Result { try live() }
+    }
+
+    // MARK: Mock
+
     /// All mocks, in-memory store seeded with preview data (servers, groups, tags, a key and 8 snippets).
     static func mock() -> AppEnvironment {
         AppEnvironment(
-            services: TildeServices(
-                secretStore: InMemorySecretStore(),            // WS3: Keychain-backed SecretStore
-                keyService: FakeKeyService(),                  // WS3: CryptoKit / SecKey KeyService
-                knownHosts: InMemoryKnownHostsStore(),         // WS1: SwiftData-backed KnownHostsStore
-                credentials: FakeCredentialResolver(),         // WS3: DefaultCredentialResolver
-                sessionEngine: FakeSessionEngine(),            // WS2: CitadelSessionEngine
-                reachability: FakeReachabilityProbe(),         // WS2: NWConnection ReachabilityProbe
-                quickConnect: FakeQuickConnectParser(),        // WS2: QuickConnectParser
-                sshConfig: FakeSSHConfigParser(),              // WS2: SSHConfigParser
-                snippets: StaticSnippetProvider()              // WS1: SwiftData-backed SnippetProviding
-            ),
-            appLock: FakeAppLock(),                            // WS3: LocalAuthentication AppLock
-            modelContainer: TildePreview.container()           // WS1: ModelContainerFactory.make(.cloudKit / .local)
+            services: .preview,
+            appLock: FakeAppLock(),
+            modelContainer: TildePreview.container()
         )
     }
 

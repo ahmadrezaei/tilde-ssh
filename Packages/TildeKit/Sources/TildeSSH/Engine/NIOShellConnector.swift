@@ -92,8 +92,13 @@ enum ConnectionOpener {
                 let resolved = try await plan.credentials.resolve(auth: auth, keyID: keyID, passwordSecretID: secretID, target: target)
                 return Resolved(credential: try SSHCredential.make(from: resolved), retry: retry)
             } catch let error as SessionError {
-                guard case .secretUnavailable = error, let prompter else { throw error }
-                guard let password = await prompter.password(for: target, reason: .secretNotSynced) else { throw error }
+                guard case .secretUnavailable(let ref) = error, let prompter else { throw error }
+                // The sentinel ref means nothing was ever saved (not "still syncing"); the sheet words them differently.
+                let reason: PromptReason = ref.isUnsavedSentinel ? .notSaved : .secretNotSynced
+                guard let password = await prompter.password(for: target, reason: reason) else {
+                    // Declining "not saved" is a plain cancel; declining "not synced" keeps the "waiting for iCloud Keychain" error.
+                    throw ref.isUnsavedSentinel ? ConnectCancelledError() : error
+                }
                 return Resolved(credential: .password(password), retry: retry)
             }
 

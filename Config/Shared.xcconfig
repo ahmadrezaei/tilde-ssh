@@ -16,6 +16,11 @@ TILDE_KEYCHAIN_GROUP = $(TILDE_BUNDLE_PREFIX).shared
 DEVELOPMENT_TEAM =
 CODE_SIGN_STYLE = Automatic
 
+// iCloud sync (CloudKit). NO runs the app on a local-only store, which is what unsigned and fork builds
+// need (creating a CloudKit store without the iCloud entitlement can abort the process). Signed release
+// builds set YES in Config/Local.xcconfig (git-ignored) or on the xcodebuild command line.
+TILDE_CLOUDKIT_ENABLED = NO
+
 // --- Versions -------------------------------------------------------------------------------
 MARKETING_VERSION = 0.1.0
 CURRENT_PROJECT_VERSION = 1

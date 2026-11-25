@@ -8,8 +8,8 @@ import TildeTerminal
 /// One session: the terminal surface with state overlays on top (connecting line, reconnect / error banners).
 /// Overlays never block the terminal with a modal; the scrollback stays visible, dimmed to 60%.
 ///
-/// The `TerminalSurface` call site matches the contract in `TildeTerminal` (WS4). The surface's `io` is the
-/// tab's paste-guarded stream.
+/// The surface reads the saved terminal settings (theme, font, key bar, paste mode), is driven by the tab's
+/// `TerminalController` (menu bar, find, font size) and asks the tab's sheet before a multi-line paste.
 struct SessionScreen: View {
     let tab: SessionTab
 
@@ -21,9 +21,12 @@ struct SessionScreen: View {
     var body: some View {
         ZStack(alignment: .top) {
             TerminalSurface(
-                io: tab.terminalIO,
+                io: tab.session,
                 environment: tab.environment,
-                snippets: services.snippets
+                settings: .shared,
+                snippets: services.snippets,
+                controller: tab.terminal,
+                onConfirmPaste: { await tab.confirmPaste($0) }
             )
             .opacity(isDimmed ? 0.6 : 1)
             .animation(.easeOut(duration: 0.2), value: isDimmed)
@@ -45,7 +48,7 @@ struct SessionScreen: View {
         }
     }
 
-    private var pasteBinding: Binding<PasteRequest?> {
+    private var pasteBinding: Binding<PendingPaste?> {
         Binding(get: { tab.pasteRequest }, set: { if $0 == nil, tab.pasteRequest != nil { tab.answerPaste(false) } })
     }
 
@@ -109,7 +112,7 @@ struct SessionStateOverlay: View {
     private func connecting(phase: ConnectPhase?) -> some View {
         VStack(spacing: TildeSpacing.m) {
             ProgressView().controlSize(.regular).tint(TildeColor.accent)
-            Text("Connecting to \(tab.server.target.username)@\(tab.server.target.host):\(tab.server.target.port) …")
+            Text("Connecting to \(tab.server.target.username)@\(tab.server.target.host):\(String(tab.server.target.port)) …")
                 .tildeMono(13, weight: .medium, relativeTo: .footnote)
                 .foregroundStyle(TildeColor.text)
                 .multilineTextAlignment(.center)

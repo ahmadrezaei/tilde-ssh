@@ -36,6 +36,8 @@ SwiftTerm ships a SwiftPM build-tool plugin, which is why the `-skip…Validatio
 
 To run on a device or with iCloud, put your own `DEVELOPMENT_TEAM` and identifiers in `Config/Local.xcconfig` (git-ignored). Never commit a team ID of your own.
 
+Builds run on a local-only store by default (`TILDE_CLOUDKIT_ENABLED = NO` in `Config/Shared.xcconfig`, surfaced as the `TildeCloudKitEnabled` Info.plist key). Creating a CloudKit store without the iCloud entitlement can abort the process, so only set `TILDE_CLOUDKIT_ENABLED = YES` in your `Config/Local.xcconfig` when the build is signed with your own iCloud container.
+
 ## How the code is organized
 
 Logic lives in the `TildeKit` package; the app targets are thin. The module graph is in the [README](README.md#architecture).

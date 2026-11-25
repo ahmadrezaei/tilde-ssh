@@ -7,6 +7,9 @@ import TildeCore
 public extension ServerSnapshot {
     /// Maps a stored server to the Sendable snapshot handed to the SSH engine and UI.
     ///
+    /// `keyID` is the key's `privateSecretID` (the id of its `key:<uuid>` Keychain item), which is what the
+    /// credential resolver reads; it is not `SSHKeyRecord.id`.
+    ///
     /// Call on the actor that owns the model's `ModelContext`. Unknown raw values fall back to the defaults
     /// (`key` auth, no environment), so a record written by a newer app version never crashes an older one.
     init(model: Server) {
@@ -15,7 +18,7 @@ public extension ServerSnapshot {
             name: model.name,
             target: model.connectionTarget,
             auth: model.authMethod,
-            keyID: model.key?.id,
+            keyID: model.key?.privateSecretID,
             passwordSecretID: model.passwordSecretID,
             environment: model.environment,
             jump: model.jumpServer.map { JumpSnapshot(model: $0) },
@@ -35,7 +38,7 @@ public extension JumpSnapshot {
         self.init(
             target: model.connectionTarget,
             auth: model.authMethod,
-            keyID: model.key?.id,
+            keyID: model.key?.privateSecretID,
             passwordSecretID: model.passwordSecretID
         )
     }
@@ -72,7 +75,7 @@ public extension Server {
         self.passwordSecretID = auth == .password ? passwordSecretID : nil
     }
 
-    /// Copies every field of `snapshot` onto this server and resolves the key (by `keyID`) and jump host (by
+    /// Copies every field of `snapshot` onto this server and resolves the key (by `keyID`, a `privateSecretID`) and jump host (by
     /// matching host, port and user among `context`'s servers). A snapshot without a key or jump host clears
     /// the relationship; one that names a key or jump host missing from the store leaves it unchanged, so a
     /// record that has not synced yet never erases a good link.
@@ -81,7 +84,7 @@ public extension Server {
     func apply(_ snapshot: ServerSnapshot, in context: ModelContext) throws {
         copyFields(from: snapshot)
         if let keyID = snapshot.keyID {
-            var descriptor = FetchDescriptor<SSHKeyRecord>(predicate: #Predicate { $0.id == keyID })
+            var descriptor = FetchDescriptor<SSHKeyRecord>(predicate: #Predicate { $0.privateSecretID == keyID })
             descriptor.fetchLimit = 1
             if let found = try context.fetch(descriptor).first { key = found }
         } else {

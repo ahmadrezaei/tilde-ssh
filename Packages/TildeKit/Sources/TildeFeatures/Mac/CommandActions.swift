@@ -153,7 +153,9 @@ public struct SessionCommandActions: Sendable {
     public var reconnect: CommandAction?
     /// Session > Disconnect (⌥⌘W).
     public var disconnect: CommandAction?
-    /// Session > Clear Scrollback (⌘K).
+    /// Session > Clear (⌘K). Clears the screen and scrollback and asks the shell to redraw its prompt.
+    public var clear: CommandAction?
+    /// Session > Clear Scrollback. Discards the history and leaves the visible screen alone.
     public var clearScrollback: CommandAction?
     /// Session > Send Ctrl-C. Writes `0x03` to the PTY.
     public var sendInterrupt: CommandAction?
@@ -176,6 +178,7 @@ public struct SessionCommandActions: Sendable {
     public init(
         reconnect: CommandAction? = nil,
         disconnect: CommandAction? = nil,
+        clear: CommandAction? = nil,
         clearScrollback: CommandAction? = nil,
         sendInterrupt: CommandAction? = nil,
         sendBreak: CommandAction? = nil,
@@ -188,6 +191,7 @@ public struct SessionCommandActions: Sendable {
     ) {
         self.reconnect = reconnect
         self.disconnect = disconnect
+        self.clear = clear
         self.clearScrollback = clearScrollback
         self.sendInterrupt = sendInterrupt
         self.sendBreak = sendBreak

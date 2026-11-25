@@ -3,14 +3,15 @@ import SwiftData
 import TildeCore
 import TildeStore
 
-/// Thin, isolated mutations on the SwiftData store used by the UI.
-///
-/// Interim: WS1 is writing `ServerRepository` & friends. Every inline mutation in the UI goes through this type, so
-/// switching to the repositories later is a change in this one file.
+/// Thin, isolated mutations on the SwiftData store used by the UI. Writes go through TildeStore's repositories where
+/// they do the same job; ordering, duplicate and import keep their own logic (the UI's drag-reorder semantics).
 @MainActor
 struct ServerActions {
     let context: ModelContext
     let secrets: any SecretStore
+
+    private var servers: ServerRepository { ServerRepository(context: context) }
+    private var groups: GroupRepository { GroupRepository(context: context) }
 
     func save() {
         do { try context.save() } catch { assertionFailure("Saving the store failed: \(error)") }
@@ -19,18 +20,21 @@ struct ServerActions {
     // MARK: Servers
 
     func toggleFavorite(_ server: Server) {
-        server.isFavorite.toggle()
-        touch(server)
+        do { try servers.setFavorite(server, !server.isFavorite) } catch { assertionFailure("Saving the store failed: \(error)") }
     }
 
+    /// Deletes the server and, once the row is gone, the Keychain secrets nothing else references any more.
     func delete(_ server: Server) {
-        if let secretID = server.passwordSecretID {
-            let sharedElsewhere = ((try? context.fetch(FetchDescriptor<Server>())) ?? [])
-                .contains { $0.id != server.id && $0.passwordSecretID == secretID }
-            if !sharedElsewhere { try? secrets.delete(SecretRef(kind: .password, id: secretID)) }
+        let serverID = server.id
+        let orphaned: [SecretRef]
+        do { orphaned = try servers.delete(server) } catch {
+            assertionFailure("Saving the store failed: \(error)")
+            return
         }
-        context.delete(server)
-        save()
+        // A secret id copied between servers (a synced duplicate, an import) stays while another server uses it.
+        let stillUsed = Set(((try? context.fetch(FetchDescriptor<Server>())) ?? [])
+            .filter { $0.id != serverID }.compactMap(\.passwordSecretID))
+        for ref in orphaned where !stillUsed.contains(ref.id) { try? secrets.delete(ref) }
     }
 
     @discardableResult
@@ -88,27 +92,20 @@ struct ServerActions {
 
     /// Updates `lastConnectedAt`, at most every 5 minutes per server (it syncs, so writes are throttled).
     func touchConnected(serverID: UUID) {
-        var descriptor = FetchDescriptor<Server>(predicate: #Predicate { $0.id == serverID })
-        descriptor.fetchLimit = 1
-        guard let server = try? context.fetch(descriptor).first else { return }
-        if let last = server.lastConnectedAt, Date.now.timeIntervalSince(last) < 300 { return }
-        server.lastConnectedAt = .now
-        save()
+        guard let server = try? servers.server(id: serverID) else { return }
+        _ = try? servers.recordConnection(server)
     }
 
     /// Removes the pinned host keys of a server ("Forget host key").
     func forgetHostKey(for server: Server) {
-        let canonical = HostEndpoint(host: server.host, port: server.port).canonical
-        let pins = (try? context.fetch(FetchDescriptor<KnownHost>(predicate: #Predicate { $0.endpoint == canonical }))) ?? []
-        pins.forEach(context.delete)
-        save()
+        try? KnownHostRepository(context: context).forget(endpoint: HostEndpoint(host: server.host, port: server.port))
     }
 
     // MARK: Import
 
     /// Saved servers as snapshots, so the import view can flag hosts that already exist.
     func savedSnapshots() -> [ServerSnapshot] {
-        ((try? context.fetch(FetchDescriptor<Server>())) ?? []).map(ServerMapper.snapshot)
+        ((try? context.fetch(FetchDescriptor<Server>())) ?? []).map { ServerSnapshot(model: $0) }
     }
 
     /// Creates servers from parsed `~/.ssh/config` hosts (the import UI is WS6's; this stores what the user chose).
@@ -153,31 +150,26 @@ struct ServerActions {
 
     @discardableResult
     func createGroup(named name: String) -> ServerGroup {
-        let groups = (try? context.fetch(FetchDescriptor<ServerGroup>())) ?? []
-        let group = ServerGroup(name: name.trimmingCharacters(in: .whitespaces), sortIndex: FractionalOrder.next(after: groups.map(\.sortIndex)))
-        context.insert(group)
-        save()
-        return group
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        if let group = try? groups.add(name: trimmed) { return group }
+        // The repository only fails when the save fails; hand back an unsaved group rather than crash the UI.
+        assertionFailure("Creating the group failed")
+        return ServerGroup(name: trimmed)
     }
 
     func rename(_ group: ServerGroup, to name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        group.name = trimmed
-        group.updatedAt = .now
-        save()
+        try? groups.rename(group, to: trimmed)
     }
 
     func delete(_ group: ServerGroup) {
-        // The relationship is `.nullify`: servers fall back to "Ungrouped".
-        context.delete(group)
-        save()
+        // Servers fall back to "Ungrouped".
+        try? groups.delete(group)
     }
 
     func setCollapsed(_ group: ServerGroup, _ collapsed: Bool) {
-        group.isCollapsed = collapsed
-        group.updatedAt = .now
-        save()
+        try? groups.setCollapsed(group, collapsed)
     }
 
     // MARK: Tags
@@ -198,18 +190,7 @@ struct ServerActions {
 
     /// Records a Quick Connect (design section 4.4). Keeps the 10 most recent.
     func recordRecent(_ target: ConnectionTarget, server: Server?) {
-        let key = QuickConnectResolver.recentString(target)
-        let recents = (try? context.fetch(FetchDescriptor<RecentConnection>(sortBy: [SortDescriptor(\.lastUsedAt, order: .reverse)]))) ?? []
-        if let existing = recents.first(where: { $0.target == key }) {
-            existing.lastUsedAt = .now
-            existing.updatedAt = .now
-        } else {
-            let recent = RecentConnection(target: key, lastUsedAt: .now)
-            recent.server = server
-            context.insert(recent)
-        }
-        for stale in recents.filter({ $0.target != key }).dropFirst(9) { context.delete(stale) }
-        save()
+        _ = try? RecentRepository(context: context).record(target: QuickConnectResolver.recentString(target), server: server)
     }
 
     // MARK: Helpers

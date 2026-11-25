@@ -323,7 +323,14 @@ import TildeCore
         let coordinator = DeduplicationCoordinator(container: container, debounce: .milliseconds(20), gracePeriod: 0)
         coordinator.schedule()
         coordinator.schedule()   // replaces the pending pass
-        try await Task.sleep(for: .milliseconds(300))
+        // Wait for the pass itself instead of a fixed time: under a loaded parallel run the main actor can be late.
+        let deadline = ContinuousClock.now + .seconds(30)
+        while coordinator.lastReport == nil, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(coordinator.lastReport?.tagsMerged == 1)
+        // A replaced pass must not run as well: a second pass would find nothing and overwrite the report.
+        try await Task.sleep(for: .milliseconds(100))
         #expect(coordinator.lastReport?.tagsMerged == 1)
         #expect(try context.fetchCount(FetchDescriptor<TildeStore.Tag>()) == 1)
         #expect(coordinator.runNow()?.total == 0)
