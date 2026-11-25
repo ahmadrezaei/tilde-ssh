@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/OWNER/tilde-ssh/security/advisories/new
+    about: Please do not open a public issue for security problems. Use a private advisory instead.
+  - name: Ask a question
+    url: https://github.com/OWNER/tilde-ssh/discussions
+    about: Usage questions and ideas are welcome in Discussions.

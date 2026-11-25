@@ -1,0 +1,19 @@
+# Swift packages Tilde may depend on, directly or transitively (SwiftPM identity, one per line).
+# scripts/check-dependencies.py compares Packages/TildeKit/Package.resolved with this list.
+# Adding a line is a supply-chain decision: record the license in NOTICE and say why in the pull request.
+#
+# identity               license      why
+citadel                  # MIT         SSH client
+swift-nio-ssh            # Apache-2.0  SSH transport (Citadel's fork)
+swift-nio                # Apache-2.0
+swift-crypto             # Apache-2.0
+swift-log                # Apache-2.0
+swift-collections        # Apache-2.0
+swift-atomics            # Apache-2.0
+swift-asn1               # Apache-2.0
+swift-system             # Apache-2.0
+bigint                   # MIT         RSA math (via Citadel)
+swiftterm                # MIT         terminal emulator
+swift-argument-parser    # Apache-2.0  (via SwiftTerm)
+swift-png                # Apache-2.0  (via SwiftTerm)
+h                        # Apache-2.0  (via swift-png)

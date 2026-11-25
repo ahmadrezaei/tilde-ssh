@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest an improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like
+      description: Sketches and examples from other tools help. Keep one idea per issue.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options: [iPhone, iPad, Mac, All]
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today
+      description: Workarounds, or how another SSH client handles it.

@@ -1,0 +1,8 @@
+First release.
+
+• Servers with groups, tags, environments and Quick Connect
+• Ed25519 key generation and Ed25519 / ECDSA / RSA key import
+• Host key verification with a hard stop when a fingerprint changes
+• SSH keyboard for iPhone and iPad, tabs and menus on iPad and Mac
+• iCloud sync for servers; passwords and keys stay in iCloud Keychain
+• Jump host, auto-reconnect, tmux attach, Face ID / Touch ID app lock
