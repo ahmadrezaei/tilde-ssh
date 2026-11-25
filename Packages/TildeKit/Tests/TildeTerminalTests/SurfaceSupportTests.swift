@@ -101,7 +101,6 @@ import TildeCore
         defer { defaults.removePersistentDomain(forName: name) }
         let settings = TerminalSettings(defaults: defaults, layoutStore: UserDefaultsKeyBarLayoutStore(defaults: defaults, scope: "test"))
         #expect(settings.theme == .tildeNight)
-        #expect(settings.appAppearance == .dark)
         #expect(settings.cursorShape == .block && !settings.cursorBlink)
         #expect(settings.osc52 == .off)
         #expect(settings.pasteConfirmation == .prodOnly)

@@ -32,6 +32,8 @@ final class TerminalHost: TerminalViewDelegate {
     private(set) weak var io: (any TerminalIO)?
     private var inputs: TerminalSurfaceInputs
     private var pump: Task<Void, Never>?
+    private var pendingResize: (cols: Int, rows: Int)?
+    private var isConfirmingLink = false
     fileprivate var attachCount = 0
     fileprivate var streamEnded = false
     fileprivate var registryKey: ObjectIdentifier?
@@ -51,6 +53,7 @@ final class TerminalHost: TerminalViewDelegate {
         view = TildeTerminalView(frame: .zero, font: TerminalFonts.font(inputs.appearance.font, size: inputs.appearance.fontSize))
         view.terminalDelegate = self
         view.pasteHandler = { [weak self] text in self?.handlePaste(text) }
+        view.onPinchEnded = { [weak self] in self?.flushPendingResize() }
         startPump(io)
         update(inputs)
     }
@@ -153,16 +156,35 @@ final class TerminalHost: TerminalViewDelegate {
 
     func sizeChanged(source: TerminalView, newCols: Int, newRows: Int) {
         inputs.controller.size = (newCols, newRows)
-        let scale = source.currentBackingScale
+        // While the fingers are down every pinch step changes the grid. Tell the server once, when the pinch ends.
+        if view.isPinching {
+            pendingResize = (newCols, newRows)
+            return
+        }
+        pendingResize = nil
+        sendResize(cols: newCols, rows: newRows)
+    }
+
+    private func sendResize(cols: Int, rows: Int) {
+        let scale = view.currentBackingScale
         io?.resize(
-            cols: newCols, rows: newRows,
-            pixelWidth: Int(source.bounds.width * scale), pixelHeight: Int(source.bounds.height * scale)
+            cols: cols, rows: rows,
+            pixelWidth: Int(view.bounds.width * scale), pixelHeight: Int(view.bounds.height * scale)
         )
     }
 
+    /// Sends the grid size that was held back during a pinch.
+    func flushPendingResize() {
+        guard let size = pendingResize else { return }
+        pendingResize = nil
+        sendResize(cols: size.cols, rows: size.rows)
+    }
+
     func setTerminalTitle(source: TerminalView, title: String) {
-        inputs.controller.title = title
-        inputs.onTitleChange?(title)
+        // The title is set by the remote program: strip control and bidi override characters, cap the length.
+        let safe = TerminalSafety.sanitizedTitle(title)
+        inputs.controller.title = safe.isEmpty ? nil : safe
+        inputs.onTitleChange?(safe)
     }
 
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
@@ -193,13 +215,18 @@ final class TerminalHost: TerminalViewDelegate {
         return PlatformPasteboard.readData()
     }
 
-    #if os(iOS)
+    /// Links in terminal output are untrusted. Only http, https and ssh links are considered, and every one is
+    /// confirmed with its full URL before anything opens (an OSC 8 link can hide its target behind other text).
     func requestOpenLink(source: TerminalView, request: TerminalLinkRequest) {
-        // Links in terminal output are untrusted: only plain web links open.
-        guard let url = URL(string: request.link), let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http" else { return }
-        UIApplication.shared.open(url)
+        guard let url = TerminalSafety.openableURL(for: request.link), !isConfirmingLink else { return }
+        isConfirmingLink = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let approved = await self.view.presentLinkConfirmation(url)
+            self.isConfirmingLink = false
+            if approved { self.view.openExternally(url) }
+        }
     }
-    #endif
 
     // MARK: Lifecycle
 

@@ -58,7 +58,9 @@ protocol TerminalViewActions: AnyObject {
     func findNext(_ query: String, caseSensitive: Bool, forward: Bool) -> Bool
     func matchSummary(_ query: String, caseSensitive: Bool) -> (index: Int, total: Int)
     func clearFindHighlights()
+    func stepFind(forward: Bool)
     func clearScreen()
+    func discardScrollback()
     func copySelection()
     func pasteClipboard()
     func selectAllText()
@@ -157,8 +159,23 @@ public final class TerminalController {
         actions?.focusTerminal()
     }
 
+    /// Finds the next match (Cmd+G). On macOS this steps SwiftTerm's own find bar; on iOS it searches `findQuery`.
+    public func findNext() { findNext(forward: true) }
+
+    /// Finds the previous match (Cmd+Shift+G).
+    public func findPrevious() { findNext(forward: false) }
+
     /// Finds the next (or previous) match of `findQuery`.
-    public func findNext(forward: Bool = true) {
+    public func findNext(forward: Bool) {
+        #if os(macOS)
+        actions?.stepFind(forward: forward)
+        return
+        #else
+        stepFindInQuery(forward: forward)
+        #endif
+    }
+
+    func stepFindInQuery(forward: Bool) {
         guard !findQuery.isEmpty else {
             findStatus = ""
             actions?.clearFindHighlights()
@@ -174,8 +191,14 @@ public final class TerminalController {
 
     // MARK: Editing and screen
 
-    /// Clears the screen and scrollback (Cmd+K).
+    /// Clears the screen and scrollback and asks the shell to redraw its prompt (Cmd+K).
     public func clear() { actions?.clearScreen() }
+
+    /// Discards the scrollback history but leaves the visible screen alone.
+    public func clearScrollback() { actions?.discardScrollback() }
+
+    /// Sends Ctrl-C (interrupt) to the foreground program.
+    public func sendInterrupt() { actions?.sendInput([0x03]) }
     public func copy() { actions?.copySelection() }
     public func paste() { actions?.pasteClipboard() }
     public func selectAll() { actions?.selectAllText() }

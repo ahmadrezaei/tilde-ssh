@@ -4,20 +4,13 @@ import TildeCore
 import TildeDesign
 import TildeStore
 
-/// Settings > Terminal: scrollback, paste confirmation, default TERM and keep-alive.
+/// Settings > Terminal, connection-side rows: default TERM and keep-alive. Scrollback and paste confirmation live in
+/// `TerminalBehaviorSettingsSection` (WS4, `TerminalSettings`), which `SettingsRoot` shows in the same section.
 struct TerminalSettingsSection: View {
-    @AppStorage(TildeSettings.scrollbackKey) private var scrollback = TildeSettings.defaultScrollback
-    @AppStorage(TildeSettings.confirmPasteKey) private var confirmPaste = PasteConfirmMode.prodOnly.rawValue
     @AppStorage(TildeSettings.defaultTermKey) private var term = TildeSettings.defaultTerm
     @AppStorage(TildeSettings.defaultKeepAliveKey) private var keepAlive = TildeSettings.defaultKeepAlive
 
     var body: some View {
-        Stepper(value: $scrollback, in: 1_000...100_000, step: 1_000) {
-            LabeledContent("Scrollback lines") { Text(scrollback.formatted()).tildeMono(13).foregroundStyle(TildeColor.text2) }
-        }
-        Picker("Confirm multi-line paste", selection: $confirmPaste) {
-            ForEach(PasteConfirmMode.allCases) { Text($0.title).tag($0.rawValue) }
-        }
         LabeledContent("Default TERM") {
             MonoField("xterm-256color", text: $term).multilineTextAlignment(.trailing)
         }

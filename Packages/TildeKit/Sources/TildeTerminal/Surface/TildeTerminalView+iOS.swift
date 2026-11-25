@@ -21,6 +21,11 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
     private var didSetUp = false
     private var pinchStartSize: Double = 13
     private var palette: SnippetPalettePresenter?
+    private var resignObserver: (any NSObjectProtocol)?
+
+    /// True while a pinch gesture changes the font size (the host holds back remote resizes until it ends).
+    private(set) var isPinching = false
+    var onPinchEnded: (() -> Void)?
 
     var inputState: TerminalInputState? { controller?.inputState }
 
@@ -38,19 +43,46 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
-        guard window != nil else { return }
+        guard window != nil else {
+            // Drop what would keep this view reachable from shared singletons.
+            if let hardwareObserver {
+                HardwareKeyboardMonitor.shared.removeObserver(hardwareObserver)
+                self.hardwareObserver = nil
+            }
+            if let resignObserver {
+                NotificationCenter.default.removeObserver(resignObserver)
+                self.resignObserver = nil
+            }
+            inputState?.reset()
+            return
+        }
         if !didSetUp {
             didSetUp = true
             keyboardDismissMode = .interactive
             let pinch = UIPinchGestureRecognizer(target: self, action: #selector(handlePinch(_:)))
             pinch.delegate = self
             addGestureRecognizer(pinch)
-            let monitor = HardwareKeyboardMonitor.shared
-            hardwareObserver = monitor.addObserver { [weak self] in self?.updateAccessory() }
-            updateAccessory()
             // Open on the keyboard: "tap a server and you are typing".
             DispatchQueue.main.async { [weak self] in _ = self?.becomeFirstResponder() }
         }
+        if hardwareObserver == nil {
+            hardwareObserver = HardwareKeyboardMonitor.shared.addObserver { [weak self] in self?.updateAccessory() }
+        }
+        if resignObserver == nil {
+            // An armed Ctrl must not survive switching away from the app.
+            let box = WeakViewBox(self)
+            resignObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.willResignActiveNotification, object: nil, queue: .main
+            ) { _ in
+                MainActor.assumeIsolated { box.view?.inputState?.reset() }
+            }
+        }
+        updateAccessory()
+    }
+
+    override func resignFirstResponder() -> Bool {
+        inputState?.reset()
+        return super.resignFirstResponder()
     }
 
     func configureKeyboard(_ configuration: KeyBarConfiguration) {
@@ -94,11 +126,15 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
         guard let controller else { return }
         switch gesture.state {
         case .began:
+            isPinching = true
             pinchStartSize = controller.fontSize
         case .changed:
             // Half-point steps keep the layout work down while the fingers move.
             let size = (pinchStartSize * Double(gesture.scale) * 2).rounded() / 2
             controller.setFontSize(size)
+        case .ended, .cancelled, .failed:
+            isPinching = false
+            onPinchEnded?()
         default:
             break
         }
@@ -170,7 +206,29 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
             sendInput(InputMapper.bytes(for: named, modifiers: modifiers, modes: currentModes))
             remaining.remove(press)
         }
+        // A sticky modifier is spent by the next key, also when that key brings its own hardware modifier
+        // (SwiftTerm sends those itself). Pure modifier presses do not count.
+        if let state = inputState, !state.active.isEmpty {
+            for press in remaining {
+                guard let key = press.key, !Self.isModifierKey(key.keyCode), !key.modifierFlags.contains(.command) else { continue }
+                if !key.modifierFlags.isDisjoint(with: [.control, .alternate]) {
+                    _ = state.consume()
+                    break
+                }
+            }
+        }
         if !remaining.isEmpty { super.pressesBegan(remaining, with: event) }
+    }
+
+    private static func isModifierKey(_ code: UIKeyboardHIDUsage) -> Bool {
+        switch code {
+        case .keyboardLeftControl, .keyboardRightControl, .keyboardLeftShift, .keyboardRightShift,
+             .keyboardLeftAlt, .keyboardRightAlt, .keyboardLeftGUI, .keyboardRightGUI,
+             .keyboardCapsLock, .keyboardLockingCapsLock:
+            return true
+        default:
+            return false
+        }
     }
 
     private static func namedKey(for code: UIKeyboardHIDUsage) -> NamedKey? {
@@ -215,33 +273,16 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
         }
     }
 
-    /// Cmd-period = Esc (the Magic Keyboard for iPad has no Esc key), Cmd-K clears, Cmd-F finds, Cmd +/-/0 resize.
+    /// Cmd-period = Esc (the Magic Keyboard for iPad has no Esc key). Find, clear and font size are driven by
+    /// the app's menu through `TerminalController`, so they are not registered here.
     override var keyCommands: [UIKeyCommand]? {
-        func command(_ title: String, _ input: String, _ action: Selector, _ flags: UIKeyModifierFlags = .command) -> UIKeyCommand {
-            let c = UIKeyCommand(title: title, action: action, input: input, modifierFlags: flags)
-            c.wantsPriorityOverSystemBehavior = true
-            return c
-        }
-        var commands = [
-            command("Clear Screen", "k", #selector(keyClear)),
-            command("Find…", "f", #selector(keyFind)),
-            command("Increase Font Size", "+", #selector(keyBigger), [.command, .shift]),
-            command("Increase Font Size", "=", #selector(keyBigger)),
-            command("Decrease Font Size", "-", #selector(keySmaller)),
-            command("Actual Font Size", "0", #selector(keyResetFont)),
-        ]
-        if keyboardConfiguration.commandPeriodSendsEscape {
-            commands.append(command("Send Escape", ".", #selector(keyEscape)))
-        }
-        return commands
+        guard keyboardConfiguration.commandPeriodSendsEscape else { return nil }
+        let command = UIKeyCommand(title: "Send Escape", action: #selector(keyEscape), input: ".", modifierFlags: .command)
+        command.wantsPriorityOverSystemBehavior = true
+        return [command]
     }
 
     @objc private func keyEscape() { sendInput([0x1B]) }
-    @objc private func keyClear() { controller?.clear() }
-    @objc private func keyFind() { controller?.showFind() }
-    @objc private func keyBigger() { controller?.increaseFontSize() }
-    @objc private func keySmaller() { controller?.decreaseFontSize() }
-    @objc private func keyResetFont() { controller?.resetFontSize() }
 
     // MARK: Key bar actions
 
@@ -316,6 +357,10 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
 
     func clearFindHighlights() { clearSearch() }
 
+    func stepFind(forward: Bool) { controller?.stepFindInQuery(forward: forward) }
+
+    func discardScrollback() { clearScrollback() }
+
     func clearScreen() {
         clearScrollback()
         if terminalInputStateSnapshot()?.isAlternateBuffer != true { sendInput([0x0C]) }   // ask the shell to redraw its prompt
@@ -332,11 +377,41 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
 
     func sendKey(_ key: NamedKey, modifiers: KeyModifiers) {
         let applied = modifiers.union(inputState?.consume() ?? [])
+        if key == .backspace, applied.isEmpty {
+            // SwiftTerm knows whether the application set DECBKM (backspace sends ^H); its own path honours it.
+            super.deleteBackward()
+            return
+        }
         sendInput(InputMapper.bytes(for: key, modifiers: applied, modes: currentModes))
     }
 
     func focusTerminal() { _ = becomeFirstResponder() }
     func scrollToEnd() { scroll(toPosition: 1) }
+}
+
+/// Lets a notification closure (which UIKit marks Sendable but runs on the main queue) reach the view.
+final class WeakViewBox: @unchecked Sendable {
+    weak var view: TildeTerminalView?
+    init(_ view: TildeTerminalView) { self.view = view }
+}
+
+extension TildeTerminalView {
+    /// Asks before opening a link from terminal output, showing the complete URL.
+    func presentLinkConfirmation(_ url: URL) async -> Bool {
+        guard let presenter = window?.rootViewController?.topmostPresented else { return false }
+        let alert = UIAlertController(
+            title: "Open link?",
+            message: "The terminal asked to open:\n\n\(url.absoluteString)",
+            preferredStyle: .alert
+        )
+        return await withCheckedContinuation { continuation in
+            alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in continuation.resume(returning: false) })
+            alert.addAction(UIAlertAction(title: "Open", style: .default) { _ in continuation.resume(returning: true) })
+            presenter.present(alert, animated: true)
+        }
+    }
+
+    func openExternally(_ url: URL) { UIApplication.shared.open(url) }
 }
 
 extension UIViewController {

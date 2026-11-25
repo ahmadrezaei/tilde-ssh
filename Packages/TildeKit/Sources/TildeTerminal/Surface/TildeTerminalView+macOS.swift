@@ -12,6 +12,9 @@ final class TildeTerminalView: TerminalView, TerminalViewActions {
     var environment: ServerEnvironment = .none
     var snippets: (any SnippetProviding)?
     private weak var controller: TerminalController?
+    /// No pinch on the Mac; the host reads this to decide whether to hold back resizes.
+    let isPinching = false
+    var onPinchEnded: (() -> Void)?
     private var keyboardConfiguration = KeyBarConfiguration.default
 
     func bind(controller: TerminalController) {
@@ -68,27 +71,14 @@ final class TildeTerminalView: TerminalView, TerminalViewActions {
         }
     }
 
-    /// Cmd-period = Esc, Cmd-K clears, Cmd +/-/0 change the font size. Returns true when handled.
+    /// Cmd-period = Esc. Find, clear and font size come from the app menu through `TerminalController`, so only
+    /// this one shortcut is caught here. Returns true when handled.
     private func handleShortcut(_ event: NSEvent) -> Bool {
-        guard let window, window.firstResponder === self, window.isKeyWindow else { return false }
+        guard keyboardConfiguration.commandPeriodSendsEscape,
+              let window, window.firstResponder === self, window.isKeyWindow else { return false }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting([.capsLock, .numericPad, .function])
-        guard flags.contains(.command), !flags.contains(.control), !flags.contains(.option),
-              let key = event.charactersIgnoringModifiers else { return false }
-        let plain = flags == .command
-        switch key {
-        case "." where plain && keyboardConfiguration.commandPeriodSendsEscape:
-            sendInput([0x1B])
-        case "k" where plain:
-            controller?.clear()
-        case "+" where plain || flags == [.command, .shift], "=" where plain:
-            controller?.increaseFontSize()
-        case "-" where plain:
-            controller?.decreaseFontSize()
-        case "0" where plain:
-            controller?.resetFontSize()
-        default:
-            return false
-        }
+        guard flags == .command, event.charactersIgnoringModifiers == "." else { return false }
+        sendInput([0x1B])
         return true
     }
 
@@ -115,6 +105,8 @@ final class TildeTerminalView: TerminalView, TerminalViewActions {
 
     func clearFindHighlights() { clearSearch() }
 
+    func discardScrollback() { clearScrollback() }
+
     func clearScreen() {
         clearScrollback()
         if terminalInputStateSnapshot()?.isAlternateBuffer != true { sendInput([0x0C]) }   // ask the shell to redraw its prompt
@@ -127,9 +119,37 @@ final class TildeTerminalView: TerminalView, TerminalViewActions {
     func sendInput(_ bytes: [UInt8]) { send(data: bytes[...]) }
 
     func sendKey(_ key: NamedKey, modifiers: KeyModifiers) {
-        let modes = TerminalInputModes(applicationCursor: terminalInputStateSnapshot()?.applicationCursor ?? false)
-        sendInput(InputMapper.bytes(for: key, modifiers: modifiers, modes: modes))
+        let applied = modifiers.union(controller?.inputState.consume() ?? [])
+        // DECCKM and DECBKM come from the emulator: SwiftTerm exposes both through `keyboardModes`.
+        let terminalModes = keyboardModes
+        let modes = TerminalInputModes(
+            applicationCursor: terminalModes.applicationCursor,
+            backspaceSendsControlH: backspaceSendsControlH || terminalModes.backarrowKeyMode
+        )
+        sendInput(InputMapper.bytes(for: key, modifiers: applied, modes: modes))
     }
+
+    func stepFind(forward: Bool) {
+        let item = NSMenuItem()
+        item.tag = Int((forward ? NSFindPanelAction.next : NSFindPanelAction.previous).rawValue)
+        performFindPanelAction(item)
+    }
+
+    /// Asks before opening a link from terminal output, showing the complete URL.
+    func presentLinkConfirmation(_ url: URL) async -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Open link?"
+        alert.informativeText = "The terminal asked to open:\n\n\(url.absoluteString)"
+        alert.addButton(withTitle: "Open")
+        alert.addButton(withTitle: "Cancel")
+        guard let window else { return alert.runModal() == .alertFirstButtonReturn }
+        return await withCheckedContinuation { continuation in
+            alert.beginSheetModal(for: window) { continuation.resume(returning: $0 == .alertFirstButtonReturn) }
+        }
+    }
+
+    func openExternally(_ url: URL) { NSWorkspace.shared.open(url) }
 
     func focusTerminal() { window?.makeFirstResponder(self) }
     func scrollToEnd() { scroll(toPosition: 1) }

@@ -2,10 +2,12 @@ import SwiftUI
 import TildeDesign
 import TildeTerminal
 
-/// Settings > Appearance: theme, app appearance, font, font size, cursor, bell. Embed it inside a `Section`
+/// Settings > Appearance: theme, app appearance (stored under `TildeSettings.appearanceKey`), font, font size, cursor, bell. Embed it inside a `Section`
 /// (it contributes rows). Reads and writes `TerminalSettings` (pass your own instance, or use the shared one).
 public struct AppearanceSettingsSection: View {
     @Bindable private var settings: TerminalSettings
+    /// The app shell reads this key to apply `preferredColorScheme`.
+    @AppStorage(TildeSettings.appearanceKey) private var appAppearance = AppAppearance.dark.rawValue
 
     public init(settings: TerminalSettings = .shared) {
         self.settings = settings
@@ -19,8 +21,8 @@ public struct AppearanceSettingsSection: View {
         }
         ThemePreview(theme: settings.theme, font: settings.font, size: settings.fontSize)
             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-        Picker("App appearance", selection: $settings.appAppearance) {
-            ForEach(AppAppearance.allCases) { Text($0.displayName).tag($0) }
+        Picker("App appearance", selection: $appAppearance) {
+            ForEach(AppAppearance.allCases) { Text($0.title).tag($0.rawValue) }
         }
         Picker("Font", selection: $settings.font) {
             ForEach(TerminalFontChoice.allCases) { choice in

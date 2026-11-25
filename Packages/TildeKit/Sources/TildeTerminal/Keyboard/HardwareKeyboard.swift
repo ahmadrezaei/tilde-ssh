@@ -10,13 +10,21 @@ public final class HardwareKeyboardMonitor {
     public static let shared = HardwareKeyboardMonitor()
 
     /// Whether a hardware keyboard is connected (or `overrideAttached`, when set).
-    public var isAttached: Bool { overrideAttached ?? detectedAttached }
+    public var isAttached: Bool {
+        #if DEBUG
+        overrideAttached ?? detectedAttached
+        #else
+        detectedAttached
+        #endif
+    }
 
-    /// Pretends a keyboard is (or is not) attached. For demos and tests: the iOS Simulator always reports the Mac's
-    /// keyboard, which would otherwise keep the key bar in its slim strip form. Leave nil in the app.
+    #if DEBUG
+    /// Pretends a keyboard is (or is not) attached. Debug builds only, for demos and tests: the iOS Simulator
+    /// always reports the Mac's keyboard, which would otherwise keep the key bar in its slim strip form.
     public var overrideAttached: Bool? {
         didSet { for callback in onChange.values { callback() } }
     }
+    #endif
 
     private var detectedAttached: Bool
 

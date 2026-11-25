@@ -86,19 +86,6 @@ public enum OSC52Policy: String, Codable, CaseIterable, Sendable, Identifiable {
     }
 }
 
-/// The app-wide light/dark choice (Settings > Appearance). The app shell applies it with `preferredColorScheme`.
-public enum AppAppearance: String, Codable, CaseIterable, Sendable, Identifiable {
-    case dark, system, light
-    public var id: String { rawValue }
-    public var displayName: String {
-        switch self {
-        case .dark: "Dark"
-        case .system: "Match System"
-        case .light: "Light"
-        }
-    }
-}
-
 /// Look of the terminal, apart from colours (those come from `TerminalTheme`).
 public struct TerminalAppearance: Equatable, Sendable {
     /// Smallest size the terminal font may take (docs/DESIGN.md section 2.3).
@@ -209,7 +196,6 @@ public final class TerminalSettings {
     @ObservationIgnored private let layoutStore: any KeyBarLayoutStoring
 
     public var themeID: String { didSet { save(themeID, "theme") } }
-    public var appAppearance: AppAppearance { didSet { save(appAppearance.rawValue, "appAppearance") } }
     public var font: TerminalFontChoice { didSet { save(font.rawValue, "font") } }
     public var fontSize: Double { didSet { defaults.set(fontSize, forKey: key("fontSize")) } }
     public var cursorShape: TerminalCursorShape { didSet { save(cursorShape.rawValue, "cursorShape") } }
@@ -243,7 +229,6 @@ public final class TerminalSettings {
         }
 
         themeID = defaults.string(forKey: "tilde.terminal.theme") ?? TerminalTheme.tildeNight.id
-        appAppearance = string("appAppearance", .dark)
         font = string("font", .sfMono)
         let storedSize = defaults.double(forKey: "tilde.terminal.fontSize")
         fontSize = storedSize > 0 ? TerminalAppearance.clamp(storedSize) : TerminalAppearance.platformDefaultFontSize
@@ -261,6 +246,12 @@ public final class TerminalSettings {
         copyOnSelect = bool("copyOnSelect", false)
         mouseReporting = bool("mouse", true)
         keyBarLayout = store.load() ?? .devOps
+    }
+
+    /// The saved multi-line paste mode, readable from anywhere (the paste guard in the session layer uses it).
+    /// `TerminalSettings` is the single store for terminal behaviour; this reads the same key it writes.
+    public nonisolated static func storedPasteConfirmation(defaults: UserDefaults = .standard) -> PasteConfirmationMode {
+        defaults.string(forKey: "tilde.terminal.pasteConfirm").flatMap { PasteConfirmationMode(rawValue: $0) } ?? .prodOnly
     }
 
     // MARK: Derived values for `TerminalSurface`
