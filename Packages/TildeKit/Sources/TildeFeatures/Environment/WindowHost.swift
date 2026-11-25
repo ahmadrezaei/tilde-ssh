@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 import TildeCore
 import TildeDesign
+import TildeSecurity
 import TildeStore
 
 /// "Tilde > Lock Now": the app shell sets this to `appLock.lockNow` (the lock itself is owned by WS3).
@@ -47,6 +48,9 @@ private struct WindowHostBody<Content: View>: View {
 
     @Environment(\.openWindow) private var openWindow
     @Environment(\.lockNowAction) private var lockNow
+    /// Set by `AppLockGate`. While it is locked the menu bar offers nothing that acts on content: the cover blocks
+    /// pointer and touch input, but menu shortcuts and menu items would still reach the actions published below.
+    @Environment(\.tildeAppLock) private var appLock
 
     private var coordinator: SessionCoordinator { navigator.coordinator }
 
@@ -78,6 +82,7 @@ private struct WindowHostBody<Content: View>: View {
         let opener = WindowOpener(action: openWindow)
 
         var actions = WindowCommandActions()
+        if appLock?.isLocked == true { return actions }
         actions.newTab = { navigator.present(.palette(.newTab)) }
         if !coordinator.recentlyClosed.isEmpty { actions.reopenClosedTab = { navigator.reopenLastClosed() } }
         if !tabs.isEmpty { actions.closeTab = { coordinator.closeSelected(in: window) } }
@@ -106,7 +111,7 @@ private struct WindowHostBody<Content: View>: View {
     }
 
     private var sessionActions: SessionCommandActions? {
-        guard let tab = navigator.selectedTab else { return nil }
+        guard appLock?.isLocked != true, let tab = navigator.selectedTab else { return nil }
         let navigator = navigator
         let coordinator = coordinator
         var actions = SessionCommandActions()

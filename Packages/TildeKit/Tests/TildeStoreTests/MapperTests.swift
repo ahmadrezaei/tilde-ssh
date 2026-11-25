@@ -29,9 +29,9 @@ import TildeCore
         #expect(snapshot.name == "db")
         #expect(snapshot.target == ConnectionTarget(host: "10.0.0.5", port: 2222, username: "postgres"))
         #expect(snapshot.auth == .key)
-        #expect(snapshot.keyID == key.id)
+        #expect(snapshot.keyID == key.privateSecretID)
         #expect(snapshot.environment == .prod)
-        #expect(snapshot.jump == JumpSnapshot(target: ConnectionTarget(host: "b.example.com", username: "ops"), auth: .key, keyID: key.id))
+        #expect(snapshot.jump == JumpSnapshot(target: ConnectionTarget(host: "b.example.com", username: "ops"), auth: .key, keyID: key.privateSecretID))
         #expect(snapshot.startupCommand == "tmux new -A -s db")
         #expect(snapshot.autoTmux && snapshot.tmuxSessionName == "db")
         #expect(snapshot.keepAliveSeconds == 15 && snapshot.termType == "xterm")
@@ -78,7 +78,7 @@ import TildeCore
         context.insert(server)
         let snapshot = ServerSnapshot(
             id: UUID(), name: "new", target: ConnectionTarget(host: "NEW.Example.com", port: 2200, username: "deploy"),
-            auth: .key, keyID: key.id, environment: .staging,
+            auth: .key, keyID: key.privateSecretID, environment: .staging,
             jump: JumpSnapshot(target: ConnectionTarget(host: "Bastion.example.com", username: "ops"))
         )
         try server.apply(snapshot, in: context)

@@ -1,8 +1,7 @@
 import Foundation
-import TildeCore
 
 public extension SecretRef {
-    /// The nil UUID. A `SecretRef` carrying it is never a real Keychain item: `DefaultCredentialResolver` uses it in
+    /// The nil UUID. A `SecretRef` carrying it is never a real Keychain item: the credential resolver uses it in
     /// `SessionError.secretUnavailable` to say "nothing was saved" (no password saved for the server, or no key
     /// assigned) as opposed to "saved, but not on this device yet". The Keychain store refuses to write it.
     static let sentinelID = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))

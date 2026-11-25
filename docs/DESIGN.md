@@ -230,7 +230,8 @@ NavigationSplitView (2 columns)
 | ⌘K | Clear scrollback (Terminal.app/iTerm2 convention) |
 | ⌘F | Find in scrollback |
 | ⌘+ / ⌘− / ⌘0 | Font bigger / smaller / reset |
-| ⌘N | New server |
+| ⌘N | New window |
+| ⇧⌘N | New server |
 | ⌘, | Settings |
 | ⌘⌃S | Toggle sidebar |
 | ⌘D / ⌘⇧D | Split right / down (**v1.1**) |
@@ -415,7 +416,7 @@ Grouped list. Each sub-page is a self-contained view owned by one workstream (§
 | **Keyboard** | Key bar editor (§5.5) · Haptics · Option as Meta (Mac, HW keyboard) · ⌘. sends Esc · With hardware keyboard: Slim strip / Hide |
 | **Terminal** | Scrollback lines (10 000 default, max 100 000) · Confirm multi-line paste (Prod only / Always / Never) · Copy on select (Mac) · TERM default · Keep-alive default |
 | **Connections** | Default username · Default key · Connect timeout (15 s) · Auto-reconnect (on) · Probe reachability (on; cellular off) |
-| **Security** | App Lock with Face ID / Touch ID / Optic ID (off; off/immediately/1 min/5 min/15 min) · Hide content in app switcher (on) · Strict host checking · Clear clipboard after copying a secret (60 s) · Known Hosts › list |
+| **Security** | App Lock with Face ID / Touch ID / Optic ID (off; off/immediately/1 min/5 min/15 min) · Hide content in app switcher (on) · Strict host checking · Allow legacy ssh-rsa (SHA-1) signatures (off) · Clear clipboard after copying a secret (60 s) · Known Hosts › list |
 | **Sync** | iCloud status (Account ✓ · Last sync 2 min ago · 42 servers, 5 keys) · Sync on/off · "Secrets waiting for iCloud Keychain: 0" · Reset local data |
 | **Data** | Import ~/.ssh/config (Mac; iOS via Files) · Import known_hosts · Export servers (JSON, no secrets) |
 | **About** | Version · GitHub · Report a bug · Acknowledgements (NOTICE) · Privacy ("Tilde collects nothing") |
@@ -610,7 +611,7 @@ Every entity also carries `id: UUID = UUID()`, `createdAt: Date = .now` and `upd
 **`RecentConnection`**: target string (`deploy@10.0.4.12:2222`), lastUsedAt, server (Server?). The list is capped at 10 per device, and pruning is done on read.
 
 **Not in SwiftData:**
-- *Preferences* (theme, font, key-bar layout, app lock settings) are in `NSUbiquitousKeyValueStore` (synced, 1 MB max), with `UserDefaults` for per-device values (font size, hardware-keyboard mode).
+- *Preferences* (theme, font, key-bar layout) are in `NSUbiquitousKeyValueStore` (synced, 1 MB max), with `UserDefaults` for per-device values (font size, hardware-keyboard mode). The App Lock settings (lock on/off, timeout, hide content in the app switcher, strict host checking, clipboard clearing, legacy `ssh-rsa`) are **per-device `UserDefaults`**, not KVS: biometrics differ per device and nothing in them is sensitive.
 - *Scrollback and session logs* are never persisted.
 
 **Port forwards** (v1.1) will be added as an additive entity `PortForward` (server, kind L/R/D, bindHost, bindPort, targetHost, targetPort, autoStart).
@@ -640,7 +641,7 @@ Rules:
   - SwiftData `ModelConfiguration(cloudKitDatabase: .private("iCloud.app.tildessh.Tilde"))`.
   - Silent push (remote notifications background mode) triggers imports.
   - Secrets sync independently through iCloud Keychain.
-  - Preferences sync through KVS.
+  - Display preferences sync through KVS. Per-device settings (App Lock, security) stay in `UserDefaults`.
 - **Conflict policy:** the store merges with property-level "store trumps" locally and is effectively **last-writer-wins per record** across devices. Conflicts are minimized by design:
   - Records are small and independent. Tags and groups are separate records, so moving a server rarely conflicts with renaming one.
   - Ordering uses fractional `sortIndex`, so a reorder rewrites one record, not the whole list.
@@ -755,7 +756,7 @@ Module dependency graph (an arrow means "depends on"):
 TildeFeatures → TildeTerminal, TildeSSH, TildeSecurity, TildeStore, TildeDesign, TildeCore
 TildeTerminal → TildeDesign, TildeCore, SwiftTerm
 TildeSSH      → TildeCore, Citadel
-TildeSecurity → TildeCore, Citadel(Crypto/BCrypt only)
+TildeSecurity → TildeCore, TildeDesign, CTildeBcrypt, Citadel(Crypto/BCrypt only)
 TildeStore    → TildeCore
 TildeDesign   → (none)
 TildeCore     → (none)

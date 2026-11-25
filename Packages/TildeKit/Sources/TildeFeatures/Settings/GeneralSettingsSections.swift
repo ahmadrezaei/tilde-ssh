@@ -56,15 +56,29 @@ struct ConnectionSettingsSection: View {
     }
 }
 
-/// Settings > Sync. Shows what is stored; the live iCloud account status and last-sync time arrive with WS1's account
-/// observer.
+/// Settings > Sync: the on/off switch, iCloud status, and what is stored.
 struct SyncSettingsSection: View {
+    @Environment(\.tildeSyncMonitor) private var monitor
+    @Environment(\.tildePreferences) private var preferences
     @Query private var servers: [Server]
     @Query private var keys: [SSHKeyRecord]
     @Query private var snippets: [Snippet]
 
     var body: some View {
         Section {
+            if let monitor, let preferences {
+                Toggle("Sync with iCloud", isOn: Binding(
+                    get: { monitor.syncPreference },
+                    set: { newValue in
+                        preferences.syncEnabled = newValue
+                        monitor.syncPreference = newValue
+                    }
+                ))
+                LabeledContent("Status") { Text(Self.statusText(monitor.status)).foregroundStyle(TildeColor.text2) }
+                if monitor.needsRestartToSync {
+                    Text("Restart Tilde to apply this change.").foregroundStyle(TildeColor.text2)
+                }
+            }
             LabeledContent("Servers") { Text("\(servers.count)").tildeMono(13).foregroundStyle(TildeColor.text2) }
             LabeledContent("Keys") { Text("\(keys.count)").tildeMono(13).foregroundStyle(TildeColor.text2) }
             LabeledContent("Snippets") { Text("\(snippets.count)").tildeMono(13).foregroundStyle(TildeColor.text2) }
@@ -72,6 +86,18 @@ struct SyncSettingsSection: View {
             Text("Sync").tildeSectionHeader()
         } footer: {
             Text("Servers, groups, tags and snippets sync through your private iCloud database. Passwords and keys stay in iCloud Keychain.")
+        }
+    }
+
+    static func statusText(_ status: SyncStatus) -> String {
+        switch status {
+        case .disabled: "Off on this device"
+        case .noAccount: "Sign in to iCloud to sync"
+        case .restricted: "iCloud is restricted"
+        case .temporarilyUnavailable: "iCloud is temporarily unavailable"
+        case .upToDate: "Up to date"
+        case .syncing: "Syncing…"
+        case .error(let message): "Error: \(message)"
         }
     }
 }

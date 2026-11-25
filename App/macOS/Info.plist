@@ -57,6 +57,8 @@
 	<string>Tilde connects to servers on your local network over SSH.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>TildeCloudKitEnabled</key>
+	<string>$(TILDE_CLOUDKIT_ENABLED)</string>
 	<key>TildeCloudKitContainer</key>
 	<string>$(TILDE_CLOUDKIT_CONTAINER)</string>
 	<key>TildeKeychainAccessGroup</key>

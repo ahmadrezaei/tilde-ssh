@@ -46,6 +46,8 @@ enum SessionErrorCopy {
             return .init(headline: "Host key not trusted", detail: "Cancelled before any credentials were sent.", actions: [.retry, .edit])
         case .authFailed(let method, let allows):
             return authFailed(method: method, allows: allows, server: server, keyName: keyName)
+        case .secretUnavailable(let ref) where ref.isUnsavedSentinel && ref.kind == .privateKey:
+            return .init(headline: "No key chosen", detail: "Pick a key for this server, or switch it to password.", actions: [.edit])
         case .secretUnavailable(let ref):
             let what = ref.kind == .password ? "Password" : "Key"
             return .init(headline: "\(what) not on this device yet",

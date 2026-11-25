@@ -10,6 +10,7 @@ A checklist for maintainers. Nothing here runs automatically.
   - iCloud container `iCloud.app.tildessh.Tilde`
   - Keychain access group `app.tildessh.shared`
 - [ ] Put your Team ID in `Config/Local.xcconfig` (`DEVELOPMENT_TEAM = ...`). It is git-ignored. Decide separately whether the committed `Shared.xcconfig` should carry it for CI signing.
+- [ ] Add `TILDE_CLOUDKIT_ENABLED = YES` to `Config/Local.xcconfig` (or pass it to `xcodebuild`) for signed release builds. The committed default is `NO`, so unsigned and fork builds run on a local-only store. It feeds the `TildeCloudKitEnabled` Info.plist key, which the app reads on iOS to decide whether CloudKit may be used (iOS cannot inspect its own entitlements). Verify in the archive's Info.plist that it reads `YES`.
 - [ ] Switch `aps-environment` to `production` for release builds (Xcode does this when signing with a distribution profile; verify in the archive's entitlements).
 - [ ] Create the App Store Connect record: name, subtitle, categories (Developer Tools, then Utilities), age rating 4+, price Free.
 - [ ] App Privacy: **Data Not Collected**. This must match `App/Resources/PrivacyInfo.xcprivacy`.

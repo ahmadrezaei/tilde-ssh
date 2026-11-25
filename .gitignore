@@ -35,3 +35,7 @@ fastlane/test_output
 .env
 *.local.xcconfig
 Config/Local.xcconfig
+
+# Local tooling and build output
+.claude/
+.dd*/
