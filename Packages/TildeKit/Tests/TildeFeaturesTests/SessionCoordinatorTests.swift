@@ -4,9 +4,10 @@ import Testing
 import TildeCore
 @testable import TildeFeatures
 
-/// Polls until `condition` holds (or 2 s pass).
+/// Polls until `condition` holds (or the timeout passes). The generous default keeps
+/// slow, heavily parallel CI runs from timing out; it returns as soon as the condition holds.
 @MainActor
-func waitUntil(timeout: Duration = .seconds(2), _ condition: @MainActor () -> Bool) async {
+func waitUntil(timeout: Duration = .seconds(15), _ condition: @MainActor () -> Bool) async {
     let deadline = ContinuousClock.now + timeout
     while !condition(), ContinuousClock.now < deadline {
         try? await Task.sleep(for: .milliseconds(5))
