@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tilde Design Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0F14; --surface:#11161D; --surface2:#171D25; --surface3:#1F2630; --border:#262E39;
+  --text:#E6EDF3; --text2:#9AA6B2; --text3:#5F6B78;
+  --accent:#2DD4BF; --accent-strong:#14B8A6; --accent-soft:rgba(45,212,191,.14);
+  --ok:#3FD68B; --warn:#F5B83D; --danger:#F7525F; --info:#58A6FF; --lab:#C792EA;
+  --t-black:#1C232B; --t-red:#F7525F; --t-green:#3FD68B; --t-yellow:#F5B83D; --t-blue:#58A6FF; --t-magenta:#C792EA; --t-cyan:#2DD4BF; --t-white:#C9D1D9;
+  --t-bblack:#4B5663; --t-fg:#D6DEE6;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --page:#05080B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--page);color:var(--text);font-family:var(--ui);-webkit-font-smoothing:antialiased}
+body{padding:0 0 120px}
+.mono{font-family:var(--mono)}
+a{color:var(--accent)}
+
+/* ---------- page chrome ---------- */
+.hero{padding:56px 48px 40px;border-bottom:1px solid #121820;background:radial-gradient(1200px 400px at 15% -10%, rgba(45,212,191,.10), transparent 60%)}
+.hero-inner{max-width:1784px;margin:0 auto;display:flex;gap:28px;align-items:center;flex-wrap:wrap}
+.hero h1{font-size:34px;font-weight:800;letter-spacing:-.02em}
+.hero h1 span{color:var(--accent)}
+.hero p{color:var(--text2);margin-top:6px;font-size:15px;max-width:760px;line-height:1.5}
+.pill{display:inline-flex;align-items:center;gap:6px;font:600 11px/1 var(--mono);padding:6px 9px;border-radius:999px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);margin-right:6px;margin-top:12px}
+.section{max-width:1880px;margin:0 auto;padding:56px 48px 8px}
+.section-h{display:flex;align-items:baseline;gap:14px;margin-bottom:8px}
+.section-h .num{font:700 12px var(--mono);color:var(--accent);border:1px solid rgba(45,212,191,.35);padding:4px 8px;border-radius:6px}
+.section-h h2{font-size:22px;font-weight:700;letter-spacing:-.01em}
+.section-sub{color:var(--text2);font-size:14px;margin-bottom:28px;max-width:900px;line-height:1.5}
+.row{display:flex;gap:40px 20px;flex-wrap:wrap;align-items:flex-start}
+.caption{margin-top:16px;font:600 12px var(--mono);color:var(--text2);text-align:center}
+.caption b{color:var(--text)}
+.note{font-size:12.5px;color:var(--text2);line-height:1.5;margin-top:8px;max-width:340px;text-align:center;margin-left:auto;margin-right:auto}
+
+/* ---------- iPhone frame ---------- */
+.device{display:flex;flex-direction:column;align-items:center}
+.iphone{width:340px;height:716px;border-radius:58px;background:linear-gradient(145deg,#2a2f37,#0c0e11 40%,#1b1f25);padding:10px;position:relative;
+  box-shadow:0 0 0 1px #3a414b inset,0 40px 90px rgba(0,0,0,.65),0 0 0 1px #000}
+.iphone::before{content:"";position:absolute;left:-3px;top:150px;width:3px;height:60px;border-radius:2px;background:#2a2f37}
+.iphone::after{content:"";position:absolute;right:-3px;top:190px;width:3px;height:90px;border-radius:2px;background:#2a2f37}
+.screen{width:320px;height:696px;border-radius:48px;overflow:hidden;background:var(--bg);position:relative;display:flex;flex-direction:column}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:98px;height:29px;background:#000;border-radius:20px;z-index:20}
+.sb{height:47px;flex:0 0 47px;display:flex;justify-content:space-between;align-items:center;padding:4px 30px 0 34px;font:600 14.5px var(--ui);color:var(--text);z-index:5}
+.sb .icons{display:flex;gap:5px;align-items:center}
+.sig{display:flex;gap:1.5px;align-items:flex-end;height:11px}
+.sig i{width:3px;background:var(--text);border-radius:1px;display:block}
+.batt{width:24px;height:11.5px;border:1.2px solid rgba(230,237,243,.45);border-radius:3.5px;padding:1.2px;position:relative}
+.batt::after{content:"";position:absolute;right:-3.5px;top:3.2px;width:1.6px;height:4px;background:rgba(230,237,243,.45);border-radius:0 1px 1px 0}
+.batt i{display:block;height:100%;width:72%;background:var(--text);border-radius:1.5px}
+.home-ind{position:absolute;bottom:7px;left:50%;transform:translateX(-50%);width:120px;height:4.5px;border-radius:3px;background:rgba(230,237,243,.75);z-index:30}
+
+/* ---------- generic iOS bits ---------- */
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:6px 16px 4px}
+.glassbtn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);display:grid;place-items:center;color:var(--text);font-size:17px;backdrop-filter:blur(10px)}
+.largetitle{font:800 30px/1.1 var(--ui);letter-spacing:-.02em;padding:2px 16px 10px}
+.search{white-space:nowrap;overflow:hidden;margin:0 14px 10px;height:36px;border-radius:11px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--text3);font:13px var(--mono)}
+.search svg{flex:0 0 auto}
+.chips{display:flex;gap:6px;padding:0 14px 10px;overflow:hidden;white-space:nowrap}
+.chip{font:600 11px var(--mono);padding:5px 9px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2)}
+.chip.on{background:var(--accent-soft);border-color:rgba(45,212,191,.45);color:var(--accent)}
+.sect{font:600 10.5px var(--ui);letter-spacing:.07em;color:var(--text3);padding:10px 18px 5px;display:flex;justify-content:space-between;text-transform:uppercase}
+.sect .cnt{font-family:var(--mono);letter-spacing:0}
+.list{margin:0 12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.srow{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--border);min-height:44px}
+.srow:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+.dot.ok{background:var(--ok);box-shadow:0 0 6px rgba(63,214,139,.6)}
+.dot.warn{background:var(--warn)}
+.dot.bad{background:var(--danger)}
+.dot.off{background:var(--text3)}
+.dot.live{background:var(--accent);box-shadow:0 0 0 3px rgba(45,212,191,.22),0 0 10px rgba(45,212,191,.7)}
+.sname{font:600 13.5px var(--mono);color:var(--text)}
+.ssub{font:11px var(--mono);color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.smain{flex:1;min-width:0}
+.badge{font:700 9px var(--mono);letter-spacing:.05em;padding:3px 5px;border-radius:5px}
+.b-prod{color:var(--danger);background:rgba(247,82,95,.14);border:1px solid rgba(247,82,95,.35)}
+.b-stg{color:var(--warn);background:rgba(245,184,61,.12);border:1px solid rgba(245,184,61,.35)}
+.b-dev{color:var(--info);background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.35)}
+.b-lab{color:var(--lab);background:rgba(199,146,234,.12);border:1px solid rgba(199,146,234,.35)}
+.lat{font:500 10.5px var(--mono);color:var(--text3);width:34px;text-align:right}
+.lat.slow{color:var(--warn)} .lat.bad{color:var(--danger)}
+.keyglyph{color:var(--text3)}
+
+.tabbar-wrap{position:absolute;left:0;right:0;bottom:0;padding:0 14px 26px;background:linear-gradient(to top, rgba(11,15,20,1) 55%, rgba(11,15,20,0));z-index:10}
+.livepill{display:flex;align-items:center;gap:8px;height:40px;border-radius:20px;padding:0 14px;margin:0 6px 8px;background:rgba(31,38,48,.82);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px);font:600 12px var(--mono);color:var(--text)}
+.livepill .grow{flex:1;color:var(--text2);font-weight:500}
+.tabbar{display:flex;justify-content:space-around;height:56px;border-radius:28px;background:rgba(23,29,37,.86);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(18px);align-items:center;padding:0 6px}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font:600 9.5px var(--ui);color:var(--text3);width:68px;padding:5px 0;border-radius:20px}
+.tab.on{color:var(--accent);background:rgba(45,212,191,.10)}
+
+/* ---------- terminal ---------- */
+.term{font:10.6px/1.36 var(--mono);color:var(--t-fg);background:var(--bg);padding:6px 7px;white-space:pre;overflow:hidden;flex:1;position:relative}
+.c-g{color:var(--t-green)} .c-r{color:var(--t-red)} .c-y{color:var(--t-yellow)} .c-b{color:var(--t-blue)} .c-m{color:var(--t-magenta)} .c-c{color:var(--t-cyan)} .c-d{color:var(--t-bblack)} .c-w{color:#F5F8FA} .bold{font-weight:700}
+.cur{background:var(--accent);color:var(--bg)}
+.prompt-u{color:var(--t-green);font-weight:600} .prompt-h{color:var(--t-cyan);font-weight:600}
+.hud{position:absolute;bottom:8px;right:8px;font:700 9.5px var(--mono);letter-spacing:.06em;color:var(--accent);background:rgba(11,15,20,.85);border:1px solid rgba(45,212,191,.55);border-radius:6px;padding:4px 7px;box-shadow:0 0 12px rgba(45,212,191,.25)}
+
+.ttitle{height:46px;flex:0 0 46px;display:flex;align-items:center;gap:8px;padding:0 10px;background:rgba(17,22,29,.92);border-top:2px solid var(--danger);border-bottom:1px solid var(--border);position:relative}
+.ttitle .back{font-size:22px;color:var(--accent);width:22px;text-align:center;line-height:1}
+.ttitle .t{flex:1;min-width:0}
+.ttitle .t1{font:700 13px var(--mono);display:flex;align-items:center;gap:6px}
+.ttitle .t2{font:500 10px var(--mono);color:var(--text2);margin-top:1px}
+.tabcount{width:26px;height:24px;border:1.6px solid var(--text2);border-radius:6px;display:grid;place-items:center;font:700 11px var(--mono);color:var(--text)}
+.more{font-size:18px;color:var(--text2);width:24px;text-align:center}
+
+/* key bar */
+.keybar{flex:0 0 46px;height:46px;background:#141A21;border-top:1px solid var(--border);display:flex;align-items:center;gap:2px;padding:0 3px;position:relative}
+.k{height:36px;min-width:0;flex:1 1 0;border-radius:7px;background:#232B35;border:1px solid #2C3541;box-shadow:0 1px 0 rgba(0,0,0,.5);display:grid;place-items:center;font:600 12px var(--mono);color:var(--text);position:relative}
+.k small{position:absolute;top:1px;right:2.5px;font:500 7px var(--mono);color:var(--text3)}
+.k.mod{font-size:9.5px;color:var(--text2);flex:1 1 0}
+.k.armed{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 1px rgba(45,212,191,.4),0 0 10px rgba(45,212,191,.25)}
+.k.locked{background:var(--accent);color:#06221E;border-color:var(--accent)}
+.k.locked::after{content:"";position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:#06221E}
+.k.joy{flex:1.15 1 0;color:var(--accent);font-size:18px}
+.k.bolt{color:var(--warn)}
+.gut{width:3px;flex:0 0 3px}
+.pagedots{position:absolute;bottom:1px;left:50%;transform:translateX(-50%);display:flex;gap:3px}
+.pagedots i{width:3.5px;height:3.5px;border-radius:50%;background:var(--text3)}
+.pagedots i.on{background:var(--accent)}
+
+/* iOS keyboard */
+.kbd{flex:0 0 auto;background:#1C1F24;padding:6px 3px 34px;display:flex;flex-direction:column;gap:9px}
+.kr{display:flex;gap:5px;justify-content:center}
+.kk{height:38px;width:27px;border-radius:6px;background:#4A4E55;display:grid;place-items:center;font:400 17px var(--ui);color:#F2F4F7;box-shadow:0 1px 0 rgba(0,0,0,.6)}
+.kk.sp{background:#2E3237;font-size:13px}
+.kk.w2{width:40px}.kk.space{width:142px;font-size:13px}.kk.ret{width:76px;font-size:13px;background:#2E3237}
+
+/* forms */
+.formnav{display:flex;justify-content:space-between;align-items:center;padding:4px 16px 10px;font:500 14.5px var(--ui)}
+.formnav .c{color:var(--accent)} .formnav .s{color:var(--accent);font-weight:700} .formnav .ti{font-weight:700}
+.fsect{font:600 10.5px var(--ui);letter-spacing:.07em;color:var(--text3);padding:9px 20px 4px;text-transform:uppercase}
+.fgroup{margin:0 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.frow{display:flex;align-items:center;justify-content:space-between;min-height:35px;padding:0 12px;border-bottom:1px solid var(--border);font:13px var(--ui);gap:10px}
+.frow:last-child{border-bottom:none}
+.frow .lbl{color:var(--text2);flex:0 0 74px}
+.frow .val{flex:1;font:500 13px var(--mono);color:var(--text);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .val.ph{color:var(--text3)}
+.frow .chev{color:var(--text3);font-size:14px}
+.seg{display:flex;background:var(--surface3);border-radius:8px;padding:2px;gap:2px;width:100%}
+.seg span{flex:1;text-align:center;font:600 11px var(--ui);color:var(--text2);padding:6px 0;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:4px}
+.seg span.on{background:#2D3642;color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.seg span.on.prod{background:rgba(247,82,95,.2);color:var(--danger)}
+.toggle{width:40px;height:24px;border-radius:12px;background:var(--surface3);position:relative;flex:0 0 40px}
+.toggle::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#C9D1D9}
+.toggle.on{background:var(--accent-strong)} .toggle.on::after{left:18px;background:#fff}
+.bigbtn{margin:14px 14px 0;height:46px;border-radius:14px;background:var(--accent);color:#04201C;font:700 15px var(--ui);display:grid;place-items:center}
+.ghostbtn{margin:8px 14px 0;height:42px;border-radius:14px;border:1px solid var(--border);color:var(--text);font:600 14px var(--ui);display:grid;place-items:center;background:var(--surface)}
+
+/* key manager */
+.krow{display:flex;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border)}
+.krow:last-child{border-bottom:none}
+.kicon{width:30px;height:30px;border-radius:8px;background:var(--surface3);display:grid;place-items:center;color:var(--accent)}
+.ktype{font:700 8.5px var(--mono);letter-spacing:.04em;padding:2px 5px;border-radius:4px;background:var(--surface3);color:var(--text2);border:1px solid var(--border)}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:372px;background:#141A21;border-top:1px solid #2F3945;border-radius:26px 26px 0 0;box-shadow:0 -20px 50px rgba(0,0,0,.6);padding:8px 14px 0;z-index:12}
+.grabber{width:36px;height:5px;border-radius:3px;background:#3A4450;margin:0 auto 10px}
+.pubkey{font:10.5px/1.45 var(--mono);color:var(--t-fg);background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:9px 10px;word-break:break-all;white-space:normal}
+.pubkey .alg{color:var(--accent)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.act{height:40px;border-radius:11px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:7px;font:600 12.5px var(--ui);color:var(--text)}
+.act.primary{background:var(--accent);color:#04201C;border-color:var(--accent)}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:11}
+
+/* host key changed */
+.hk{background:radial-gradient(500px 300px at 50% 0%, rgba(247,82,95,.28), transparent 70%), linear-gradient(#1A0D10, #0B0F14 60%);}
+.hk .warnicon{width:64px;height:64px;border-radius:18px;margin:18px auto 12px;background:rgba(247,82,95,.16);border:1px solid rgba(247,82,95,.5);display:grid;place-items:center;box-shadow:0 0 40px rgba(247,82,95,.35)}
+.hk h3{font:800 20px var(--ui);letter-spacing:.04em;color:var(--danger);text-align:center}
+.hk .host{font:700 14px var(--mono);text-align:center;margin-top:6px}
+.hk .host span{color:var(--text2);font-weight:500}
+.hk p{font:13px/1.5 var(--ui);color:var(--text2);text-align:center;padding:12px 22px 0}
+.hk p b{color:var(--text)}
+.fp{margin:14px 14px 0;border:1px solid rgba(247,82,95,.35);border-radius:12px;overflow:hidden;background:rgba(11,15,20,.7)}
+.fp .r{padding:9px 11px;border-bottom:1px solid rgba(247,82,95,.2)}
+.fp .r:last-child{border-bottom:none}
+.fp .l{font:700 9.5px var(--mono);letter-spacing:.08em;display:flex;justify-content:space-between}
+.fp .v{font:500 11px var(--mono);margin-top:4px;word-break:break-all;color:var(--text)}
+.fp .m{font:10px var(--mono);color:var(--text3);margin-top:3px}
+.dangerbtn{margin:14px 14px 0;height:48px;border-radius:14px;background:var(--text);color:#0B0F14;font:800 15px var(--ui);display:grid;place-items:center}
+.holdbtn{margin:10px 14px 0;height:44px;border-radius:14px;border:1.5px solid rgba(247,82,95,.6);color:var(--danger);font:700 13.5px var(--ui);display:flex;align-items:center;justify-content:center;gap:8px;position:relative;overflow:hidden}
+.holdbtn .fill{position:absolute;left:0;top:0;bottom:0;width:38%;background:rgba(247,82,95,.18)}
+.holdbtn span{position:relative}
+.links{display:flex;justify-content:center;gap:16px;margin-top:12px;font:600 12px var(--ui);color:var(--text2)}
+
+/* ---------- iPad ---------- */
+.ipad{width:1000px;height:712px;border-radius:38px;background:linear-gradient(145deg,#2a2f37,#0c0e11 40%,#1b1f25);padding:16px;box-shadow:0 0 0 1px #3a414b inset,0 50px 110px rgba(0,0,0,.65);position:relative}
+.ipad .scr{width:968px;height:680px;border-radius:24px;overflow:hidden;background:var(--bg);display:flex;flex-direction:column;position:relative}
+.ipad .sbar{height:26px;flex:0 0 26px;display:flex;justify-content:space-between;align-items:center;padding:0 22px;font:600 12px var(--ui);color:var(--text)}
+.split{flex:1;display:flex;min-height:0}
+.side{width:262px;flex:0 0 262px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.side .shead{display:flex;align-items:center;justify-content:space-between;padding:8px 12px 8px}
+.side .shead b{font:800 20px var(--ui);letter-spacing:-.01em}
+.side .search{margin:0 10px 8px}
+.side .sect{padding:10px 14px 4px}
+.nrow{display:flex;align-items:center;gap:9px;padding:6px 10px;margin:0 6px;border-radius:9px}
+.nrow.sel{background:var(--accent-soft);box-shadow:inset 0 0 0 1px rgba(45,212,191,.35)}
+.nrow .sname{font-size:12.5px}
+.nrow .ssub{font-size:10px}
+.side .foot{margin-top:auto;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:9px 4px;color:var(--text2);font:600 10px var(--ui)}
+.side .foot div{display:flex;flex-direction:column;align-items:center;gap:3px}
+.detail{flex:1;display:flex;flex-direction:column;min-width:0}
+.tabs{height:38px;flex:0 0 38px;display:flex;align-items:flex-end;gap:2px;padding:0 8px;background:var(--surface);border-bottom:1px solid var(--border)}
+.ttab{height:32px;display:flex;align-items:center;gap:7px;padding:0 10px 0 11px;border-radius:9px 9px 0 0;font:600 11.5px var(--mono);color:var(--text2);background:transparent;position:relative;min-width:150px}
+.ttab.on{background:var(--bg);color:var(--text);box-shadow:0 -1px 0 var(--border) inset}
+.ttab .stripe{position:absolute;left:8px;right:8px;top:0;height:2px;border-radius:0 0 2px 2px}
+.ttab .x{margin-left:auto;color:var(--text3);font-size:12px}
+.ttab .kb{margin-left:auto;font:600 9px var(--mono);color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:1px 4px}
+.tplus{width:30px;height:30px;display:grid;place-items:center;color:var(--text2);font-size:18px;margin-bottom:1px}
+.tinfo{height:28px;flex:0 0 28px;display:flex;align-items:center;gap:12px;padding:0 12px;font:500 10.5px var(--mono);color:var(--text2);border-bottom:1px solid var(--border);background:rgba(17,22,29,.6)}
+.tinfo .sp{flex:1}
+.hwstrip{height:32px;flex:0 0 32px;background:#141A21;border-top:1px solid var(--border);display:flex;align-items:center;gap:4px;padding:0 8px}
+.hk2{white-space:nowrap;height:24px;padding:0 6px;border-radius:6px;background:#232B35;border:1px solid #2C3541;font:600 10.5px var(--mono);color:var(--text2);display:grid;place-items:center}
+.hk2.acc{color:var(--accent)}
+
+/* ---------- Mac ---------- */
+.mac{width:1180px;border-radius:14px;overflow:hidden;background:var(--bg);box-shadow:0 0 0 1px #2C333D,0 0 0 2px #000,0 60px 120px rgba(0,0,0,.7)}
+.mtool{height:52px;display:flex;align-items:center;gap:12px;padding:0 14px;background:linear-gradient(#1A2028,#151A21);border-bottom:1px solid #262E39}
+.lights{display:flex;gap:8px;margin-right:6px}
+.lights i{width:12px;height:12px;border-radius:50%;display:block}
+.mbtn{width:30px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--text2)}
+.mbtn:hover{background:var(--surface3)}
+.qc{flex:0 1 460px;margin:0 auto;height:30px;border-radius:9px;background:#0F141A;border:1px solid #2A333F;display:flex;align-items:center;gap:8px;padding:0 10px;font:12px var(--mono);color:var(--text3)}
+.qc .kbdh{margin-left:auto;font:600 10px var(--mono);border:1px solid #2A333F;border-radius:5px;padding:2px 5px;color:var(--text3)}
+.latpill{display:flex;align-items:center;gap:6px;font:600 11px var(--mono);color:var(--text2);padding:4px 9px;border-radius:8px;background:var(--surface2);border:1px solid var(--border)}
+.mbody{display:flex;height:640px}
+.mside{width:240px;flex:0 0 240px;background:rgba(17,22,29,.92);border-right:1px solid var(--border);padding-top:6px;display:flex;flex-direction:column}
+.mside .sect{padding:10px 14px 4px;font-size:10px}
+.mrow{display:flex;align-items:center;gap:8px;padding:4px 10px;margin:0 8px;border-radius:6px;height:28px}
+.mrow .sname{font-size:12px;font-weight:500}
+.mrow .lat{margin-left:auto;width:auto}
+.mrow.sel{background:rgba(45,212,191,.16)}
+.mrow .grp{color:var(--text3);font-size:10px;width:10px}
+.mdetail{flex:1;display:flex;flex-direction:column;min-width:0}
+.mtabs{height:34px;display:flex;align-items:stretch;background:#12171E;border-bottom:1px solid var(--border)}
+.mtab{flex:0 0 210px;display:flex;align-items:center;gap:7px;padding:0 12px;font:600 11.5px var(--mono);color:var(--text2);border-right:1px solid var(--border);position:relative}
+.mtab.on{background:var(--bg);color:var(--text)}
+.mtab .stripe{position:absolute;left:0;right:0;top:0;height:2px}
+.mtab .x{margin-left:auto;color:var(--text3)}
+.mtab .k{all:unset;margin-left:auto;font:600 9.5px var(--mono);color:var(--text3)}
+.mterm{font:11.6px/1.38 var(--mono);padding:8px 10px}
+/* htop */
+.h-bar{color:var(--t-bblack)}
+.h-hdr{background:var(--t-green);color:#0B0F14;font-weight:700}
+.h-sel{background:#1D4E57;color:#E6EDF3}
+.h-fk{background:#0B0F14;color:#E6EDF3;font-weight:700}
+.h-fl{background:#2DD4BF;color:#0B0F14}
+
+/* ---------- App Store ---------- */
+.store{display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start}
+.ascard{width:420px;background:#0E1217;border:1px solid var(--border);border-radius:20px;padding:20px}
+.as-top{display:flex;gap:14px;align-items:center}
+.as-top .ic{width:84px;height:84px;flex:0 0 84px}
+.as-name{font:700 17px var(--ui);line-height:1.2}
+.as-sub{font:13px var(--ui);color:var(--text2);margin-top:3px}
+.get{margin-top:8px;display:inline-block;background:#2B66F6;color:#fff;font:800 13px var(--ui);padding:6px 18px;border-radius:999px}
+.as-meta{display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+.as-meta div{text-align:center;flex:1}
+.as-meta .k1{font:600 9px var(--ui);color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.as-meta .v1{font:700 15px var(--ui);color:var(--text2);margin-top:3px}
+.as-shots{display:flex;gap:8px;margin-top:16px}
+.shot{flex:1;height:200px;border-radius:12px;background:linear-gradient(160deg,#122029,#0B0F14 60%);border:1px solid var(--border);padding:10px 8px;overflow:hidden;position:relative}
+.shot .cap{font:800 12px/1.15 var(--ui);color:var(--text)}
+.shot .cap span{color:var(--accent)}
+.shot .mini{position:absolute;left:12px;right:12px;bottom:-30px;height:140px;border-radius:14px;background:var(--bg);border:3px solid #232A33;padding:8px;font:6px/1.35 var(--mono);color:var(--t-fg);white-space:pre;overflow:hidden}
+.meta-table{flex:1;min-width:420px;max-width:640px}
+.mt{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)}
+.mt .r{display:flex;gap:14px;padding:11px 14px;border-bottom:1px solid var(--border);align-items:flex-start}
+.mt .r:last-child{border-bottom:none}
+.mt .l{flex:0 0 110px;font:600 11px var(--ui);color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+.mt .v{flex:1;font:500 13px/1.5 var(--mono);color:var(--text);word-break:break-word}
+.mt .n{font:600 11px var(--mono);color:var(--ok);flex:0 0 auto}
+.icons-ladder{display:flex;gap:26px;align-items:flex-end;margin-top:22px;flex-wrap:wrap}
+.ladder{display:flex;gap:18px;align-items:flex-end;padding:18px 20px;border-radius:16px;border:1px solid var(--border)}
+.ladder.light{background:#EEF2F5;border-color:#D5DBE1}
+.ladder.dark{background:#0E1217}
+.ladder .lbl{font:600 10px var(--mono);color:var(--text3);text-align:center;margin-top:6px}
+.ladder.light .lbl{color:#59636E}
+
+/* ---------- palette / key bar spec ---------- */
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.sw{width:120px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:var(--surface)}
+.sw .c{height:54px}
+.sw .t{padding:7px 9px;font:600 10.5px var(--mono);color:var(--text2)}
+.sw .t b{display:block;color:var(--text);font-size:11px;margin-bottom:2px}
+.kbspec{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:22px}
+.kbcard{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+.kbcard h4{font:700 13px var(--ui);margin-bottom:4px}
+.kbcard p{font:12.5px/1.5 var(--ui);color:var(--text2);margin-bottom:12px}
+.kbdemo{background:#141A21;border:1px solid var(--border);border-radius:10px;display:flex;gap:3px;padding:5px;align-items:center;position:relative}
+.kbdemo .k{height:34px}
+.pagelabel{font:700 10px var(--mono);color:var(--text3);margin:10px 0 5px;letter-spacing:.06em}
+.pop{position:absolute;bottom:46px;background:#1F2630;border:1px solid #33404E;border-radius:12px;padding:6px;display:grid;grid-template-columns:repeat(4,44px);gap:4px;box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.pop span{height:34px;border-radius:7px;background:#28313C;display:grid;place-items:center;font:700 12px var(--mono);color:var(--text)}
+.pop span.hi{background:var(--accent);color:#04201C}
+.joy-demo{position:relative;height:150px;background:#0F141A;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.bubble{position:absolute;width:38px;height:44px;border-radius:10px;background:#2D3642;border:1px solid #3B4757;display:grid;place-items:center;font:700 16px var(--mono);color:var(--accent);box-shadow:0 10px 24px rgba(0,0,0,.5)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font:12px var(--ui);color:var(--text2)}
+.legend span{display:flex;align-items:center;gap:6px}
+.lg{width:26px;height:20px;border-radius:5px;background:#232B35;border:1px solid #2C3541}
+.lg.armed{border-color:var(--accent);background:var(--accent-soft)}
+.lg.locked{background:var(--accent);border-color:var(--accent)}
+footer{max-width:1880px;margin:60px auto 0;padding:24px 48px;color:var(--text3);font:12px var(--mono);border-top:1px solid #121820}
+@media (max-width: 700px){ .section,.hero{padding-left:16px;padding-right:16px} .meta-table{min-width:0} .ascard{width:100%} }
+</style>
+</head>
+<body>
+
+<!-- Shared icon symbol (same artwork as design/icon.svg) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="i-bg" cx="30%" cy="18%" r="95%"><stop offset="0" stop-color="#1D2733"/><stop offset=".55" stop-color="#0F151C"/><stop offset="1" stop-color="#070A0E"/></radialGradient>
+    <linearGradient id="i-sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".07"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <linearGradient id="i-mint" x1="214" y1="420" x2="812" y2="620" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9BF7E4"/><stop offset=".55" stop-color="#3EE0C3"/><stop offset="1" stop-color="#14B8A6"/></linearGradient>
+    <linearGradient id="i-cur" x1="0" y1="400" x2="0" y2="632" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5EEAD4"/><stop offset="1" stop-color="#14B8A6"/></linearGradient>
+    <filter id="i-glow" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="26" result="b"/><feColorMatrix in="b" type="matrix" values="0 0 0 0 .18 0 0 0 0 .83 0 0 0 0 .75 0 0 0 .55 0"/></filter>
+    <pattern id="i-dots" width="64" height="64" patternUnits="userSpaceOnUse"><circle cx="32" cy="32" r="2.2" fill="#fff" fill-opacity=".06"/></pattern>
+    <clipPath id="i-clip"><rect width="1024" height="1024" rx="228"/></clipPath>
+    <!-- light variant -->
+    <linearGradient id="i-bgl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E3E9EE"/></linearGradient>
+  </defs>
+  <symbol id="tilde-icon" viewBox="0 0 1024 1024">
+    <g clip-path="url(#i-clip)">
+      <rect width="1024" height="1024" fill="url(#i-bg)"/><rect width="1024" height="1024" fill="url(#i-sheen)"/><rect width="1024" height="1024" fill="url(#i-dots)"/>
+      <g transform="translate(512 516) scale(1.1) translate(-512 -516)">
+        <g filter="url(#i-glow)"><path d="M254 556 C 292 458, 384 442, 444 516 C 504 590, 596 574, 634 476" fill="none" stroke="#2DD4BF" stroke-width="100" stroke-linecap="round"/><rect x="710" y="400" width="108" height="232" rx="18" fill="#2DD4BF"/></g>
+        <path d="M254 556 C 292 458, 384 442, 444 516 C 504 590, 596 574, 634 476" fill="none" stroke="url(#i-mint)" stroke-width="100" stroke-linecap="round"/>
+        <rect x="710" y="400" width="108" height="232" rx="18" fill="url(#i-cur)"/><rect x="710" y="400" width="108" height="36" rx="18" fill="#fff" fill-opacity=".18"/>
+      </g>
+    </g>
+  </symbol>
+  <symbol id="tilde-icon-light" viewBox="0 0 1024 1024">
+    <g clip-path="url(#i-clip)">
+      <rect width="1024" height="1024" fill="url(#i-bgl)"/>
+      <g transform="translate(512 516) scale(1.1) translate(-512 -516)">
+        <path d="M254 556 C 292 458, 384 442, 444 516 C 504 590, 596 574, 634 476" fill="none" stroke="#0F9F8F" stroke-width="100" stroke-linecap="round"/>
+        <rect x="710" y="400" width="108" height="232" rx="18" fill="#0F9F8F"/>
+      </g>
+    </g>
+  </symbol>
+  <!-- glyphs -->
+  <symbol id="g-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="g-servers" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="6" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="11" width="14" height="6" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6.5" cy="6" r="1" fill="currentColor"/><circle cx="6.5" cy="14" r="1" fill="currentColor"/></symbol>
+  <symbol id="g-key" viewBox="0 0 20 20"><circle cx="6.5" cy="10" r="3.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 10h7.5M15 10v3M17.5 10v2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="g-bolt" viewBox="0 0 20 20"><path d="M11 2L4 11.5h5L8 18l8-10h-5.2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="g-gear" viewBox="0 0 20 20"><circle cx="10" cy="10" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="g-lock" viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.6" fill="currentColor"/><path d="M5 7V5a3 3 0 016 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="g-dots" viewBox="0 0 20 20"><circle cx="4.5" cy="10" r="1.6" fill="currentColor"/><circle cx="10" cy="10" r="1.6" fill="currentColor"/><circle cx="15.5" cy="10" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="g-plus" viewBox="0 0 20 20"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="g-sidebar" viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4v12" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="g-shield" viewBox="0 0 20 20"><path d="M10 2l6 2.5v5c0 4-2.7 6.9-6 8.5-3.3-1.6-6-4.5-6-8.5v-5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="g-warn" viewBox="0 0 24 24"><path d="M12 3l10 17H2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.3" fill="currentColor"/></symbol>
+  <symbol id="g-share" viewBox="0 0 20 20"><path d="M10 3v10M6.5 6.5L10 3l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v6h10v-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="g-copy" viewBox="0 0 20 20"><rect x="6.5" y="6.5" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13.5 6.5V4.5a1 1 0 00-1-1h-8a1 1 0 00-1 1v8a1 1 0 001 1h2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="g-cloud" viewBox="0 0 20 20"><path d="M6 15.5h8.5a3.5 3.5 0 00.4-7A5 5 0 005.3 9.6 3 3 0 006 15.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+</svg>
+
+<header class="hero">
+  <div class="hero-inner">
+    <svg width="96" height="96" style="filter:drop-shadow(0 18px 40px rgba(45,212,191,.18))"><use href="#tilde-icon"/></svg>
+    <div>
+      <h1>Tilde <span>~</span> design mockups</h1>
+      <p>SSH client &amp; terminal for iPhone, iPad and Mac. Terminal-first, dark by default, monospace everywhere data lives, and red means <b style="color:var(--danger)">production</b>. These are static mockups for approval, not app code. Spec: <span class="mono">docs/DESIGN.md</span>.</p>
+      <span class="pill">v0.1 · draft for approval</span><span class="pill">iOS 26 · iPadOS 26 · macOS 26</span><span class="pill">SwiftUI · Citadel · SwiftTerm</span><span class="pill">Apache-2.0 · github.com/&lt;owner&gt;/tilde-ssh</span>
+    </div>
+  </div>
+</header>
+
+<!-- ================= 1. App Store ================= -->
+<section class="section">
+  <div class="section-h"><span class="num">01</span><h2>Icon &amp; App Store listing</h2></div>
+  <p class="section-sub">A tilde (<span class="mono">~</span>, home) flowing into a block cursor (ready for input). Name, subtitle and keyword field never repeat a word, so every character is indexed once.</p>
+  <div class="store">
+    <div class="ascard">
+      <div class="as-top">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#tilde-icon"/></svg>
+        <div>
+          <div class="as-name">Tilde – SSH Client &amp; Terminal</div>
+          <div class="as-sub">Remote Server Shell for DevOps</div>
+          <span class="get">GET</span>
+        </div>
+      </div>
+      <div class="as-meta">
+        <div><div class="k1">Price</div><div class="v1">Free</div></div>
+        <div><div class="k1">Category</div><div class="v1" style="font-size:12px;padding-top:2px">Developer Tools</div></div>
+        <div><div class="k1">Age</div><div class="v1">4+</div></div>
+        <div><div class="k1">Privacy</div><div class="v1" style="font-size:11px;padding-top:3px">Not Collected</div></div>
+      </div>
+      <div class="as-shots">
+        <div class="shot"><div class="cap">A real <span>SSH keyboard</span></div><div class="mini"><span class="c-g">deploy@prod-api-01</span>:~$ htop
+<span class="c-g">||||||||||</span><span class="c-r">||</span>     42%
+<span class="c-g">||||||||||||||</span>   58%
+<span class="c-b">Mem</span> <span class="c-g">||||||||</span> 11.2G
+<span class="h-hdr"> PID USER  CPU%  </span>
+18231 deploy 38.2
+ 1904 postgres 21.7
+</div></div>
+        <div class="shot"><div class="cap">Every server, <span>one tap</span></div><div class="mini" style="white-space:normal;font-size:7px"><div style="color:#F7525F">● prod-api-01 <span style="float:right">PROD</span></div><div style="color:#9AA6B2;margin:3px 0">● db-primary</div><div style="color:#9AA6B2">● k8s-node-3</div><div style="color:#9AA6B2;margin-top:3px">● stg-api-01 <span style="float:right;color:#F5B83D">STG</span></div></div></div>
+        <div class="shot"><div class="cap"><span>Paranoid</span> by default</div><div class="mini" style="white-space:normal;text-align:center;background:#1A0D10;border-color:#3A1A20"><div style="color:#F7525F;font:800 9px var(--ui);margin-top:20px">HOST KEY<br>HAS CHANGED</div><div style="font-size:6px;color:#9AA6B2;margin-top:6px">No credentials were sent.</div></div></div>
+      </div>
+    </div>
+
+    <div class="meta-table">
+      <div class="mt">
+        <div class="r"><div class="l">Name</div><div class="v">Tilde – SSH Client &amp; Terminal</div><div class="n">29/30</div></div>
+        <div class="r"><div class="l">Subtitle</div><div class="v">Remote Server Shell for DevOps</div><div class="n">30/30</div></div>
+        <div class="r"><div class="l">Keywords</div><div class="v" style="font-size:12px">servers,secure,console,sysadmin,linux,unix,vps,homelab,cloud,host,root,keys,ed25519,bash,sre,admin</div><div class="n">98/100</div></div>
+        <div class="r"><div class="l">Promo text</div><div class="v" style="font-family:var(--ui)">Your servers, one tap away. Ed25519 keys, iCloud-synced hosts, and a keyboard built for Ctrl-C at 3am. Free and open source — no account, no tracking.</div><div class="n">150/170</div></div>
+        <div class="r"><div class="l">Description</div><div class="v" style="font-family:var(--ui);color:var(--text2)"><b style="color:var(--text)">A fast, native SSH client and terminal for iPhone, iPad and Mac.</b><br>Connect with a password or SSH key. Your servers sync over iCloud; your secrets stay in iCloud Keychain.<br>Built for DevOps and SREs: dark, dense, keyboard-first. Free and open source.</div></div>
+        <div class="r"><div class="l">Repo · License</div><div class="v">github.com/&lt;owner&gt;/tilde-ssh · Apache-2.0</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="icons-ladder">
+    <div class="ladder dark">
+      <div><svg width="180" height="180"><use href="#tilde-icon"/></svg><div class="lbl">180 · dark</div></div>
+      <div><svg width="120" height="120"><use href="#tilde-icon"/></svg><div class="lbl">120</div></div>
+      <div><svg width="60" height="60"><use href="#tilde-icon"/></svg><div class="lbl">60</div></div>
+      <div><svg width="40" height="40"><use href="#tilde-icon"/></svg><div class="lbl">40</div></div>
+      <div><svg width="29" height="29"><use href="#tilde-icon"/></svg><div class="lbl">29</div></div>
+    </div>
+    <div class="ladder light">
+      <div><svg width="120" height="120" style="filter:drop-shadow(0 6px 14px rgba(0,0,0,.18))"><use href="#tilde-icon"/></svg><div class="lbl">on light wallpaper</div></div>
+      <div><svg width="120" height="120" style="filter:drop-shadow(0 6px 14px rgba(0,0,0,.12))"><use href="#tilde-icon-light"/></svg><div class="lbl">light appearance</div></div>
+      <div><svg width="60" height="60"><use href="#tilde-icon-light"/></svg><div class="lbl">60</div></div>
+      <div><svg width="29" height="29"><use href="#tilde-icon"/></svg><div class="lbl">29</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 2. iPhone ================= -->
+<section class="section">
+  <div class="section-h"><span class="num">02</span><h2>iPhone</h2></div>
+  <p class="section-sub">Three taps to a prompt. The search field doubles as Quick Connect (<span class="mono">user@host:port</span>), live sessions follow you in the tab-bar accessory, and the key bar puts every symbol iOS hides on the <span class="mono">#+=</span> page one tap or one flick away.</p>
+  <div class="row">
+
+    <!-- 2a Server list -->
+    <div class="device">
+      <div class="iphone"><div class="screen">
+        <div class="island"></div>
+        <div class="sb"><span>3:14</span><span class="icons"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span style="font-size:12px;font-weight:700">5G</span><span class="batt"><i></i></span></span></div>
+        <div class="navbar"><span class="glassbtn"><svg width="18" height="18" style="color:var(--text2)"><use href="#g-dots"/></svg></span><span class="glassbtn" style="color:var(--accent)"><svg width="18" height="18"><use href="#g-plus"/></svg></span></div>
+        <div class="largetitle">Servers</div>
+        <div class="search"><svg width="14" height="14"><use href="#g-search"/></svg>Search or user@host:port</div>
+        <div class="chips"><span class="chip on">All</span><span class="chip">#payments</span><span class="chip">#k8s</span><span class="chip">#db</span><span class="chip">#edge</span><span class="chip">#lab</span></div>
+        <div style="overflow:hidden;flex:1">
+          <div class="sect"><span>Live</span><span class="cnt">2</span></div>
+          <div class="list">
+            <div class="srow"><span class="dot live"></span><div class="smain"><div class="sname">prod-api-01</div><div class="ssub">deploy@10.0.1.12 · 2 sessions</div></div><span class="badge b-prod">PROD</span><span class="lat">23ms</span></div>
+            <div class="srow"><span class="dot live"></span><div class="smain"><div class="sname">k8s-node-3</div><div class="ssub">ops@10.0.8.23 via bastion-eu</div></div><span class="badge b-prod">PROD</span><span class="lat">41ms</span></div>
+          </div>
+          <div class="sect"><span>Favorites</span><span class="cnt">2</span></div>
+          <div class="list">
+            <div class="srow"><span class="dot ok"></span><div class="smain"><div class="sname">db-primary</div><div class="ssub">postgres@10.0.2.5</div></div><span class="badge b-prod">PROD</span><span class="lat">4ms</span></div>
+            <div class="srow"><span class="dot ok"></span><div class="smain"><div class="sname">bastion-eu</div><div class="ssub">ops@bastion.eu.acme.io:2222</div></div><span class="badge b-prod">PROD</span><span class="lat">18ms</span></div>
+          </div>
+          <div class="sect"><span>▾ Payments</span><span class="cnt">4</span></div>
+          <div class="list">
+            <div class="srow"><span class="dot bad"></span><div class="smain"><div class="sname">prod-api-02</div><div class="ssub">deploy@10.0.1.13</div></div><span class="badge b-prod">PROD</span><span class="lat bad">—</span></div>
+            <div class="srow"><span class="dot warn"></span><div class="smain"><div class="sname">stg-api-01</div><div class="ssub">deploy@stg-api-01.internal</div></div><span class="badge b-stg">STG</span><span class="lat slow">212ms</span></div>
+            <div class="srow"><span class="dot off"></span><div class="smain"><div class="sname">refunds-worker</div><div class="ssub">deploy@10.0.1.40</div></div><span class="badge b-dev">DEV</span><span class="lat"></span></div>
+          </div>
+        </div>
+        <div class="tabbar-wrap">
+          <div class="livepill"><span class="dot live" style="width:7px;height:7px;flex-basis:7px"></span>3 live<span class="grow">· prod-api-01</span><span style="color:var(--text3)">›</span></div>
+          <div class="tabbar">
+            <div class="tab on"><svg width="20" height="20"><use href="#g-servers"/></svg>Servers</div>
+            <div class="tab"><svg width="20" height="20"><use href="#g-key"/></svg>Keys</div>
+            <div class="tab"><svg width="20" height="20"><use href="#g-bolt"/></svg>Snippets</div>
+            <div class="tab"><svg width="20" height="20"><use href="#g-gear"/></svg>Settings</div>
+          </div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <div class="caption"><b>Server list</b> · groups · tags · reachability</div>
+      <div class="note">Dot = TCP reachability (no auth attempts). Pulsing mint = live session. Red badges make production impossible to miss.</div>
+    </div>
+
+    <!-- 2b Terminal + key bar -->
+    <div class="device">
+      <div class="iphone"><div class="screen">
+        <div class="island"></div>
+        <div class="sb" style="background:rgba(17,22,29,.92)"><span>3:14</span><span class="icons"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span style="font-size:12px;font-weight:700">5G</span><span class="batt"><i></i></span></span></div>
+        <div class="ttitle">
+          <span class="back">‹</span>
+          <div class="t"><div class="t1">prod-api-01 <span class="badge b-prod">PROD</span></div><div class="t2"><span style="color:var(--ok)">●</span> 23ms · 46×22 · ed25519</div></div>
+          <span class="tabcount">3</span><span class="more"><svg width="18" height="18"><use href="#g-dots"/></svg></span>
+        </div>
+<div class="term"><span class="hud">CTRL</span><span class="prompt-u">deploy@prod-api-01</span>:<span class="c-b">~</span>$ systemctl status api
+<span class="c-g">●</span> api.service - Payments API
+   Loaded: loaded (/etc/systemd/system/api.s…
+   Active: <span class="c-g bold">active (running)</span> since 03:12:44 UTC
+ Main PID: 18231 (node)
+   Memory: 412.6M  Tasks: 23 (limit: 9443)
+<span class="prompt-u">deploy@prod-api-01</span>:<span class="c-b">~</span>$ journalctl -u api -f -n 7
+<span class="c-d">03:14:01</span> api[18231]: GET /v1/charges <span class="c-g">200</span> 41ms
+<span class="c-d">03:14:02</span> api[18231]: GET /healthz <span class="c-g">200</span> 1ms
+<span class="c-d">03:14:03</span> api[18231]: POST /v1/refunds <span class="c-r bold">502</span> 3004ms
+<span class="c-d">03:14:03</span> api[18231]: <span class="c-r">upstream timeout db-primary:5432</span>
+<span class="c-d">03:14:03</span> api[18231]: <span class="c-y">retry 1/3 refunds#88412</span>
+<span class="c-d">03:14:04</span> api[18231]: POST /v1/refunds <span class="c-g">200</span> 88ms
+<span class="c-d">03:14:05</span> api[18231]: GET /v1/charges <span class="c-g">200</span> 37ms
+^C
+<span class="prompt-u">deploy@prod-api-01</span>:<span class="c-b">~</span>$ <span class="cur"> </span></div>
+        <div class="keybar">
+          <div class="k mod">esc</div><div class="k mod armed">ctrl</div><div class="k mod">alt</div>
+          <div class="gut"></div>
+          <div class="k">tab<small>⇤</small></div><div class="k">/<small>\</small></div><div class="k">-<small>_</small></div><div class="k">|<small>&amp;</small></div><div class="k">~<small>`</small></div><div class="k bolt"><svg width="14" height="14"><use href="#g-bolt"/></svg></div>
+          <div class="gut"></div>
+          <div class="k joy">✣</div>
+          <div class="pagedots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="kbd">
+          <div class="kr"><span class="kk">q</span><span class="kk">w</span><span class="kk">e</span><span class="kk">r</span><span class="kk">t</span><span class="kk">y</span><span class="kk">u</span><span class="kk">i</span><span class="kk">o</span><span class="kk">p</span></div>
+          <div class="kr"><span class="kk">a</span><span class="kk">s</span><span class="kk">d</span><span class="kk">f</span><span class="kk">g</span><span class="kk">h</span><span class="kk">j</span><span class="kk">k</span><span class="kk">l</span></div>
+          <div class="kr"><span class="kk sp w2">⇧</span><span class="kk">z</span><span class="kk">x</span><span class="kk">c</span><span class="kk">v</span><span class="kk">b</span><span class="kk">n</span><span class="kk">m</span><span class="kk sp w2">⌫</span></div>
+          <div class="kr"><span class="kk sp w2" style="width:40px">123</span><span class="kk space" style="background:#4A4E55">space</span><span class="kk ret">return</span></div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <div class="caption"><b>Terminal</b> · key bar · Ctrl armed (one-shot)</div>
+      <div class="note">Red top stripe = PROD. Ctrl is armed, so the next letter typed becomes ^X and the <span class="mono">CTRL</span> HUD confirms it. Swipe the middle keys for brackets, shell symbols, nav, F-keys.</div>
+    </div>
+
+    <!-- 2c Add server -->
+    <div class="device">
+      <div class="iphone"><div class="screen" style="background:#0B0F14">
+        <div class="island"></div>
+        <div class="sb"><span>3:16</span><span class="icons"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span class="batt"><i></i></span></span></div>
+        <div class="formnav"><span class="c">Cancel</span><span class="ti">New Server</span><span class="s">Save</span></div>
+        <div style="flex:1;overflow:hidden">
+          <div class="fsect" style="padding-top:2px">Connection</div>
+          <div class="fgroup">
+            <div class="frow"><span class="lbl">Name</span><span class="val">db-replica-2</span></div>
+            <div class="frow"><span class="lbl">Host</span><span class="val">10.0.2.7</span></div>
+            <div class="frow"><span class="lbl">Port</span><span class="val">22</span></div>
+            <div class="frow"><span class="lbl">User</span><span class="val">postgres</span></div>
+          </div>
+          <div class="fsect">Authentication</div>
+          <div class="fgroup">
+            <div class="frow" style="padding:6px 10px"><div class="seg"><span class="on"><svg width="12" height="12"><use href="#g-key"/></svg> Key</span><span>Password</span><span>Ask</span></div></div>
+            <div class="frow"><span class="lbl">Key</span><span class="val">iphone-ed25519 <span style="color:var(--text3)">·…Vw0</span></span><span class="chev">›</span></div>
+          </div>
+          <div class="fsect">Organize</div>
+          <div class="fgroup">
+            <div class="frow" style="padding:6px 10px"><div class="seg"><span>None</span><span>Dev</span><span>Stg</span><span class="on prod">● Prod</span><span>Lab</span></div></div>
+            <div class="frow"><span class="lbl">Group</span><span class="val">Data</span><span class="chev">›</span></div>
+            <div class="frow"><span class="lbl">Tags</span><span class="val"><span class="chip" style="padding:3px 6px">#db</span> <span class="chip" style="padding:3px 6px">#postgres</span></span></div>
+          </div>
+          <div class="fsect">Advanced</div>
+          <div class="fgroup">
+            <div class="frow"><span class="lbl">Jump host</span><span class="val">bastion-eu</span><span class="chev">›</span></div>
+            <div class="frow"><span style="color:var(--text)">Auto-attach tmux</span><span class="toggle on"></span></div>
+          </div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;padding:22px 0 30px;background:linear-gradient(to top,#0B0F14 72%,rgba(11,15,20,0))">
+          <div style="display:flex;gap:8px;margin:0 14px"><div class="ghostbtn" style="margin:0;flex:0 0 96px;height:46px;font-size:12.5px;color:var(--text2)">Test</div><div class="bigbtn" style="margin:0;flex:1">Save &amp; Connect</div></div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <div class="caption"><b>Add server</b> · one dense form</div>
+      <div class="note">Pasting <span class="mono">ssh -p 2222 -J bastion user@host</span> into Host fills every field. "Test connection" checks handshake, host key and auth, then disconnects.</div>
+    </div>
+
+    <!-- 2d Key manager -->
+    <div class="device">
+      <div class="iphone"><div class="screen">
+        <div class="island"></div>
+        <div class="sb"><span>3:18</span><span class="icons"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span class="batt"><i></i></span></span></div>
+        <div class="navbar"><span></span><span class="glassbtn" style="color:var(--accent)"><svg width="18" height="18"><use href="#g-plus"/></svg></span></div>
+        <div class="largetitle">Keys</div>
+        <div class="list" style="margin-top:2px">
+          <div class="krow"><div class="kicon"><svg width="16" height="16"><use href="#g-key"/></svg></div><div class="smain"><div class="sname" style="font-size:13px">iphone-ed25519</div><div class="ssub">SHA256:4f+HqTn1…Vw0 · 9 servers</div></div><span class="ktype">ED25519</span><svg width="16" height="16" style="color:var(--text3)"><use href="#g-cloud"/></svg></div>
+          <div class="krow"><div class="kicon"><svg width="16" height="16"><use href="#g-key"/></svg></div><div class="smain"><div class="sname" style="font-size:13px">macbook-ed25519</div><div class="ssub">SHA256:Qm2bX0aL…c1E · 14 servers</div></div><span class="ktype">ED25519</span><svg width="16" height="16" style="color:var(--text3)"><use href="#g-cloud"/></svg></div>
+          <div class="krow"><div class="kicon"><svg width="16" height="16"><use href="#g-key"/></svg></div><div class="smain"><div class="sname" style="font-size:13px">legacy-deploy</div><div class="ssub">SHA256:r9TzAa3K…77g · 2 servers</div></div><span class="ktype">RSA-4096</span><svg width="16" height="16" style="color:var(--text3)"><use href="#g-cloud"/></svg></div>
+          <div class="krow"><div class="kicon"><svg width="16" height="16"><use href="#g-key"/></svg></div><div class="smain"><div class="sname" style="font-size:13px">yubi-backup</div><div class="ssub">SHA256:Hd0pW1nq…Lk8 · 0 servers</div></div><span class="ktype">ECDSA</span><span style="font-size:11px;color:var(--text3)">📱</span></div>
+        </div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="grabber"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div class="kicon" style="background:var(--accent-soft)"><svg width="16" height="16"><use href="#g-key"/></svg></div>
+            <div style="flex:1;min-width:0"><div class="sname">iphone-ed25519</div><div class="ssub">Generated 2026-11-02 · iCloud Keychain</div></div>
+            <span class="ktype" style="color:var(--accent);border-color:rgba(45,212,191,.4)">ED25519</span>
+          </div>
+          <div class="pubkey"><span class="alg">ssh-ed25519</span> AAAAC3NzaC1lZDI1NTE5AAAAIK7v2mQf9yT4xQw3hZr1nE8bLpV0cJm5sGd2aXk6uRtY <span style="color:var(--text3)">tilde@iphone</span></div>
+          <div style="font:500 10.5px var(--mono);color:var(--text3);margin-top:8px">SHA256:4f+HqTn1dQ8sZpL0wY3kE2aNvB7cR6mXuJ9hTgVw0</div>
+          <div class="actions">
+            <div class="act primary"><svg width="15" height="15"><use href="#g-copy"/></svg>Copy public key</div>
+            <div class="act"><svg width="15" height="15"><use href="#g-share"/></svg>Share…</div>
+            <div class="act"><svg width="15" height="15"><use href="#g-servers"/></svg>Install on server…</div>
+            <div class="act"><span class="mono" style="font-size:11px;color:var(--accent)">$_</span>Copy one-liner</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12px var(--ui)"><span style="color:var(--text2)">Export private key…</span><span style="color:var(--danger)">Delete</span></div>
+        </div>
+        <div class="home-ind"></div>
+      </div></div>
+      <div class="caption"><b>Key manager</b> · generate · import · share</div>
+      <div class="note">☁ = private key in iCloud Keychain (E2E). 📱 = this device only. "Install on server" appends to <span class="mono">authorized_keys</span> idempotently over an existing login.</div>
+    </div>
+
+    <!-- 2e Host key changed -->
+    <div class="device">
+      <div class="iphone"><div class="screen hk">
+        <div class="island"></div>
+        <div class="sb"><span>3:21</span><span class="icons"><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:11px"></i></span><span class="batt"><i></i></span></span></div>
+        <div class="warnicon"><svg width="34" height="34" style="color:var(--danger)"><use href="#g-warn"/></svg></div>
+        <h3>HOST KEY HAS CHANGED</h3>
+        <div class="host">prod-api-01 <span>10.0.1.12:22</span></div>
+        <p>Someone could be intercepting this connection, or the server was rebuilt and its keys rotated. <b>No credentials were sent.</b></p>
+        <div class="fp">
+          <div class="r"><div class="l"><span style="color:var(--text2)">EXPECTED · ED25519</span><span style="color:var(--text3)">pinned</span></div><div class="v">SHA256:4f+HqTn1dQ8sZpL0wY3kE2aNvB7cR6mXuJ9hTgVw0</div><div class="m">trusted 2026-03-14 on MacBook Pro</div></div>
+          <div class="r"><div class="l"><span style="color:var(--danger)">RECEIVED · ED25519</span><span style="color:var(--danger)">≠</span></div><div class="v" style="color:#FFB3B9">SHA256:Zk81Lr0aP2xVt6Nq9WcE4yHbJ3uS7dMfG5oKiR1mQ9</div><div class="m">just now · this iPhone</div></div>
+        </div>
+        <div class="dangerbtn">Disconnect</div>
+        <div class="holdbtn"><div class="fill"></div><span>Hold to trust new key</span></div>
+        <div class="links"><span>Copy fingerprints</span><span>How to verify</span></div>
+        <div class="home-ind"></div>
+      </div></div>
+      <div class="caption"><b>Host key changed</b> · full-screen, no swipe-away</div>
+      <div class="note">Aborted at key exchange, before any auth. Trusting requires a 1.5 s press-and-hold, and the new pin syncs to every device.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= 3. iPad ================= -->
+<section class="section">
+  <div class="section-h"><span class="num">03</span><h2>iPad: split view, tabs, hardware keyboard</h2></div>
+  <p class="section-sub">NavigationSplitView with the server sidebar, a tab strip in the detail column (⌘1–9, ⌘T, ⌘W, ⌘P palette). With a Magic Keyboard attached, the key bar shrinks to a slim strip with Esc and F-keys, which the Magic Keyboard for iPad lacks.</p>
+  <div class="device">
+    <div class="ipad"><div class="scr">
+      <div class="sbar"><span>3:24 Tue 25 Nov</span><span class="icons" style="display:flex;gap:6px;align-items:center"><span style="font-size:11px">Wi-Fi</span><span class="batt"><i></i></span></span></div>
+      <div class="split">
+        <div class="side">
+          <div class="shead"><b>Tilde</b><span style="display:flex;gap:6px"><span class="glassbtn" style="width:28px;height:28px"><svg width="15" height="15" style="color:var(--text2)"><use href="#g-sidebar"/></svg></span><span class="glassbtn" style="width:28px;height:28px;color:var(--accent)"><svg width="15" height="15"><use href="#g-plus"/></svg></span></span></div>
+          <div class="search" style="height:32px;font-size:11.5px"><svg width="13" height="13"><use href="#g-search"/></svg>Search or user@host<span style="margin-left:auto;font-size:10px;border:1px solid var(--border);border-radius:4px;padding:1px 4px">⌘L</span></div>
+          <div class="sect"><span>Live</span><span class="cnt">3</span></div>
+          <div class="nrow"><span class="dot live"></span><div class="smain"><div class="sname">prod-api-01</div><div class="ssub">deploy@10.0.1.12</div></div><span class="badge b-prod">PROD</span></div>
+          <div class="nrow sel"><span class="dot live"></span><div class="smain"><div class="sname">k8s-node-3</div><div class="ssub">ops@10.0.8.23 via bastion-eu</div></div><span class="badge b-prod">PROD</span></div>
+          <div class="nrow"><span class="dot live"></span><div class="smain"><div class="sname">db-primary</div><div class="ssub">postgres@10.0.2.5</div></div><span class="badge b-prod">PROD</span></div>
+          <div class="sect"><span>▾ Kubernetes</span><span class="cnt">3</span></div>
+          <div class="nrow"><span class="dot ok"></span><div class="smain"><div class="sname">k8s-node-1</div></div><span class="lat">38ms</span></div>
+          <div class="nrow"><span class="dot warn"></span><div class="smain"><div class="sname">k8s-node-2</div></div><span class="lat slow">190ms</span></div>
+          <div class="nrow"><span class="dot ok"></span><div class="smain"><div class="sname">k8s-node-3</div></div><span class="lat">41ms</span></div>
+          <div class="sect"><span>▸ Payments</span><span class="cnt">4</span></div>
+          <div class="sect"><span>▸ Data</span><span class="cnt">3</span></div>
+          <div class="sect"><span>▾ Homelab</span><span class="cnt">2</span></div>
+          <div class="nrow"><span class="dot ok"></span><div class="smain"><div class="sname">nas.local</div></div><span class="badge b-lab">LAB</span></div>
+          <div class="foot">
+            <div><svg width="17" height="17"><use href="#g-key"/></svg>Keys</div>
+            <div><svg width="17" height="17"><use href="#g-bolt"/></svg>Snippets</div>
+            <div><svg width="17" height="17"><use href="#g-shield"/></svg>Hosts</div>
+            <div><svg width="17" height="17"><use href="#g-gear"/></svg>Settings</div>
+          </div>
+        </div>
+        <div class="detail">
+          <div class="tabs">
+            <div class="ttab"><span class="stripe" style="background:var(--danger)"></span><span class="dot ok" style="width:6px;height:6px;flex-basis:6px"></span>prod-api-01<span class="kb">⌘1</span></div>
+            <div class="ttab on"><span class="stripe" style="background:var(--danger)"></span><span class="dot ok" style="width:6px;height:6px;flex-basis:6px"></span>k8s-node-3<span class="x">✕</span></div>
+            <div class="ttab"><span class="stripe" style="background:var(--danger)"></span><span class="dot warn" style="width:6px;height:6px;flex-basis:6px"></span>db-primary<span class="kb">⌘3</span></div>
+            <div class="tplus"><svg width="16" height="16"><use href="#g-plus"/></svg></div>
+          </div>
+          <div class="tinfo"><span><span style="color:var(--ok)">●</span> ops@10.0.8.23 via bastion-eu</span><span>41ms</span><span>132×36</span><span>tmux: tilde</span><span class="sp"></span><span style="color:var(--text3)">⌘P palette · ⌘⇧S snippets</span></div>
+<div class="term" style="font-size:10.4px;padding:8px 10px"><span class="prompt-u">ops@k8s-node-3</span>:<span class="c-b">~</span>$ kubectl get pods -n payments -o wide
+<span class="bold">NAME                          READY   STATUS             RESTARTS      AGE   IP           NODE</span>
+api-7d9f8b6c4-2xkqp           1/1     <span class="c-g">Running</span>            0             3d    10.42.3.17   k8s-node-3
+api-7d9f8b6c4-9wz7m           1/1     <span class="c-g">Running</span>            0             3d    10.42.1.22   k8s-node-1
+api-7d9f8b6c4-tq4ns           0/1     <span class="c-r bold">CrashLoopBackOff</span>   7 (2m ago)    41m   10.42.2.9    k8s-node-2
+refunds-worker-5c8d7f-hm2lx   1/1     <span class="c-g">Running</span>            1 (6h ago)    2d    10.42.3.31   k8s-node-3
+ledger-6b5f9d8b7-p8vrc        1/1     <span class="c-g">Running</span>            0             12d   10.42.1.40   k8s-node-1
+<span class="prompt-u">ops@k8s-node-3</span>:<span class="c-b">~</span>$ kubectl logs api-7d9f8b6c4-tq4ns -n payments --tail=5
+{"level":"<span class="c-b">info</span>","ts":"03:13:58Z","msg":"connecting to db-primary:5432","pool":20}
+{"level":"<span class="c-r">error</span>","ts":"03:14:03Z","msg":"dial tcp 10.0.2.5:5432: i/o timeout"}
+{"level":"<span class="c-r">error</span>","ts":"03:14:03Z","msg":"readiness probe failed","path":"/healthz"}
+{"level":"<span class="c-y">warn</span>","ts":"03:14:04Z","msg":"shutting down","signal":"SIGTERM"}
+{"level":"<span class="c-b">info</span>","ts":"03:14:04Z","msg":"exit","code":1}
+<span class="prompt-u">ops@k8s-node-3</span>:<span class="c-b">~</span>$ kubectl top nodes
+<span class="bold">NAME         CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%</span>
+k8s-node-1   1840m        46%    11203Mi         70%
+k8s-node-2   3610m        <span class="c-r bold">90%</span>    14980Mi         <span class="c-r bold">94%</span>
+k8s-node-3   1022m        25%    7012Mi          44%
+<span class="prompt-u">ops@k8s-node-3</span>:<span class="c-b">~</span>$ kubectl describe node k8s-node-2 | grep -A5 Conditions
+<span class="bold">Conditions:</span>
+  Type             Status  Reason                       Message
+  MemoryPressure   <span class="c-y">True</span>    KubeletHasInsufficientMemory kubelet has insufficient memory available
+  DiskPressure     False   KubeletHasNoDiskPressure     kubelet has no disk pressure
+  PIDPressure      False   KubeletHasSufficientPID      kubelet has sufficient PID available
+  Ready            True    KubeletReady                 kubelet is posting ready status
+<span class="prompt-u">ops@k8s-node-3</span>:<span class="c-b">~</span>$ kubectl cordon k8s-node-2<span class="cur"> </span></div>
+          <div class="hwstrip">
+            <span class="hk2 acc">esc</span><span class="hk2">F1</span><span class="hk2">F2</span><span class="hk2">F3</span><span class="hk2">F4</span><span class="hk2">F5</span><span class="hk2">F6</span><span class="hk2">F7</span><span class="hk2">F8</span><span class="hk2">F9</span><span class="hk2">F10</span><span class="hk2">F11</span><span class="hk2">F12</span>
+            <span style="flex:1"></span>
+            <span class="hk2" style="color:var(--warn)">⚡</span><span class="hk2">⌃ lock</span><span class="hk2">⌄</span>
+            <span style="font:500 10px var(--mono);color:var(--text3);margin-left:6px;white-space:nowrap">⌥ = Meta · ⌘. = Esc</span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <div class="caption"><b>iPad landscape</b> · sidebar + tabs + slim hardware strip</div>
+  </div>
+</section>
+
+<!-- ================= 4. Mac ================= -->
+<section class="section">
+  <div class="section-h"><span class="num">04</span><h2>Mac: sidebar, tabs, address-bar Quick Connect</h2></div>
+  <p class="section-sub">Native AppKit-backed SwiftTerm view. Quick Connect sits where a browser's address bar would (⌘L). Full menu set: Session ▸ Reconnect ⌘R, Clear Scrollback ⌘K, Copy SSH Command ⌥⌘C. Tabs can move to their own window.</p>
+  <div class="device">
+    <div class="mac">
+      <div class="mtool">
+        <div class="lights"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i></div>
+        <div class="mbtn"><svg width="17" height="17"><use href="#g-sidebar"/></svg></div>
+        <div class="qc"><svg width="13" height="13"><use href="#g-search"/></svg>Search servers or user@host:port<span class="kbdh">⌘L</span></div>
+        <div class="latpill"><span style="color:var(--ok)">●</span>db-primary · 4ms · aes256-gcm</div>
+        <div class="mbtn" style="color:var(--warn)"><svg width="16" height="16"><use href="#g-bolt"/></svg></div>
+        <div class="mbtn"><svg width="16" height="16"><use href="#g-plus"/></svg></div>
+      </div>
+      <div class="mbody">
+        <div class="mside">
+          <div class="sect"><span>Live</span><span class="cnt">3</span></div>
+          <div class="mrow"><span class="dot live" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">prod-api-01</span><span class="badge b-prod" style="margin-left:auto">PROD</span></div>
+          <div class="mrow"><span class="dot live" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">k8s-node-3</span><span class="badge b-prod" style="margin-left:auto">PROD</span></div>
+          <div class="mrow sel"><span class="dot live" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">db-primary</span><span class="badge b-prod" style="margin-left:auto">PROD</span></div>
+          <div class="sect"><span>Favorites</span></div>
+          <div class="mrow"><span class="dot ok" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">bastion-eu</span><span class="lat">18ms</span></div>
+          <div class="mrow"><span class="dot ok" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">grafana-01</span><span class="lat">22ms</span></div>
+          <div class="sect"><span>▾ Data</span><span class="cnt">3</span></div>
+          <div class="mrow"><span class="dot ok" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">db-primary</span><span class="lat">4ms</span></div>
+          <div class="mrow"><span class="dot ok" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">db-replica-1</span><span class="lat">5ms</span></div>
+          <div class="mrow"><span class="dot warn" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">db-replica-2</span><span class="lat slow">164ms</span></div>
+          <div class="sect"><span>▾ Edge</span><span class="cnt">2</span></div>
+          <div class="mrow"><span class="dot ok" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">edge-fra-1</span><span class="badge b-stg" style="margin-left:auto">STG</span></div>
+          <div class="mrow"><span class="dot bad" style="width:7px;height:7px;flex-basis:7px"></span><span class="sname">edge-sin-1</span><span class="lat bad">—</span></div>
+          <div class="sect"><span>▸ Kubernetes</span><span class="cnt">3</span></div>
+          <div class="sect"><span>▸ Payments</span><span class="cnt">4</span></div>
+          <div class="sect"><span>Tags</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;padding:2px 14px"><span class="chip">#db</span><span class="chip">#k8s</span><span class="chip">#edge</span><span class="chip">#payments</span></div>
+          <div style="margin-top:auto;padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:16px;color:var(--text2);font:600 11px var(--ui)"><span>Keys ⌥⌘K</span><span>Snippets ⌥⌘S</span></div>
+        </div>
+        <div class="mdetail">
+          <div class="mtabs">
+            <div class="mtab"><span class="stripe" style="background:var(--danger)"></span><span class="dot ok" style="width:6px;height:6px;flex-basis:6px"></span>prod-api-01<span class="k">⌘1</span></div>
+            <div class="mtab"><span class="stripe" style="background:var(--danger)"></span><span class="dot ok" style="width:6px;height:6px;flex-basis:6px"></span>k8s-node-3<span class="k">⌘2</span></div>
+            <div class="mtab on"><span class="stripe" style="background:var(--danger)"></span><span class="dot ok" style="width:6px;height:6px;flex-basis:6px"></span>db-primary<span class="x">✕</span></div>
+            <div style="flex:1"></div>
+          </div>
+<div class="term mterm"><span class="c-c">  0</span>[<span class="c-g">||||||||||||</span><span class="c-r">||</span>               42.1%]  <span class="c-c">  4</span>[<span class="c-g">||||||</span><span class="c-r">|</span>                      21.7%]  <span class="c-c bold">Tasks:</span> <span class="bold">187</span>, 412 thr; <span class="c-g bold">3</span> running
+<span class="c-c">  1</span>[<span class="c-g">|||||||||||||||</span><span class="c-r">||||</span>          58.9%]  <span class="c-c">  5</span>[<span class="c-g">||||</span>                         12.0%]  <span class="c-c bold">Load average:</span> <span class="bold">2.41</span> 1.98 1.72
+<span class="c-c">  2</span>[<span class="c-g">||||||||</span><span class="c-r">|</span>                    26.3%]  <span class="c-c">  6</span>[<span class="c-g">||||||||||||||</span><span class="c-r">|||</span>            51.2%]  <span class="c-c bold">Uptime:</span> <span class="bold">41 days, 06:12:09</span>
+<span class="c-c">  3</span>[<span class="c-g">||||||</span>                       17.4%]  <span class="c-c">  7</span>[<span class="c-g">|||||||</span>                      19.8%]
+<span class="c-c">Mem</span>[<span class="c-g">||||||||||||</span><span class="c-b">|||</span><span class="c-y">||||||||</span>11.2G/15.5G]  <span class="c-c">Swp</span>[<span class="c-r">|</span>                       128M/2.00G]
+
+<span class="h-hdr">    PID USER       PRI  NI  VIRT   RES   SHR S  CPU% MEM%   TIME+  Command                                                         </span>
+<span class="h-sel">   1904 postgres    20   0 4.2G  2.1G  2.0G S  21.7 13.5  9h12:44 postgres: checkpointer                                          </span>
+  18231 <span class="c-w">deploy</span>      20   0 1.9G  412M   38M S  <span class="c-r">38.2</span>  2.6 41:02.18 node /srv/api/dist/server.js
+   2210 postgres    20   0 4.2G  186M  180M S   9.4  1.2  2h01:13 postgres: walwriter
+   2214 postgres    20   0 4.2G  1.4G  1.4G R   8.1  9.0  0:42.77 postgres: <span class="c-g">api payments 10.0.1.12(51412) SELECT</span>
+   2236 postgres    20   0 4.2G  1.1G  1.1G S   6.9  7.1  0:18.03 postgres: api payments 10.0.1.13(40218) idle in transaction
+    861 root        20   0  1.2G   61M   22M S   2.2  0.4  3h44:10 /usr/bin/containerd
+   1022 prometheus  20   0  2.0G  288M   41M S   1.6  1.8  6h31:56 /usr/local/bin/node_exporter --collector.systemd
+    744 root        20   0  356M   18M   12M S   0.4  0.1  0:51.07 /usr/sbin/sshd -D
+  30117 <span class="c-w">postgres</span>    20   0 12.6M  5.1M  3.4M <span class="c-g">R</span>   0.4  0.0  0:00.21 htop
+      1 root        20   0  167M   13M  8.4M S   0.0  0.1  1:12.40 /sbin/init
+    402 root        19  -1  148M   44M   43M S   0.0  0.3  0:33.18 /lib/systemd/systemd-journald
+    599 systemd-r   20   0 25.3M   13M  9.0M S   0.0  0.1  0:09.44 /lib/systemd/systemd-resolved
+   1131 root        20   0  9.4M  3.0M  2.7M S   0.0  0.0  0:02.07 /usr/sbin/cron -f
+   1408 pgbouncer   20   0 18.2M  6.6M  4.9M S   0.3  0.0  1h10:31 /usr/sbin/pgbouncer /etc/pgbouncer/pgbouncer.ini
+   2290 postgres    20   0 4.2G   96M   92M S   0.2  0.6  0:07.95 postgres: autovacuum launcher
+   2291 postgres    20   0 4.2G   12M   10M S   0.0  0.1  0:00.62 postgres: logical replication launcher
+  14022 root        20   0  287M   21M   16M S   0.0  0.1  0:04.33 /usr/lib/udisks2/udisksd
+  15510 deploy      20   0 10.1M  4.8M  3.3M S   0.0  0.0  0:00.11 -bash
+  15544 deploy      20   0 14.0M  6.1M  3.9M S   0.0  0.0  0:00.03 tmux: server (/tmp/tmux-1001/default)
+
+
+
+<span class="h-fk">F1</span><span class="h-fl">Help  </span><span class="h-fk">F2</span><span class="h-fl">Setup </span><span class="h-fk">F3</span><span class="h-fl">Search</span><span class="h-fk">F4</span><span class="h-fl">Filter</span><span class="h-fk">F5</span><span class="h-fl">Tree  </span><span class="h-fk">F6</span><span class="h-fl">SortBy</span><span class="h-fk">F7</span><span class="h-fl">Nice -</span><span class="h-fk">F8</span><span class="h-fl">Nice +</span><span class="h-fk">F9</span><span class="h-fl">Kill  </span><span class="h-fk">F10</span><span class="h-fl">Quit  </span></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption"><b>Mac</b> · NavigationSplitView + in-window tab strip · htop on db-primary</div>
+  </div>
+</section>
+
+<!-- ================= 5. Key bar spec ================= -->
+<section class="section">
+  <div class="section-h"><span class="num">05</span><h2>The SSH key bar: pages, modifiers, gestures</h2></div>
+  <p class="section-sub">Pinned <span class="mono">esc ctrl alt</span> on the left and the arrow joystick on the right never move. The six keys in the middle page horizontally. Small grey glyphs are <b>flick-up</b> alternates. Every key is customizable, with presets for DevOps, Vim, tmux, Emacs, Kubernetes and Minimal.</p>
+  <div class="kbspec">
+    <div class="kbcard">
+      <h4>Default "DevOps" profile: 5 pages</h4>
+      <p>One row, 46 pt. Each key is 36×38 pt on a 402 pt-wide iPhone.</p>
+      <div class="pagelabel">PAGE 1 · CORE</div>
+      <div class="kbdemo"><div class="k mod">esc</div><div class="k mod">ctrl</div><div class="k mod">alt</div><div class="gut"></div><div class="k">tab<small>⇤</small></div><div class="k">/<small>\</small></div><div class="k">-<small>_</small></div><div class="k">|<small>&amp;</small></div><div class="k">~<small>`</small></div><div class="k bolt"><svg width="14" height="14"><use href="#g-bolt"/></svg></div><div class="gut"></div><div class="k joy">✣</div></div>
+      <div class="pagelabel">PAGE 2 · BRACKETS</div>
+      <div class="kbdemo"><div class="k mod">esc</div><div class="k mod">ctrl</div><div class="k mod">alt</div><div class="gut"></div><div class="k">{<small>}</small></div><div class="k">[<small>]</small></div><div class="k">&lt;<small>&gt;</small></div><div class="k">(<small>)</small></div><div class="k">"<small>'</small></div><div class="k">=<small>+</small></div><div class="gut"></div><div class="k joy">✣</div></div>
+      <div class="pagelabel">PAGE 3 · SHELL</div>
+      <div class="kbdemo"><div class="k mod">esc</div><div class="k mod">ctrl</div><div class="k mod">alt</div><div class="gut"></div><div class="k">$<small>#</small></div><div class="k">*<small>^</small></div><div class="k">:<small>;</small></div><div class="k">!<small>?</small></div><div class="k">@<small>%</small></div><div class="k" style="color:var(--danger);font-size:11px">^C</div><div class="gut"></div><div class="k joy">✣</div></div>
+      <div class="pagelabel">PAGE 4 · NAV &nbsp;·&nbsp; PAGE 5 · F1–F12 (flick = F7–F12)</div>
+      <div class="kbdemo"><div class="k mod">esc</div><div class="k mod">ctrl</div><div class="k mod">alt</div><div class="gut"></div><div class="k" style="font-size:9.5px">home</div><div class="k" style="font-size:9.5px">end</div><div class="k" style="font-size:9.5px">pgup</div><div class="k" style="font-size:9.5px">pgdn</div><div class="k" style="font-size:9.5px">del</div><div class="k" style="font-size:9.5px">⌫w</div><div class="gut"></div><div class="k joy">✣</div></div>
+      <div class="kbdemo" style="margin-top:6px"><div class="k mod">esc</div><div class="k mod">ctrl</div><div class="k mod">alt</div><div class="gut"></div><div class="k" style="font-size:10.5px">F1<small>F7</small></div><div class="k" style="font-size:10.5px">F2<small>F8</small></div><div class="k" style="font-size:10.5px">F3<small>F9</small></div><div class="k" style="font-size:10.5px">F4<small>10</small></div><div class="k" style="font-size:10.5px">F5<small>11</small></div><div class="k" style="font-size:10.5px">F6<small>12</small></div><div class="gut"></div><div class="k joy">✣</div></div>
+    </div>
+
+    <div class="kbcard">
+      <h4>Sticky modifiers</h4>
+      <p><b>Tap</b> = one-shot (applies to the next key from <i>any</i> keyboard). <b>Double-tap</b> = lock. <b>Long-press Ctrl</b> = combo grid. Slide and release to send.</p>
+      <div class="kbdemo" style="margin-top:150px">
+        <div class="pop" style="left:44px"><span>^C</span><span>^D</span><span>^Z</span><span class="hi">^R</span><span>^L</span><span>^A</span><span>^E</span><span>^W</span><span>^U</span><span>^K</span><span>^B</span><span style="color:var(--text3);font-size:10px">edit</span></div>
+        <div class="k mod">esc</div><div class="k mod armed" style="outline:2px solid rgba(45,212,191,.0)">ctrl</div><div class="k mod locked">alt</div><div class="gut"></div><div class="k">tab<small>⇤</small></div><div class="k">/<small>\</small></div><div class="k">-<small>_</small></div><div class="k">|<small>&amp;</small></div><div class="k">~<small>`</small></div><div class="k bolt"><svg width="14" height="14"><use href="#g-bolt"/></svg></div><div class="gut"></div><div class="k joy">✣</div>
+      </div>
+      <div class="legend"><span><i class="lg"></i>idle</span><span><i class="lg armed"></i>armed (one-shot)</span><span><i class="lg locked"></i>locked</span><span class="mono" style="font-size:11px">Alt = ESC prefix · Ctrl+←  = \e[1;5D</span></div>
+    </div>
+
+    <div class="kbcard">
+      <h4>Arrow joystick ✣</h4>
+      <p><b>Drag</b> from ✣ in any direction. Past 8 pt it sends that arrow, and the further you drag the faster it repeats (8 / 20 / 40 Hz). Each step gives a haptic tick. <b>Tap</b> swaps the middle keys for <span class="mono">← ↓ ↑ → home end</span>. It is DECCKM-aware (<span class="mono">\eOA</span> vs <span class="mono">\e[A</span>).</p>
+      <div class="joy-demo">
+        <svg width="100%" height="150" viewBox="0 0 420 150" preserveAspectRatio="xMidYMid meet">
+          <circle cx="330" cy="100" r="60" fill="none" stroke="#262E39" stroke-dasharray="3 4"/>
+          <circle cx="330" cy="100" r="28" fill="none" stroke="#262E39" stroke-dasharray="3 4"/>
+          <circle cx="330" cy="100" r="8" fill="none" stroke="#2DD4BF" stroke-opacity=".5"/>
+          <path d="M330 100 L 258 100" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="258" cy="100" r="13" fill="rgba(45,212,191,.18)" stroke="#2DD4BF" stroke-width="2"/>
+          <text x="340" y="141" fill="#5F6B78" font-family="ui-monospace,JetBrains Mono,monospace" font-size="10">8 Hz</text>
+          <text x="376" y="141" fill="#5F6B78" font-family="ui-monospace,JetBrains Mono,monospace" font-size="10">20</text>
+          <text x="398" y="141" fill="#5F6B78" font-family="ui-monospace,JetBrains Mono,monospace" font-size="10">40</text>
+          <text x="20" y="40" fill="#9AA6B2" font-family="ui-monospace,JetBrains Mono,monospace" font-size="12">$ git log --oneline | head -2<tspan fill="#2DD4BF">▍</tspan></text>
+          <text x="20" y="62" fill="#5F6B78" font-family="ui-monospace,JetBrains Mono,monospace" font-size="11">← ← ← ← sent (20 Hz)</text>
+        </svg>
+        <div class="bubble" style="left:228px;top:28px">←</div>
+      </div>
+    </div>
+
+    <div class="kbcard">
+      <h4>iPad + hardware keyboard</h4>
+      <p>The system keyboard is hidden, so the bar collapses to a 32 pt strip (or hides; it's a setting). Option = Meta, ⌘. = Esc, all app shortcuts are ⌘-only so Ctrl always reaches the shell.</p>
+      <div class="kbdemo" style="padding:4px 6px">
+        <span class="hk2 acc">esc</span><span class="hk2">F1</span><span class="hk2">F2</span><span class="hk2">F3</span><span class="hk2">F4</span><span class="hk2">F5</span><span class="hk2">F6</span><span class="hk2">F7</span><span class="hk2">F8</span><span class="hk2">F9</span><span class="hk2">F10</span><span style="flex:1"></span><span class="hk2" style="color:var(--warn)">⚡</span><span class="hk2">⌄</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;margin-top:14px;font:12px var(--mono);color:var(--text2)">
+        <span><b style="color:var(--text)">⌘T</b> new tab</span><span><b style="color:var(--text)">⌘W</b> close tab</span>
+        <span><b style="color:var(--text)">⌘1–9</b> go to tab</span><span><b style="color:var(--text)">⌘⇧[ ]</b> prev / next</span>
+        <span><b style="color:var(--text)">⌘L</b> quick connect</span><span><b style="color:var(--text)">⌘P</b> palette</span>
+        <span><b style="color:var(--text)">⌘R</b> reconnect</span><span><b style="color:var(--text)">⌘K</b> clear scrollback</span>
+        <span><b style="color:var(--text)">⌘F</b> find</span><span><b style="color:var(--text)">⌘± / ⌘0</b> font size</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 6. Palette ================= -->
+<section class="section">
+  <div class="section-h"><span class="num">06</span><h2>Tokens &amp; terminal theme "Tilde Night"</h2></div>
+  <p class="section-sub">One accent. Status colors double as environment colors. The terminal's ANSI palette reuses the same hues, so a red <span class="mono">502</span> in the logs and a red PROD badge mean the same thing.</p>
+  <div class="swatches">
+    <div class="sw"><div class="c" style="background:#0B0F14"></div><div class="t"><b>bg</b>#0B0F14</div></div>
+    <div class="sw"><div class="c" style="background:#11161D"></div><div class="t"><b>surface</b>#11161D</div></div>
+    <div class="sw"><div class="c" style="background:#171D25"></div><div class="t"><b>surface2</b>#171D25</div></div>
+    <div class="sw"><div class="c" style="background:#262E39"></div><div class="t"><b>border</b>#262E39</div></div>
+    <div class="sw"><div class="c" style="background:#E6EDF3"></div><div class="t"><b>text</b>#E6EDF3</div></div>
+    <div class="sw"><div class="c" style="background:#2DD4BF"></div><div class="t"><b>accent</b>#2DD4BF</div></div>
+    <div class="sw"><div class="c" style="background:#3FD68B"></div><div class="t"><b>ok</b>#3FD68B</div></div>
+    <div class="sw"><div class="c" style="background:#F5B83D"></div><div class="t"><b>warn · STG</b>#F5B83D</div></div>
+    <div class="sw"><div class="c" style="background:#F7525F"></div><div class="t"><b>danger · PROD</b>#F7525F</div></div>
+    <div class="sw"><div class="c" style="background:#58A6FF"></div><div class="t"><b>info · DEV</b>#58A6FF</div></div>
+    <div class="sw"><div class="c" style="background:#C792EA"></div><div class="t"><b>lab</b>#C792EA</div></div>
+  </div>
+  <div style="display:flex;gap:4px;margin-top:16px;flex-wrap:wrap">
+    <div class="sw" style="width:72px"><div class="c" style="background:#1C232B;height:30px"></div><div class="t">black</div></div>
+    <div class="sw" style="width:72px"><div class="c" style="background:#F7525F;height:30px"></div><div class="t">red</div></div>
+    <div class="sw" style="width:72px"><div class="c" style="background:#3FD68B;height:30px"></div><div class="t">green</div></div>
+    <div class="sw" style="width:72px"><div class="c" style="background:#F5B83D;height:30px"></div><div class="t">yellow</div></div>
+    <div class="sw" style="width:72px"><div class="c" style="background:#58A6FF;height:30px"></div><div class="t">blue</div></div>
+    <div class="sw" style="width:72px"><div class="c" style="background:#C792EA;height:30px"></div><div class="t">magenta</div></div>
+    <div class="sw" style="width:72px"><div class="c" style="background:#2DD4BF;height:30px"></div><div class="t">cyan</div></div>
+    <div class="sw" style="width:72px"><div class="c" style="background:#C9D1D9;height:30px"></div><div class="t">white</div></div>
+  </div>
+  <p style="margin-top:16px;font:13px var(--mono);color:var(--text2)">Typography: <span style="color:var(--text)">SF Mono</span> for data &amp; terminal (bundled alt: JetBrains Mono Nerd Font) · SF Pro for chrome · section headers 11 pt caps +0.6 tracking.</p>
+</section>
+
+<footer>Tilde design mockups v0.1 · static HTML · fonts fall back to the system monospace if Google Fonts is unreachable · hostnames, IPs and fingerprints are fictional.</footer>
+</body>
+</html>

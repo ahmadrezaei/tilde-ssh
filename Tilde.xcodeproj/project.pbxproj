@@ -1,0 +1,617 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00F289AAF1A4B0629E2B7533 /* TildeSecurity in Frameworks */ = {isa = PBXBuildFile; productRef = EA0FD605F0E1DB2D3B9FCEFF /* TildeSecurity */; };
+		05E236BDD754F69A80C924CC /* TildeDesign in Frameworks */ = {isa = PBXBuildFile; productRef = 12F89B228B701AB4E8285312 /* TildeDesign */; };
+		3B7178C1514A6B7CE867BA77 /* TildeFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = E55AFD0349A72851588E515A /* TildeFeatures */; };
+		68FFBC9E61C5292D7061C7D2 /* TildeSSH in Frameworks */ = {isa = PBXBuildFile; productRef = CECA8E813941EBD9C08A0DCE /* TildeSSH */; };
+		8125F52817646291F372EAD8 /* TildeSecurity in Frameworks */ = {isa = PBXBuildFile; productRef = 2BC026BF2CA451DC33999426 /* TildeSecurity */; };
+		887F7911A8F3B2BB7F4ECDDF /* TildeStore in Frameworks */ = {isa = PBXBuildFile; productRef = E1CB0E996E6EAF9554D48A29 /* TildeStore */; };
+		8F63067605CCF13E1B73C926 /* TildeTerminal in Frameworks */ = {isa = PBXBuildFile; productRef = 2A2D544ADEAD086625CFC299 /* TildeTerminal */; };
+		A26B98580543E9824BB8ACA0 /* TildeStore in Frameworks */ = {isa = PBXBuildFile; productRef = 22E1BC4E0D793FA5FF64C892 /* TildeStore */; };
+		CFC60104D644CAB349F4BE32 /* TildeTerminal in Frameworks */ = {isa = PBXBuildFile; productRef = 65FA9FA6757D01B503414991 /* TildeTerminal */; };
+		D1A16E96685EE7FA722E17DB /* TildeCore in Frameworks */ = {isa = PBXBuildFile; productRef = F6118746849A97F2704DB5E1 /* TildeCore */; };
+		D6BC3BF58B8F3E22B45F9940 /* TildeDesign in Frameworks */ = {isa = PBXBuildFile; productRef = 238B1E8807CE38C4436C880B /* TildeDesign */; };
+		DE1A0C7A95B2522E18AA36BC /* TildeFeatures in Frameworks */ = {isa = PBXBuildFile; productRef = 3E7FEE8C09484570998DDD62 /* TildeFeatures */; };
+		E736DB42AFB51088C5B00B52 /* TildeSSH in Frameworks */ = {isa = PBXBuildFile; productRef = 5499635F3A8BA0A407C8C35A /* TildeSSH */; };
+		FE617B91DF86D3744114B666 /* TildeCore in Frameworks */ = {isa = PBXBuildFile; productRef = D2B4E5D0726189D665FEBECB /* TildeCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		3211EB113F0CF70DC1D8AD1C /* TildeKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TildeKit; path = Packages/TildeKit; sourceTree = SOURCE_ROOT; };
+		4EAA5031173EBCBCDE3AE8B6 /* Tilde-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Tilde-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9874B08647D3BABE4656DFEA /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
+		BB2FE6E23FD9963C43FAE365 /* Tilde-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Tilde-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		01879536FD88C8389D0CB16E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 9B25DCA3A7C4D8D9634AAA1C /* Tilde-iOS */;
+		};
+		C6878F978A637B3E6A52C8F0 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 1285263236AE015D44AAFC6B /* Tilde-macOS */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		10945541D621FA15C8C9D870 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			name = Shared;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		3B7ED63C45A1751666E1CE7C /* iOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				01879536FD88C8389D0CB16E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			name = iOS;
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		B6A2B0830FE48749AB652149 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			name = Resources;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		EFA580CA4BFF4C3F94827A73 /* macOS */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C6878F978A637B3E6A52C8F0 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			name = macOS;
+			path = macOS;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C933E3DEAF496964C0C56B77 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FE617B91DF86D3744114B666 /* TildeCore in Frameworks */,
+				887F7911A8F3B2BB7F4ECDDF /* TildeStore in Frameworks */,
+				8125F52817646291F372EAD8 /* TildeSecurity in Frameworks */,
+				68FFBC9E61C5292D7061C7D2 /* TildeSSH in Frameworks */,
+				CFC60104D644CAB349F4BE32 /* TildeTerminal in Frameworks */,
+				D6BC3BF58B8F3E22B45F9940 /* TildeDesign in Frameworks */,
+				DE1A0C7A95B2522E18AA36BC /* TildeFeatures in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FB6EDDA2D1404D722A7CD859 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D1A16E96685EE7FA722E17DB /* TildeCore in Frameworks */,
+				A26B98580543E9824BB8ACA0 /* TildeStore in Frameworks */,
+				00F289AAF1A4B0629E2B7533 /* TildeSecurity in Frameworks */,
+				E736DB42AFB51088C5B00B52 /* TildeSSH in Frameworks */,
+				8F63067605CCF13E1B73C926 /* TildeTerminal in Frameworks */,
+				05E236BDD754F69A80C924CC /* TildeDesign in Frameworks */,
+				3B7178C1514A6B7CE867BA77 /* TildeFeatures in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5340271DBB0AE6A96EDA43F2 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				3B7ED63C45A1751666E1CE7C /* iOS */,
+				EFA580CA4BFF4C3F94827A73 /* macOS */,
+				B6A2B0830FE48749AB652149 /* Resources */,
+				10945541D621FA15C8C9D870 /* Shared */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		5EED566FFEC60BBF51732C56 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				9874B08647D3BABE4656DFEA /* Shared.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		810445E40ED9CC72A761902D = {
+			isa = PBXGroup;
+			children = (
+				5340271DBB0AE6A96EDA43F2 /* App */,
+				5EED566FFEC60BBF51732C56 /* Config */,
+				D948DFF99D336CC5C025BC40 /* Packages */,
+				CD866745CEB2B2C9B7CC217E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		CD866745CEB2B2C9B7CC217E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4EAA5031173EBCBCDE3AE8B6 /* Tilde-iOS.app */,
+				BB2FE6E23FD9963C43FAE365 /* Tilde-macOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D948DFF99D336CC5C025BC40 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				3211EB113F0CF70DC1D8AD1C /* TildeKit */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1285263236AE015D44AAFC6B /* Tilde-macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 69B5FE79E723236742DE04E5 /* Build configuration list for PBXNativeTarget "Tilde-macOS" */;
+			buildPhases = (
+				89BABDB729C1F72FB4A19E30 /* Sources */,
+				F352889A69A9AE13A15DC0D9 /* Resources */,
+				C933E3DEAF496964C0C56B77 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B6A2B0830FE48749AB652149 /* Resources */,
+				10945541D621FA15C8C9D870 /* Shared */,
+				EFA580CA4BFF4C3F94827A73 /* macOS */,
+			);
+			name = "Tilde-macOS";
+			packageProductDependencies = (
+				D2B4E5D0726189D665FEBECB /* TildeCore */,
+				E1CB0E996E6EAF9554D48A29 /* TildeStore */,
+				2BC026BF2CA451DC33999426 /* TildeSecurity */,
+				CECA8E813941EBD9C08A0DCE /* TildeSSH */,
+				65FA9FA6757D01B503414991 /* TildeTerminal */,
+				238B1E8807CE38C4436C880B /* TildeDesign */,
+				3E7FEE8C09484570998DDD62 /* TildeFeatures */,
+			);
+			productName = "Tilde-macOS";
+			productReference = BB2FE6E23FD9963C43FAE365 /* Tilde-macOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		9B25DCA3A7C4D8D9634AAA1C /* Tilde-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 69C32DA2042313C07D11B6B0 /* Build configuration list for PBXNativeTarget "Tilde-iOS" */;
+			buildPhases = (
+				B0594E682F9674F6E0F2DE93 /* Sources */,
+				0C9BDCF6A2066509A8D13CDB /* Resources */,
+				FB6EDDA2D1404D722A7CD859 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				B6A2B0830FE48749AB652149 /* Resources */,
+				10945541D621FA15C8C9D870 /* Shared */,
+				3B7ED63C45A1751666E1CE7C /* iOS */,
+			);
+			name = "Tilde-iOS";
+			packageProductDependencies = (
+				F6118746849A97F2704DB5E1 /* TildeCore */,
+				22E1BC4E0D793FA5FF64C892 /* TildeStore */,
+				EA0FD605F0E1DB2D3B9FCEFF /* TildeSecurity */,
+				5499635F3A8BA0A407C8C35A /* TildeSSH */,
+				2A2D544ADEAD086625CFC299 /* TildeTerminal */,
+				12F89B228B701AB4E8285312 /* TildeDesign */,
+				E55AFD0349A72851588E515A /* TildeFeatures */,
+			);
+			productName = "Tilde-iOS";
+			productReference = 4EAA5031173EBCBCDE3AE8B6 /* Tilde-iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A261868099F4E2565F8DF22B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					1285263236AE015D44AAFC6B = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					9B25DCA3A7C4D8D9634AAA1C = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 8901B75EC288D3415BF3D195 /* Build configuration list for PBXProject "Tilde" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 810445E40ED9CC72A761902D;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E7B171BB155BDA0218C810C7 /* XCLocalSwiftPackageReference "Packages/TildeKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = CD866745CEB2B2C9B7CC217E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9B25DCA3A7C4D8D9634AAA1C /* Tilde-iOS */,
+				1285263236AE015D44AAFC6B /* Tilde-macOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0C9BDCF6A2066509A8D13CDB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F352889A69A9AE13A15DC0D9 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		89BABDB729C1F72FB4A19E30 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0594E682F9674F6E0F2DE93 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		8BBE2E52E81B4FAAD306674C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "App/iOS/Tilde-iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/iOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TILDE_BUNDLE_ID)";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		93C66390D0807A17363D2E49 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "App/macOS/Tilde-macOS.entitlements";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = App/macOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TILDE_BUNDLE_ID)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		B7E4296CAA7EF2F931C17BF4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9874B08647D3BABE4656DFEA /* Shared.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		D9D010943ADB841C8D9C7D00 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9874B08647D3BABE4656DFEA /* Shared.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		EC88B76118B0FCBAD73BC2FC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "App/macOS/Tilde-macOS.entitlements";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				INFOPLIST_FILE = App/macOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TILDE_BUNDLE_ID)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		FF3762B0ABB3386B928E2D01 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "App/iOS/Tilde-iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/iOS/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(TILDE_BUNDLE_ID)";
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		69B5FE79E723236742DE04E5 /* Build configuration list for PBXNativeTarget "Tilde-macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC88B76118B0FCBAD73BC2FC /* Debug */,
+				93C66390D0807A17363D2E49 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		69C32DA2042313C07D11B6B0 /* Build configuration list for PBXNativeTarget "Tilde-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FF3762B0ABB3386B928E2D01 /* Debug */,
+				8BBE2E52E81B4FAAD306674C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8901B75EC288D3415BF3D195 /* Build configuration list for PBXProject "Tilde" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D9D010943ADB841C8D9C7D00 /* Debug */,
+				B7E4296CAA7EF2F931C17BF4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		E7B171BB155BDA0218C810C7 /* XCLocalSwiftPackageReference "Packages/TildeKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TildeKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		12F89B228B701AB4E8285312 /* TildeDesign */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeDesign;
+		};
+		22E1BC4E0D793FA5FF64C892 /* TildeStore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeStore;
+		};
+		238B1E8807CE38C4436C880B /* TildeDesign */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeDesign;
+		};
+		2A2D544ADEAD086625CFC299 /* TildeTerminal */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeTerminal;
+		};
+		2BC026BF2CA451DC33999426 /* TildeSecurity */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeSecurity;
+		};
+		3E7FEE8C09484570998DDD62 /* TildeFeatures */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeFeatures;
+		};
+		5499635F3A8BA0A407C8C35A /* TildeSSH */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeSSH;
+		};
+		65FA9FA6757D01B503414991 /* TildeTerminal */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeTerminal;
+		};
+		CECA8E813941EBD9C08A0DCE /* TildeSSH */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeSSH;
+		};
+		D2B4E5D0726189D665FEBECB /* TildeCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeCore;
+		};
+		E1CB0E996E6EAF9554D48A29 /* TildeStore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeStore;
+		};
+		E55AFD0349A72851588E515A /* TildeFeatures */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeFeatures;
+		};
+		EA0FD605F0E1DB2D3B9FCEFF /* TildeSecurity */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeSecurity;
+		};
+		F6118746849A97F2704DB5E1 /* TildeCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TildeCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A261868099F4E2565F8DF22B /* Project object */;
+}

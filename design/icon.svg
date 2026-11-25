@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Tilde app icon</title>
+  <desc>
+    Tilde - SSH Client and Terminal. A bold tilde (the shell's home directory) that ends in a
+    block cursor, on a deep ink background. 1024x1024 on Apple's icon grid.
+    Layers are grouped (#background, #grid, #glyph) so they can be imported into Icon Composer
+    as separate layers for Liquid Glass / dark / tinted variants. For an Xcode asset export,
+    drop the #squircle clip (iOS/macOS apply their own mask) and keep the full-bleed square.
+  </desc>
+  <defs>
+    <!-- Rounded-rect approximation of Apple's continuous-corner mask (preview only). -->
+    <clipPath id="squircle">
+      <rect width="1024" height="1024" rx="228" ry="228"/>
+    </clipPath>
+    <radialGradient id="bg" cx="30%" cy="18%" r="95%">
+      <stop offset="0" stop-color="#1D2733"/>
+      <stop offset="0.55" stop-color="#0F151C"/>
+      <stop offset="1" stop-color="#070A0E"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.07"/>
+      <stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="214" y1="420" x2="812" y2="620" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9BF7E4"/>
+      <stop offset="0.55" stop-color="#3EE0C3"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+    <linearGradient id="cursor" x1="0" y1="400" x2="0" y2="632" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5EEAD4"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur stdDeviation="26" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="0 0 0 0 0.18  0 0 0 0 0.83  0 0 0 0 0.75  0 0 0 0.55 0"/>
+    </filter>
+    <pattern id="dots" width="64" height="64" patternUnits="userSpaceOnUse">
+      <circle cx="32" cy="32" r="2.2" fill="#FFFFFF" fill-opacity="0.06"/>
+    </pattern>
+  </defs>
+
+  <g clip-path="url(#squircle)">
+    <g id="background">
+      <rect width="1024" height="1024" fill="url(#bg)"/>
+      <rect width="1024" height="1024" fill="url(#sheen)"/>
+    </g>
+    <g id="grid">
+      <rect width="1024" height="1024" fill="url(#dots)"/>
+    </g>
+
+    <g id="glyph" transform="translate(512 516) scale(1.1) translate(-512 -516)">
+      <!-- soft phosphor glow -->
+      <g filter="url(#glow)">
+        <path d="M254 556 C 292 458, 384 442, 444 516 C 504 590, 596 574, 634 476"
+              fill="none" stroke="#2DD4BF" stroke-width="100" stroke-linecap="round"/>
+        <rect x="710" y="400" width="108" height="232" rx="18" fill="#2DD4BF"/>
+      </g>
+      <!-- the tilde: ~ (home) -->
+      <path d="M254 556 C 292 458, 384 442, 444 516 C 504 590, 596 574, 634 476"
+            fill="none" stroke="url(#mint)" stroke-width="100" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- the block cursor -->
+      <rect x="710" y="400" width="108" height="232" rx="18" fill="url(#cursor)"/>
+      <rect x="710" y="400" width="108" height="36" rx="18" fill="#FFFFFF" fill-opacity="0.18"/>
+    </g>
+  </g>
+</svg>

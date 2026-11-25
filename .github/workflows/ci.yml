@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: TildeKit (swift build / test)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: Packages/TildeKit/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('Packages/TildeKit/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-
+      - name: Build
+        working-directory: Packages/TildeKit
+        run: swift build
+      - name: Test
+        working-directory: Packages/TildeKit
+        run: swift test
+
+  app:
+    name: ${{ matrix.scheme }}
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scheme: Tilde-iOS
+            destination: generic/platform=iOS Simulator
+          - scheme: Tilde-macOS
+            destination: platform=macOS
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Build
+        run: |
+          xcodebuild -project Tilde.xcodeproj \
+            -scheme "${{ matrix.scheme }}" \
+            -destination "${{ matrix.destination }}" \
+            -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            build
