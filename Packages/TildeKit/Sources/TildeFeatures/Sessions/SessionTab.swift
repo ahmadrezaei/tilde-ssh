@@ -24,7 +24,11 @@ public final class SessionTab: Identifiable {
     @ObservationIgnored var stateTask: Task<Void, Never>?
     @ObservationIgnored var latencyTask: Task<Void, Never>?
 
-    init(session: any TerminalSession, windowID: UUID, isAdHoc: Bool) {
+    /// Keeps the session's prompter alive for as long as the tab exists.
+    @ObservationIgnored let prompter: SessionPrompter?
+
+    init(session: any TerminalSession, windowID: UUID, isAdHoc: Bool, prompter: SessionPrompter? = nil) {
+        self.prompter = prompter
         self.id = session.id
         self.server = session.server
         self.session = session

@@ -35,10 +35,14 @@ enum PasteGuardPolicy {
 /// A `TerminalIO` wrapper that holds back multi-line pastes until the user confirms ("Paste 14 lines into
 /// prod-api-01?").
 ///
-/// It works on the byte stream so it needs nothing from `TerminalSurface`: a bracketed paste
-/// (`ESC[200~ ... ESC[201~`, possibly split over several `send` calls) with any newline in it, or a single
-/// `send` carrying two or more non-empty lines, is a paste. A lone Return or a one-line snippet is never
-/// held. While a confirmation is open, later keystrokes queue behind it so ordering is preserved.
+/// It works on the byte stream so it needs nothing from `TerminalSurface`. A paste is either a bracketed paste
+/// (`ESC[200~ ... ESC[201~`, possibly split over several `send` calls) or any multi-byte `send` that carries a
+/// CR or LF (a paste of `rm -rf /` plus a newline is one line, and still runs the moment it arrives). A lone
+/// Return, typed characters and Meta-key sequences (`ESC` first) are never held.
+///
+/// Every chunk goes through one ordered queue. While a confirmation is open, later chunks wait behind it and are
+/// classified again when their turn comes, so a second paste is asked about too and keystrokes can never overtake
+/// the paste in front of them.
 ///
 /// If WS4 adds a native paste hook to `TerminalSurface`, this wrapper can go.
 final class PasteGuardIO: TerminalIO, Sendable {
@@ -48,10 +52,17 @@ final class PasteGuardIO: TerminalIO, Sendable {
 
     private struct State {
         var collecting: Data?
-        var awaiting = false
         var queue: [Data] = []
+        /// A drain loop owns the queue (running, or suspended on a confirmation).
+        var draining = false
     }
     private let state = Mutex(State())
+
+    private enum Step {
+        case idle, skip
+        case forward(Data)
+        case paste(Data)
+    }
 
     init(base: any TerminalIO, shouldConfirm: @escaping @Sendable () -> Bool, confirm: @escaping @Sendable (String) async -> Bool) {
         self.base = base
@@ -66,55 +77,66 @@ final class PasteGuardIO: TerminalIO, Sendable {
     }
 
     func send(_ bytes: Data) {
-        enum Outcome { case forward, hold, paste(Data) }
-        let outcome = state.withLock { s -> Outcome in
-            if s.awaiting {
-                s.queue.append(bytes)
-                return .hold
-            }
-            if var collected = s.collecting {
-                collected.append(bytes)
-                if collected.range(of: PasteGuardPolicy.bracketEnd) != nil {
-                    s.collecting = nil
-                    return .paste(collected)
-                }
-                s.collecting = collected
-                return .hold
-            }
-            if bytes.starts(with: PasteGuardPolicy.bracketStart) {
-                if bytes.range(of: PasteGuardPolicy.bracketEnd) != nil { return .paste(bytes) }
-                s.collecting = bytes
-                return .hold
-            }
-            guard bytes.count > 1 else { return .forward }
-            let text = String(decoding: bytes, as: UTF8.self)
-            return PasteGuardPolicy.lines(of: text).count >= 2 ? .paste(bytes) : .forward
+        let shouldDrain = state.withLock { s -> Bool in
+            s.queue.append(bytes)
+            if s.draining { return false }
+            s.draining = true
+            return true
         }
+        if shouldDrain { drain() }
+    }
 
-        switch outcome {
-        case .forward:
-            base.send(bytes)
-        case .hold:
-            break
-        case .paste(let data):
-            let text = PasteGuardPolicy.payload(of: data)
-            let bracketed = data.starts(with: PasteGuardPolicy.bracketStart)
-            let isMultiline = bracketed ? PasteGuardPolicy.containsNewline(text) : PasteGuardPolicy.lines(of: text).count >= 2
-            guard isMultiline, shouldConfirm() else {
+    /// Processes the queue in order. Returns when it is empty, or when suspended on a confirmation (the task that
+    /// finishes the confirmation calls `drain()` again).
+    private func drain() {
+        while true {
+            let step = state.withLock { s -> Step in
+                guard !s.queue.isEmpty else {
+                    s.draining = false
+                    return .idle
+                }
+                return Self.classify(s.queue.removeFirst(), &s)
+            }
+            switch step {
+            case .idle:
+                return
+            case .skip:
+                continue
+            case .forward(let data):
                 base.send(data)
+            case .paste(let data):
+                let text = PasteGuardPolicy.payload(of: data)
+                guard PasteGuardPolicy.containsNewline(text), shouldConfirm() else {
+                    base.send(data)
+                    continue
+                }
+                Task { [self] in
+                    if await confirm(text) { base.send(data) }
+                    drain()
+                }
                 return
             }
-            state.withLock { $0.awaiting = true }
-            Task { [self] in
-                let approved = await confirm(text)
-                let queued = state.withLock { s -> [Data] in
-                    s.awaiting = false
-                    defer { s.queue = [] }
-                    return s.queue
-                }
-                if approved { base.send(data) }
-                for pending in queued { base.send(pending) }
-            }
         }
+    }
+
+    private static func classify(_ chunk: Data, _ s: inout State) -> Step {
+        if var collected = s.collecting {
+            collected.append(chunk)
+            if collected.range(of: PasteGuardPolicy.bracketEnd) != nil {
+                s.collecting = nil
+                return .paste(collected)
+            }
+            s.collecting = collected
+            return .skip
+        }
+        if chunk.starts(with: PasteGuardPolicy.bracketStart) {
+            if chunk.range(of: PasteGuardPolicy.bracketEnd) != nil { return .paste(chunk) }
+            s.collecting = chunk
+            return .skip
+        }
+        // Single keystrokes and escape sequences (arrows, Meta-Return) are not pastes.
+        guard chunk.count > 1, chunk.first != 0x1B else { return .forward(chunk) }
+        let text = String(decoding: chunk, as: UTF8.self)
+        return PasteGuardPolicy.containsNewline(text) ? .paste(chunk) : .forward(chunk)
     }
 }

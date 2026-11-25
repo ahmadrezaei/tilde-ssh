@@ -8,6 +8,7 @@ public struct HoldToConfirmButton: View {
     @State private var progress: Double = 0
     @State private var isHolding = false
     @State private var task: Task<Void, Never>?
+    @State private var confirmsForAccessibility = false
 
     public init(_ title: String, duration: Double = 1.5, action: @escaping () -> Void) {
         self.title = title
@@ -35,7 +36,14 @@ public struct HoldToConfirmButton: View {
             .accessibilityLabel(title)
             .accessibilityHint("Press and hold to confirm")
             .accessibilityAddTraits(.isButton)
-            .accessibilityAction { action() }
+            // VoiceOver and Switch Control cannot press and hold: they get an explicit confirmation instead.
+            .accessibilityAction { confirmsForAccessibility = true }
+            .alert(title, isPresented: $confirmsForAccessibility) {
+                Button(title, role: .destructive, action: action)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This is a security-sensitive action. Confirm that you want to continue.")
+            }
     }
 
     private func begin() {

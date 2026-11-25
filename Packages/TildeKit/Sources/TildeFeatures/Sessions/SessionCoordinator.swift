@@ -19,8 +19,6 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
     /// Host-key questions in arrival order; the UI shows the first one that belongs to its window.
     public private(set) var hostKeyQueue: [HostKeyRequest] = []
     public private(set) var passwordQueue: [PasswordRequest] = []
-    /// iPhone: whether the full-screen session deck is up.
-    public var isDeckPresented = false
     /// Set after "Save server" on a Quick Connect password prompt; the root view opens the editor.
     public var saveServerRequest: SaveServerRequest?
     /// Most recently closed first; "Reopen last closed session" (Cmd-Shift-T).
@@ -30,12 +28,40 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
     public var onConnected: (@MainActor (ServerSnapshot) -> Void)?
 
     public static let defaultHostKeyTimeout: Duration = .seconds(120)
+    public static let defaultPasswordTimeout: Duration = .seconds(300)
     private let hostKeyTimeout: Duration
+    private let passwordTimeout: Duration
+    /// One navigator per window, created on first use and dropped when the window closes.
+    @ObservationIgnored private var navigators: [UUID: AppNavigator] = [:]
 
-    public init(services: TildeServices, hostKeyTimeout: Duration = SessionCoordinator.defaultHostKeyTimeout) {
+    public init(
+        services: TildeServices,
+        hostKeyTimeout: Duration = SessionCoordinator.defaultHostKeyTimeout,
+        passwordTimeout: Duration = SessionCoordinator.defaultPasswordTimeout
+    ) {
         self.services = services
         self.hostKeyTimeout = hostKeyTimeout
+        self.passwordTimeout = passwordTimeout
         self.reachability = ReachabilityMonitor(prober: services.reachability)
+    }
+
+    // MARK: Windows
+
+    /// The navigator of a window (UI routing: sheets, deck, iPhone tab), created on first use.
+    public func navigator(for window: UUID) -> AppNavigator {
+        if let existing = navigators[window] { return existing }
+        let navigator = AppNavigator(coordinator: self, windowID: window)
+        navigators[window] = navigator
+        return navigator
+    }
+
+    /// A window went away: close its tabs (which answers their pending prompts) and forget its navigator.
+    public func windowClosed(_ window: UUID) {
+        for tab in tabs(in: window) { close(tab) }
+        selectedTabIDs[window] = nil
+        navigators[window] = nil
+        for request in hostKeyQueue where request.windowID == window { answerHostKey(request, .reject) }
+        for request in passwordQueue where request.windowID == window { answerPassword(request, password: nil) }
     }
 
     // MARK: Queries
@@ -71,14 +97,16 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
             pty: PTYConfig(term: server.termType, cols: 80, rows: 24, env: server.envVars),
             connectTimeout: .seconds(TildeSettings.currentConnectTimeout)
         )
+        let prompter = SessionPrompter(coordinator: self)
         let session = services.sessionEngine.makeSession(
             request,
             credentials: services.credentials,
             knownHosts: services.knownHosts,
-            hostKeyPrompter: self,
-            passwordPrompter: self
+            hostKeyPrompter: prompter,
+            passwordPrompter: prompter
         )
-        let tab = SessionTab(session: session, windowID: window, isAdHoc: adHoc)
+        prompter.tabID = session.id
+        let tab = SessionTab(session: session, windowID: window, isAdHoc: adHoc, prompter: prompter)
         tabs.append(tab)
         select(tab)
         observe(tab)
@@ -109,6 +137,9 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         tab.stateTask?.cancel()
         tab.latencyTask?.cancel()
         tab.pasteRequest?.resolve(false)
+        // A closed tab can no longer answer: release the engine, which is waiting on its questions.
+        for request in hostKeyQueue where request.tabID == tab.id { answerHostKey(request, .reject) }
+        for request in passwordQueue where request.tabID == tab.id { answerPassword(request, password: nil) }
         let session = tab.session
         Task { await session.disconnect() }
 
@@ -124,7 +155,6 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         if wasSelected {
             if let index, !remaining.isEmpty { select(remaining[min(index, remaining.count - 1)]) } else { selectedTabIDs[window] = nil }
         }
-        if tabs.isEmpty { isDeckPresented = false }
     }
 
     public func closeSelected(in window: UUID) {
@@ -166,7 +196,11 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         guard let tab = selectedTab(in: window), tab.isConnected else { return false }
         var text = SnippetTemplate.fill(snippet.command, values: values)
         if snippet.runOnInsert { text += "\r" }
-        tab.terminalIO.send(Data(text.utf8))
+        // A one-line snippet is the user's explicit action and goes straight to the session. A multi-line one goes
+        // through the paste guard, so a PROD server asks first.
+        let multiline = PasteGuardPolicy.lines(of: text).count > 1
+        let io: any TerminalIO = multiline ? tab.terminalIO : tab.session
+        io.send(Data(text.utf8))
         return true
     }
 
@@ -207,10 +241,17 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         hostKeyQueue.first { $0.windowID == nil || $0.windowID == window }
     }
 
+    /// For prompts that do not belong to a tab (for example "Test connection" in the server editor).
     public func decide(_ challenge: HostKeyChallenge) async -> HostKeyDecision {
-        let window = tab(matching: challenge.endpoint)?.windowID
-        let decision = await withCheckedContinuation { (continuation: CheckedContinuation<HostKeyDecision, Never>) in
-            let request = HostKeyRequest(challenge: challenge, windowID: window, continuation: continuation)
+        await decide(challenge, tabID: nil)
+    }
+
+    func decide(_ challenge: HostKeyChallenge, tabID: UUID?) async -> HostKeyDecision {
+        let tab = tabID.flatMap(self.tab(id:))
+        // The engine pins the key (`trust`, `replacing: true` after a change) and reconnects on `.trustAndSave`
+        // itself; the coordinator only carries the user's decision back.
+        return await withCheckedContinuation { (continuation: CheckedContinuation<HostKeyDecision, Never>) in
+            let request = HostKeyRequest(challenge: challenge, tabID: tabID, windowID: tab?.windowID, continuation: continuation)
             hostKeyQueue.append(request)
             // An unknown host never auto-trusts: after 120 s the handshake gives up.
             request.timeoutTask = Task { [weak self, weak request] in
@@ -219,10 +260,6 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
                 self.answerHostKey(request, .reject)
             }
         }
-        if decision == .trustAndSave {
-            await pinAfterChangedKey(challenge)
-        }
-        return decision
     }
 
     /// Resolves the question shown in the sheet or takeover.
@@ -232,49 +269,36 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         request.resolve(decision)
     }
 
-    /// For a changed key the engine has already aborted, so "Hold to trust new key" must replace the pin and then
-    /// reconnect. The pin write is idempotent (`replacing: true`), so it is safe if the engine also writes it. If
-    /// the engine does not reconnect on its own, the tab is reconnected shortly after.
-    private func pinAfterChangedKey(_ challenge: HostKeyChallenge) async {
-        switch challenge.lookup {
-        case .mismatch, .conflicted:
-            try? await services.knownHosts.trust(challenge.presented, for: challenge.endpoint, replacing: true)
-            guard let tab = tab(matching: challenge.endpoint) else { return }
-            Task { [weak self, weak tab] in
-                try? await Task.sleep(for: .milliseconds(1500))
-                guard let self, let tab else { return }
-                if case .disconnected(.error(.hostKeyMismatch)) = tab.state { self.reconnect(tab) }
-            }
-        case .trusted, .unknown:
-            break
-        }
-    }
-
-    private func tab(matching endpoint: HostEndpoint) -> SessionTab? {
-        func matches(_ target: ConnectionTarget) -> Bool {
-            target.host.caseInsensitiveCompare(endpoint.host) == .orderedSame && target.port == endpoint.port
-        }
-        let candidates = tabs.filter { matches($0.server.target) || ($0.server.jump.map { matches($0.target) } ?? false) }
-        return candidates.first { !$0.isConnected } ?? candidates.first
-    }
-
     // MARK: Passwords (PasswordPrompter)
 
     public func pendingPassword(in window: UUID) -> PasswordRequest? {
         passwordQueue.first { $0.windowID == nil || $0.windowID == window }
     }
 
+    /// For prompts that do not belong to a tab (for example "Test connection" in the server editor).
     public func password(for target: ConnectionTarget, reason: PromptReason) async -> String? {
-        let owner = tabs.first { $0.server.target == target || $0.server.jump?.target == target }
+        await password(for: target, reason: reason, tabID: nil)
+    }
+
+    func password(for target: ConnectionTarget, reason: PromptReason, tabID: UUID?) async -> String? {
+        let owner = tabID.flatMap(self.tab(id:))
         return await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
-            passwordQueue.append(PasswordRequest(
+            let request = PasswordRequest(
                 target: target, reason: reason,
                 serverName: owner?.server.name ?? target.host,
+                tabID: tabID,
                 windowID: owner?.windowID,
                 canSaveServer: owner?.isAdHoc ?? false,
                 canUpdateSaved: owner.map { $0.server.auth == .password && $0.server.passwordSecretID != nil } ?? false,
                 continuation: continuation
-            ))
+            )
+            passwordQueue.append(request)
+            // Nobody should be left waiting forever on a prompt that is never answered.
+            request.timeoutTask = Task { [weak self, weak request] in
+                try? await Task.sleep(for: self?.passwordTimeout ?? Self.defaultPasswordTimeout)
+                guard !Task.isCancelled, let self, let request else { return }
+                self.answerPassword(request, password: nil)
+            }
         }
     }
 
@@ -282,15 +306,14 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
     public func answerPassword(_ request: PasswordRequest, password: String?, saveServer: Bool = false, updateSaved: Bool = false) {
         guard passwordQueue.contains(where: { $0.id == request.id }) else { return }
         passwordQueue.removeAll { $0.id == request.id }
-        if let password {
-            let owner = tabs.first { $0.server.target == request.target || $0.server.jump?.target == request.target }
-            if updateSaved, let owner, let secretID = owner.server.passwordSecretID {
+        if let password, let owner = request.tabID.flatMap(tab(id:)) {
+            if updateSaved, let secretID = owner.server.passwordSecretID {
                 try? services.secretStore.write(
                     Data(password.utf8), for: SecretRef(kind: .password, id: secretID),
                     label: "Tilde: \(request.target.username)@\(request.target.host)", synchronizable: true
                 )
             }
-            if saveServer, let owner {
+            if saveServer {
                 var server = owner.server
                 server.auth = .password
                 saveServerRequest = SaveServerRequest(server: server, password: password)

@@ -168,7 +168,7 @@ public struct ServerList: View {
                     Section {
                         ForEach(ungrouped) { row($0) }
                             .onMove { from, to in move(ungrouped, from, to) }
-                            .moveDisabled(sortMode != .manual)
+                            .moveDisabled(sortMode != .manual || !showOffline)
                     } header: {
                         SectionHeader(groups.isEmpty ? "Servers" : "Ungrouped", count: ungrouped.count)
                     }
@@ -216,7 +216,7 @@ public struct ServerList: View {
     private var liveSection: some View {
         Section {
             ForEach(liveTabs) { tab in
-                Button { coordinator.select(tab); coordinator.isDeckPresented = true } label: { LiveSessionRow(tab: tab) }
+                Button { coordinator.select(tab); navigator.showDeckIfCompact() } label: { LiveSessionRow(tab: tab) }
                     .buttonStyle(.plain)
                     .tildeRowBackground()
                     .swipeActions(edge: .trailing) {
@@ -234,7 +234,7 @@ public struct ServerList: View {
             if !group.isCollapsed {
                 ForEach(members) { row($0) }
                     .onMove { from, to in move(members, from, to) }
-                    .moveDisabled(sortMode != .manual)
+                    .moveDisabled(sortMode != .manual || !showOffline)
             }
         } header: {
             Button { withAnimation(.snappy) { actions.setCollapsed(group, !group.isCollapsed) } } label: {

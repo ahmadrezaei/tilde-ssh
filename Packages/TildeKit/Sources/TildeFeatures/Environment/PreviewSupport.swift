@@ -44,7 +44,7 @@ struct TildePreviewHost<Content: View>: View {
         self.openSession = openSession
         self.content = content
         _coordinator = State(initialValue: coordinator)
-        _navigator = State(initialValue: AppNavigator(coordinator: coordinator))
+        _navigator = State(initialValue: coordinator.navigator(for: UUID()))
     }
 
     var body: some View {

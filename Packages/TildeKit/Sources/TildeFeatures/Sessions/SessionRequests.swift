@@ -6,6 +6,8 @@ import TildeCore
 public final class HostKeyRequest: Identifiable {
     public nonisolated var id: UUID { challenge.id }
     public let challenge: HostKeyChallenge
+    /// The tab (session id) that asked, or `nil` for a request that does not belong to a tab ("Test connection").
+    public let tabID: UUID?
     /// The window whose tab triggered the request; `nil` shows it in whichever window is frontmost.
     public let windowID: UUID?
     public let askedAt: Date
@@ -13,8 +15,9 @@ public final class HostKeyRequest: Identifiable {
     private var continuation: CheckedContinuation<HostKeyDecision, Never>?
     var timeoutTask: Task<Void, Never>?
 
-    init(challenge: HostKeyChallenge, windowID: UUID?, continuation: CheckedContinuation<HostKeyDecision, Never>) {
+    init(challenge: HostKeyChallenge, tabID: UUID?, windowID: UUID?, continuation: CheckedContinuation<HostKeyDecision, Never>) {
         self.challenge = challenge
+        self.tabID = tabID
         self.windowID = windowID
         self.askedAt = Date()
         self.continuation = continuation
@@ -52,18 +55,22 @@ public final class PasswordRequest: Identifiable {
     public let target: ConnectionTarget
     public let reason: PromptReason
     public let serverName: String
+    /// The tab (session id) that asked, or `nil` for a request that does not belong to a tab.
+    public let tabID: UUID?
     public let windowID: UUID?
     /// Offer "Save server" (a Quick Connect session that is not saved yet).
     public let canSaveServer: Bool
     /// Offer "Update saved password" (the saved password was rejected).
     public let canUpdateSaved: Bool
     private var continuation: CheckedContinuation<String?, Never>?
+    var timeoutTask: Task<Void, Never>?
 
-    init(target: ConnectionTarget, reason: PromptReason, serverName: String, windowID: UUID?,
+    init(target: ConnectionTarget, reason: PromptReason, serverName: String, tabID: UUID?, windowID: UUID?,
          canSaveServer: Bool, canUpdateSaved: Bool, continuation: CheckedContinuation<String?, Never>) {
         self.target = target
         self.reason = reason
         self.serverName = serverName
+        self.tabID = tabID
         self.windowID = windowID
         self.canSaveServer = canSaveServer
         self.canUpdateSaved = canUpdateSaved
@@ -87,6 +94,8 @@ public final class PasswordRequest: Identifiable {
     }
 
     func resolve(_ password: String?) {
+        timeoutTask?.cancel()
+        timeoutTask = nil
         continuation?.resume(returning: password)
         continuation = nil
     }
@@ -98,4 +107,24 @@ public struct SaveServerRequest: Identifiable, Equatable, Sendable {
     public var server: ServerSnapshot
     /// The password the user typed, to store with the new server.
     public var password: String?
+}
+
+/// The prompter handed to one session's engine, so every question is tied to that session's tab. The contracts
+/// carry only a host or target, which is ambiguous when two tabs point at the same server.
+@MainActor
+final class SessionPrompter: HostKeyPrompter, PasswordPrompter {
+    private weak var coordinator: SessionCoordinator?
+    var tabID: UUID?
+
+    init(coordinator: SessionCoordinator) { self.coordinator = coordinator }
+
+    func decide(_ challenge: HostKeyChallenge) async -> HostKeyDecision {
+        guard let coordinator else { return .reject }
+        return await coordinator.decide(challenge, tabID: tabID)
+    }
+
+    func password(for target: ConnectionTarget, reason: PromptReason) async -> String? {
+        guard let coordinator else { return nil }
+        return await coordinator.password(for: target, reason: reason, tabID: tabID)
+    }
 }

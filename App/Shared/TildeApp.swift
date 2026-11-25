@@ -26,13 +26,13 @@ struct TildeApp: App {
             .tildeEnvironment(environment)
             .preferredColorScheme(colorScheme)   // dark by default; Settings > Appearance overrides.
         }
-        // Keyboard shortcuts (Cmd-T, Cmd-W, Cmd-1...9, Cmd-P, ...). WS6's `MacCommands` adds the Mac-only menu items.
-        .commands { SessionCommands() }
+        // The menu bar (Mac and iPadOS 26). It reads the actions each window publishes through `WindowHost`.
+        .commands { MacCommands() }
 
         // "Open in New Window" on a tab: one tab, one window (iPadOS Stage Manager and Mac).
-        WindowGroup("Session", id: "session", for: UUID.self) { $tabID in
+        WindowGroup("Session", id: "session", for: SessionWindowValue.self) { $value in
             AppLockGate(lock: environment.appLock) {
-                DetachedSessionWindow(tabID: tabID)
+                DetachedSessionWindow(tabID: value?.sessionID)
             }
             .tildeEnvironment(environment)
             .preferredColorScheme(colorScheme)
@@ -56,6 +56,7 @@ private extension View {
         self
             .environment(\.tildeServices, environment.services)
             .environment(environment.coordinator)
+            .environment(\.lockNowAction, { environment.appLock.lockNow() })
             .modelContainer(environment.modelContainer)
     }
 }

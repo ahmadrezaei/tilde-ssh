@@ -20,9 +20,11 @@ public enum AppSheet: Identifiable, Equatable {
     /// Quick Connect session being saved ("Save as server…").
     case saveServer(SaveServerRequest)
     case palette(PaletteMode)
-    case keys, snippets, settings, generateKey, importSSHConfig
+    case keys, snippets, settings, generateKey, importSSHConfig, importKnownHosts
     case newSnippet
     case editSnippet(UUID)
+    /// A `ssh://` link asked for this connection. Nothing connects until the user confirms.
+    case confirmLink(QuickConnectResult)
 
     public var id: String {
         switch self {
@@ -35,8 +37,10 @@ public enum AppSheet: Identifiable, Equatable {
         case .settings: "settings"
         case .generateKey: "generateKey"
         case .importSSHConfig: "importSSHConfig"
+        case .importKnownHosts: "importKnownHosts"
         case .newSnippet: "newSnippet"
         case .editSnippet(let id): "editSnippet-\(id)"
+        case .confirmLink(let result): "confirmLink-\(result.target.displayString)"
         }
     }
 }
@@ -46,8 +50,9 @@ public enum PhoneTab: String, Hashable, Sendable, CaseIterable {
     case servers, keys, snippets, settings
 }
 
-/// Per-window UI routing: which sheet is up, which iPhone tab is selected, and the verbs views use to open
-/// sessions. One instance per window (`RootView` creates it); injected with `.environment(navigator)`.
+/// Per-window UI routing: which sheet is up, whether the session deck is up, which iPhone tab is selected, and
+/// the verbs views use to open sessions. One instance per window, owned by the `SessionCoordinator`
+/// (`coordinator.navigator(for:)`), and injected with `.environment(navigator)` by `WindowHost`.
 @MainActor
 @Observable
 public final class AppNavigator {
@@ -59,7 +64,13 @@ public final class AppNavigator {
     /// Increment to ask the server list to focus its search / Quick Connect field.
     public var focusSearchToken = 0
 
-    public init(coordinator: SessionCoordinator, windowID: UUID = UUID()) {
+    /// `true` while this window shows the compact (iPhone) layout, which presents sessions in a full-screen deck.
+    /// Set by the layout views; on iPad and Mac sessions show in the detail column and there is no deck.
+    public var isCompact = false
+    /// Whether the full-screen session deck is up in this window. Only ever `true` in the compact layout.
+    public var isDeckPresented = false
+
+    init(coordinator: SessionCoordinator, windowID: UUID) {
         self.coordinator = coordinator
         self.windowID = windowID
     }
@@ -74,12 +85,17 @@ public final class AppNavigator {
         focusSearchToken += 1
     }
 
-    /// Opens (or focuses) a session. On iPhone this also brings up the session deck.
+    /// Opens (or focuses) a session. In the compact layout this also brings up the session deck.
     @discardableResult
     public func open(_ server: ServerSnapshot, newSession: Bool = false, adHoc: Bool = false) -> SessionTab {
         let tab = coordinator.open(server, in: windowID, newSession: newSession, adHoc: adHoc)
-        coordinator.isDeckPresented = true
+        showDeckIfCompact()
         return tab
+    }
+
+    /// Brings up the deck (compact layout only).
+    public func showDeckIfCompact() {
+        if isCompact { isDeckPresented = true }
     }
 
     /// "Save as server…" for a Quick Connect tab.
@@ -88,6 +104,16 @@ public final class AppNavigator {
     }
 
     public func reopenLastClosed() {
-        if coordinator.reopenLastClosed(in: windowID) != nil { coordinator.isDeckPresented = true }
+        if coordinator.reopenLastClosed(in: windowID) != nil { showDeckIfCompact() }
+    }
+
+    /// Shows a `tilde://` destination: a tab on iPhone, a sheet elsewhere.
+    public func show(_ destination: TildeURLDestination) {
+        switch destination {
+        case .servers: phoneTab = .servers
+        case .keys: if isCompact { phoneTab = .keys } else { present(.keys) }
+        case .snippets: if isCompact { phoneTab = .snippets } else { present(.snippets) }
+        case .settings: if isCompact { phoneTab = .settings } else { present(.settings) }
+        }
     }
 }

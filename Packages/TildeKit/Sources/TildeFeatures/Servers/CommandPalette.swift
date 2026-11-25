@@ -281,7 +281,7 @@ struct CommandPalette: View {
             launcher.open(server, newSession: mode == .newTab && coordinator.isLive(serverID: id))
         case .session(let id):
             dismiss()
-            if let tab = coordinator.tab(id: id) { coordinator.select(tab); coordinator.isDeckPresented = true }
+            if let tab = coordinator.tab(id: id) { coordinator.select(tab); navigator.showDeckIfCompact() }
         case .snippet(let snippet):
             if SnippetTemplate.placeholders(in: snippet.command).isEmpty {
                 dismiss()

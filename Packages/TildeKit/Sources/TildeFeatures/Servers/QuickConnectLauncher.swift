@@ -40,6 +40,13 @@ struct QuickConnectLauncher {
         return navigator.open(resolution.server, adHoc: !resolution.isSaved)
     }
 
+    /// Opens the session for a link the user confirmed: a new tab with a password prompt (see
+    /// `QuickConnectResolver.linkServer`).
+    @discardableResult
+    func connectFromLink(_ result: QuickConnectResult) -> SessionTab {
+        navigator.open(QuickConnectResolver.linkServer(result), newSession: true, adHoc: true)
+    }
+
     /// Opens a saved server: focuses its session, or starts one (`newSession` forces a new tab).
     @discardableResult
     func open(_ server: Server, newSession: Bool = false) -> SessionTab {

@@ -53,6 +53,16 @@ enum QuickConnectResolver {
         return QuickConnectResolution(server: server, isSaved: false)
     }
 
+    /// The session for a connection requested by a `ssh://` link. A link is untrusted input, so it gets a password
+    /// prompt only: no default key, no saved server's settings or startup command, no jump host, no key name.
+    static func linkServer(_ result: QuickConnectResult) -> ServerSnapshot {
+        ServerSnapshot(
+            name: result.target.port == 22 ? result.target.host : result.target.hostPort,
+            target: ConnectionTarget(host: result.target.host, port: result.target.port, username: result.target.username),
+            auth: .passwordPrompt
+        )
+    }
+
     /// `user@host:port` as stored in `RecentConnection.target`.
     static func recentString(_ target: ConnectionTarget) -> String { target.displayString }
 

@@ -106,6 +106,11 @@ struct ServerActions {
 
     // MARK: Import
 
+    /// Saved servers as snapshots, so the import view can flag hosts that already exist.
+    func savedSnapshots() -> [ServerSnapshot] {
+        ((try? context.fetch(FetchDescriptor<Server>())) ?? []).map(ServerMapper.snapshot)
+    }
+
     /// Creates servers from parsed `~/.ssh/config` hosts (the import UI is WS6's; this stores what the user chose).
     /// Skips hosts that already exist (same host, port and user). A key is attached only when a key named like the
     /// identity file exists; otherwise the server asks for a password.

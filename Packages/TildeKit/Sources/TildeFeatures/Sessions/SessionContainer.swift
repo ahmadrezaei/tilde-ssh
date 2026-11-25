@@ -98,7 +98,7 @@ private struct TabStripItem: View {
             SessionMenuItems(tab: tab)
             Button {
                 let id = coordinator.moveToOwnWindow(tab)
-                openWindow(id: "session", value: id)
+                openWindow(id: "session", value: SessionWindowValue(sessionID: id))
             } label: { Label("Open in New Window", systemImage: "macwindow.badge.plus") }
         }
         .accessibilityElement(children: .combine)

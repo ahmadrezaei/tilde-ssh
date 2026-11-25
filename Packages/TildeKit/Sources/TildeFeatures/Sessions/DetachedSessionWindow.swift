@@ -4,8 +4,8 @@ import TildeDesign
 /// A window that shows the single tab moved out with "Open in New Window". The tab's id is the window id, so the
 /// window shows exactly that tab; when it closes, the window goes with it.
 ///
-/// Scene: `WindowGroup("Session", id: "session", for: UUID.self) { $id in DetachedSessionWindow(tabID: id) }`
-/// (declared in `TildeApp`). WS6's `SessionWindow` placeholder can adopt this.
+/// Scene: `WindowGroup("Session", id: "session", for: SessionWindowValue.self) { $value in DetachedSessionWindow(tabID: value?.sessionID) }`
+/// (declared in `TildeApp`).
 public struct DetachedSessionWindow: View {
     private let tabID: UUID?
 
@@ -26,7 +26,8 @@ private struct DetachedContent: View {
 
     var body: some View {
         SessionContainer()
-            .onChange(of: navigator.tabs.isEmpty) { _, isEmpty in
+            // `initial: true`: a restored window whose tab is gone dismisses itself right away.
+            .onChange(of: navigator.tabs.isEmpty, initial: true) { _, isEmpty in
                 if isEmpty { dismissWindow() }
             }
     }

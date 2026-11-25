@@ -89,11 +89,11 @@ struct DataSettingsSection: View {
             Text("Data").tildeSectionHeader()
         }
         .sheet(isPresented: $showsImport) {
-            SSHConfigImportView { hosts in
+            let actions = ServerActions(context: context, secrets: services.secretStore)
+            SSHConfigImportView(existingServers: actions.savedSnapshots(), onFinish: { hosts in
                 showsImport = false
-                guard !hosts.isEmpty else { return }
-                ServerActions(context: context, secrets: services.secretStore).importHosts(hosts)
-            }
+                if !hosts.isEmpty { actions.importHosts(hosts) }
+            })
         }
     }
 }

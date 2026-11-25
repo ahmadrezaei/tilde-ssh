@@ -17,7 +17,7 @@ struct SessionDeck: View {
                 SessionTitleBar(
                     tab: selected,
                     tabCount: tabs.count,
-                    onClose: { coordinator.isDeckPresented = false },
+                    onClose: { navigator.isDeckPresented = false },
                     onShowGrid: { showsGrid = true },
                     onShowPalette: { navigator.present(.palette(.all)) }
                 )
@@ -26,7 +26,7 @@ struct SessionDeck: View {
                 SessionStack(tabs: tabs, selectedID: selected?.id)
                 if selected == nil {
                     EmptyState("No open sessions", message: "Connect to a server to start one.") {
-                        Button("Close") { coordinator.isDeckPresented = false }.buttonStyle(.tildeSecondary)
+                        Button("Close") { navigator.isDeckPresented = false }.buttonStyle(.tildeSecondary)
                     }
                 }
             }
@@ -37,7 +37,7 @@ struct SessionDeck: View {
                 .presentationDetents([.medium, .large])
         }
         .onChange(of: tabs.isEmpty) { _, isEmpty in
-            if isEmpty { coordinator.isDeckPresented = false }
+            if isEmpty { navigator.isDeckPresented = false }
         }
     }
 }

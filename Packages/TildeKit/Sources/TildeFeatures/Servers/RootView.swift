@@ -42,7 +42,6 @@ private struct PhoneRoot: View {
 
     var body: some View {
         @Bindable var navigator = navigator
-        @Bindable var coordinator = coordinator
         TabView(selection: $navigator.phoneTab) {
             Tab("Servers", systemImage: "server.rack", value: PhoneTab.servers) {
                 NavigationStack { ServerList() }
@@ -57,12 +56,16 @@ private struct PhoneRoot: View {
                 SettingsRoot()
             }
         }
-        .modifier(LiveSessionsAccessory(isEnabled: coordinator.hasTabs))
-        .fullScreenCover(isPresented: $coordinator.isDeckPresented) {
+        .modifier(LiveSessionsAccessory(isEnabled: !navigator.tabs.isEmpty))
+        .fullScreenCover(isPresented: $navigator.isDeckPresented) {
+            // The deck covers the window, so it hosts the window's sheets and prompts while it is up.
             SessionDeck()
-                .modifier(SessionPromptHost())
+                .modifier(SessionPromptHost(suppressed: navigator.sheet != nil))
+                .modifier(AppSheetHost(isActive: true))
                 .background(TildeColor.bg)
         }
+        .onAppear { navigator.isCompact = true }
+        .onDisappear { navigator.isCompact = false; navigator.isDeckPresented = false }
     }
 }
 
@@ -87,12 +90,13 @@ private struct LiveSessionsPill: View {
     @Environment(AppNavigator.self) private var navigator
 
     var body: some View {
-        let live = coordinator.liveTabs.count
+        let hasTabs = !navigator.tabs.isEmpty
+        let live = navigator.tabs.filter(\.isLive).count
         let selected = navigator.selectedTab
-        Button { if coordinator.hasTabs { coordinator.isDeckPresented = true } } label: {
+        Button { if hasTabs { navigator.isDeckPresented = true } } label: {
             HStack(spacing: 8) {
-                StatusDot(coordinator.hasTabs ? .live : .unknown)
-                Text(coordinator.hasTabs ? "\(live) live" : "No live sessions").tildeMono(12, weight: .semibold, relativeTo: .caption)
+                StatusDot(hasTabs ? .live : .unknown)
+                Text(hasTabs ? "\(live) live" : "No live sessions").tildeMono(12, weight: .semibold, relativeTo: .caption)
                 if let selected {
                     Text("· \(selected.title)").tildeMono(12, relativeTo: .caption).foregroundStyle(TildeColor.text2).lineLimit(1)
                 }
@@ -126,7 +130,7 @@ private struct SplitRoot: View {
                 .toolbar { detailToolbar }
         }
         .navigationSplitViewStyle(.balanced)
-        .onAppear { coordinator.isDeckPresented = false }
+        .onAppear { navigator.isCompact = false; navigator.isDeckPresented = false }
     }
 
     @ToolbarContentBuilder
