@@ -11,6 +11,10 @@ import AppKit
 /// Live sessions stay connected while locked; only the UI is covered (and made untouchable, and the keyboard is
 /// dismissed so hardware keystrokes cannot reach a terminal behind the cover).
 ///
+/// The cover is shown twice on purpose: as a sibling of the content, and in a **separate overlay window above
+/// everything** (`LockOverlayPresenter`), because sheets, full-screen covers, popovers and alerts are presented above
+/// any view in the root hierarchy and would otherwise stay readable while locked.
+///
 /// With a real `AppLock` the gate also feeds it the scene phase (re-lock timeout) and shows the privacy cover
 /// while the app is in the app switcher. It injects the lock into the environment as `\.tildeAppLock`.
 public struct AppLockGate<Content: View>: View {
@@ -18,6 +22,7 @@ public struct AppLockGate<Content: View>: View {
     private let content: Content
     @Environment(\.scenePhase) private var scenePhase
     @State private var hasAutoPrompted = false
+    @State private var presenter: LockOverlayPresenter?
 
     public init(lock: any AppLocking, @ViewBuilder content: () -> Content) {
         self.lock = lock
@@ -36,19 +41,15 @@ public struct AppLockGate<Content: View>: View {
                 .accessibilityHidden(isCovered)
                 .disabled(lock.isLocked)
             if isCovered {
-                LockCover(
-                    isLocked: lock.isLocked,
-                    biometry: concreteLock?.biometry ?? .none,
-                    showsFailure: concreteLock?.lastAttemptFailed ?? false,
-                    isBusy: concreteLock?.isAuthenticating ?? false,
-                    unlock: { Task { _ = await lock.unlock() } }
-                )
-                .transition(.opacity)
+                LockCoverHost(lock: lock)
+                    .transition(.opacity)
             }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             concreteLock?.sceneDidChange(AppLockPhase(phase))
+            syncOverlay()
         }
+        .onChange(of: isCovered, initial: true) { _, _ in syncOverlay() }
         .onChange(of: lock.isLocked, initial: true) { _, locked in
             if locked {
                 hasAutoPrompted = false
@@ -61,6 +62,16 @@ public struct AppLockGate<Content: View>: View {
             hasAutoPrompted = true
             Task { _ = await lock.unlock() }
         }
+        .onDisappear { presenter?.setVisible(false) }
+    }
+
+    /// Shows or removes the overlay window to match the lock state (and picks up scenes that appeared since).
+    private func syncOverlay() {
+        if presenter == nil {
+            let lock = lock
+            presenter = LockOverlayPresenter { AnyView(LockCoverHost(lock: lock).preferredColorScheme(.dark)) }
+        }
+        presenter?.setVisible(isCovered)
     }
 
     private func resignKeyboardFocus() {
@@ -69,6 +80,22 @@ public struct AppLockGate<Content: View>: View {
         #elseif canImport(AppKit)
         NSApp.keyWindow?.makeFirstResponder(nil)
         #endif
+    }
+}
+
+/// Reads the lock's state itself, so the same view works inside the hierarchy and in the overlay window.
+struct LockCoverHost: View {
+    let lock: any AppLocking
+
+    var body: some View {
+        let concrete = lock as? AppLock
+        LockCover(
+            isLocked: lock.isLocked,
+            biometry: concrete?.biometry ?? .none,
+            showsFailure: concrete?.lastAttemptFailed ?? false,
+            isBusy: concrete?.isAuthenticating ?? false,
+            unlock: { Task { _ = await lock.unlock() } }
+        )
     }
 }
 

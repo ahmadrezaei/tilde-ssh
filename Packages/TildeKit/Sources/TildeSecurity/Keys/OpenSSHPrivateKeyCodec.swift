@@ -14,6 +14,9 @@ public enum OpenSSHPrivateKeyCodec {
     private static let magic = Array("openssh-key-v1".utf8) + [0]
     /// ssh-keygen's default is 16 bcrypt rounds.
     public static let defaultKDFRounds: UInt32 = 16
+    /// Keys asking for more bcrypt rounds are rejected: it would freeze the UI for a long time (a hostile file could
+    /// otherwise ask for billions).
+    public static let maxKDFRounds: UInt32 = 1024
 
     // MARK: Decoding
 
@@ -26,6 +29,10 @@ public enum OpenSSHPrivateKeyCodec {
             return try decodeContainer(container, passphrase: passphrase)
         } catch let error as KeyParseError {
             throw error
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch KeyCipherError.cancelled {
+            throw CancellationError()
         } catch let error as KeyCipherError {
             _ = error
             throw KeyParseError.unsupportedFormat("The key could not be decrypted.")
@@ -78,7 +85,7 @@ public enum OpenSSHPrivateKeyCodec {
             var options = SSHWireReader(kdfOptions)
             let salt = try options.readString()
             let rounds = try options.readUInt32()
-            guard rounds >= 1, rounds <= 1 << 16, section.count % cipher.blockSize == 0 else {
+            guard rounds >= 1, rounds <= maxKDFRounds, section.count % cipher.blockSize == 0 else {
                 throw KeyParseError.unsupportedFormat("Unsupported key derivation parameters.")
             }
             var derived = try BcryptPBKDF.derive(passphrase: Array(passphrase.utf8), salt: salt, rounds: rounds,
@@ -157,6 +164,9 @@ public enum OpenSSHPrivateKeyCodec {
     ///   - passphrase: when non-empty, encrypts with `aes256-ctr` + bcrypt-pbkdf (what `ssh-keygen` does by default).
     ///   - rounds: bcrypt rounds for the passphrase KDF.
     public static func encode(_ key: SSHPrivateKey, passphrase: String? = nil, rounds: UInt32 = defaultKDFRounds) throws -> Data {
+        guard rounds >= 1, rounds <= maxKDFRounds else {
+            throw KeyParseError.unsupportedFormat("bcrypt rounds must be between 1 and \(maxKDFRounds).")
+        }
         let publicBlob = Array(try key.publicKeyBlob())
         let encrypting = !(passphrase?.isEmpty ?? true)
         let cipher = OpenSSHCipher.aes256ctr

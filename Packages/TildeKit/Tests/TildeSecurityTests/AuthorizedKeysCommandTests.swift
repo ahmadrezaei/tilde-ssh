@@ -12,7 +12,7 @@ import Testing
     @Test func oneLinerMatchesTheDesign() {
         let line = "ssh-ed25519 AAAAC3 tilde@iphone"
         #expect(AuthorizedKeysCommand.oneLiner(publicKeyLine: line)
-            == "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo 'ssh-ed25519 AAAAC3 tilde@iphone' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
+            == "mkdir -p ~/.ssh && chmod 700 ~/.ssh && printf '%s\\n' 'ssh-ed25519 AAAAC3 tilde@iphone' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
     }
 
     #if os(macOS)

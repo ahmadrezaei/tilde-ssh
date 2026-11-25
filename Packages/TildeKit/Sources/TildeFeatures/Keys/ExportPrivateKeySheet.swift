@@ -13,6 +13,8 @@ struct ExportPrivateKeySheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.tildeServices) private var services
+    @Environment(\.tildeAppLock) private var appLock
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var protectWithPassphrase = true
     @State private var passphrase = ""
@@ -91,16 +93,32 @@ struct ExportPrivateKeySheet: View {
                 contentType: .data,
                 defaultFilename: fileName
             ) { _ in }
-            .onDisappear {
-                exported = nil
-                passphrase = ""
-                confirmation = ""
+            .onDisappear(perform: wipe)
+            // The lock screen lives in its own window above this sheet, but the exported key must not outlive the
+            // lock: drop it and close the sheet the moment the app locks or leaves the foreground.
+            .onChange(of: appLock?.isLocked ?? false) { _, locked in
+                if locked { closeAndWipe() }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .background { closeAndWipe() }
             }
         }
         #if os(macOS)
         .frame(minWidth: 440, minHeight: 380)
         #endif
         .presentationDetents([.medium, .large])
+    }
+
+    private func wipe() {
+        exported = nil
+        passphrase = ""
+        confirmation = ""
+        showFileExporter = false
+    }
+
+    private func closeAndWipe() {
+        wipe()
+        dismiss()
     }
 
     private var canPrepare: Bool {

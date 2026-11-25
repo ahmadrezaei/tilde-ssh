@@ -35,6 +35,8 @@ public struct ImportKeySheet: View {
     @State private var showFileImporter = false
     @State private var suggestedName: String?
     @State private var parseTask: Task<Void, Never>?
+    /// Bumped for every parse attempt; only the newest attempt may publish a result.
+    @State private var parseGeneration = 0
 
     private struct Parsed {
         var info: PublicKeyInfo
@@ -168,6 +170,11 @@ public struct ImportKeySheet: View {
                     .foregroundStyle(TildeColor.text2)
                     .textSelection(.enabled)
                     .accessibilityLabel("Fingerprint \(parsed.info.fingerprintSHA256)")
+                if let bits = parsed.info.bits, bits < 2048 {
+                    Label("This RSA key is only \(bits) bits. Keys under 2048 bits are weak, and many servers refuse them.", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(TildeColor.warn)
+                        .font(.system(size: 14))
+                }
                 if let duplicate {
                     Label("Already imported as “\(duplicate.name)”.", systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(TildeColor.warn)
@@ -212,21 +219,34 @@ public struct ImportKeySheet: View {
         parseTask = Task { await attempt(passphrase: nil) }
     }
 
+    /// Runs through `parseTask`, so a new unlock attempt or an edit to the text cancels the one in flight.
     private func unlock() async {
         guard !passphrase.isEmpty else { return }
-        await attempt(passphrase: passphrase)
+        parseTask?.cancel()
+        let task = Task { await attempt(passphrase: passphrase) }
+        parseTask = task
+        await task.value
     }
 
-    /// Parses off the main actor: decrypting runs bcrypt, which is deliberately slow.
+    /// Parses off the main actor (decrypting runs bcrypt, which is deliberately slow). The parse is cancellable, and a
+    /// result is only used if it still belongs to the current text and is the newest attempt.
     private func attempt(passphrase: String?) async {
+        parseGeneration += 1
+        let generation = parseGeneration
+        let snapshot = text
         isWorking = true
-        defer { isWorking = false }
-        let data = Data(text.utf8)
-        let service = services.keyService
-        let result: Result<(PublicKeyInfo, PrivateKeyMaterial), KeyParseError> = await Task.detached(priority: .userInitiated) {
-            do { return .success(try service.parse(privateKey: data, passphrase: passphrase)) } catch let error as KeyParseError { return .failure(error) } catch { return .failure(.unsupportedFormat("The key could not be read.")) }
-        }.value
-        if Task.isCancelled { return }
+        defer { if generation == parseGeneration { isWorking = false } }
+        let result: Result<(PublicKeyInfo, PrivateKeyMaterial), KeyParseError>
+        do {
+            result = .success(try await CancellableKeyParsing.parse(service: services.keyService, privateKey: Data(snapshot.utf8), passphrase: passphrase))
+        } catch let error as KeyParseError {
+            result = .failure(error)
+        } catch is CancellationError {
+            return
+        } catch {
+            result = .failure(.unsupportedFormat("The key could not be read."))
+        }
+        guard !Task.isCancelled, generation == parseGeneration, snapshot == text else { return }
         switch result {
         case .success(let (info, material)):
             needsPassphrase = false

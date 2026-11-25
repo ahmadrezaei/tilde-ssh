@@ -9,7 +9,7 @@ import TildeCore
 ///   ref the engine should ask the user (`PromptReason.secretNotSynced`); for a key ref it shows "waiting for
 ///   iCloud Keychain".
 /// - `.passwordPrompt`, and `.password` without a `passwordSecretID` (nothing was saved), throw
-///   `secretUnavailable(DefaultCredentialResolver.unsavedPasswordRef)`, a sentinel whose id is the nil UUID.
+///   `secretUnavailable(DefaultCredentialResolver.unsavedPasswordRef)`, a sentinel (`SecretRef.isUnsavedSentinel`) whose id is the nil UUID.
 ///   The engine should ask the user (`PromptReason.notSaved`) and never call the resolver for that again.
 /// - `.key` returns the unencrypted `openssh-key-v1` bytes. A key stored passphrase-protected (v1.1 "keep
 ///   encrypted" mode) is unlocked with its `kpp:<uuid>` secret.
@@ -17,9 +17,9 @@ import TildeCore
 /// `keyID` is the key's `SSHKeyRecord.privateSecretID` (the id of the `key:<uuid>` Keychain item).
 public struct DefaultCredentialResolver: CredentialResolver {
     /// Sentinel ref meaning "no password was ever saved for this server".
-    public static let unsavedPasswordRef = SecretRef(kind: .password, id: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+    public static let unsavedPasswordRef = SecretRef(kind: .password, id: SecretRef.sentinelID)
     /// Sentinel ref meaning "the server has no key assigned".
-    public static let unassignedKeyRef = SecretRef(kind: .privateKey, id: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+    public static let unassignedKeyRef = SecretRef(kind: .privateKey, id: SecretRef.sentinelID)
 
     private let secrets: any SecretStore
 

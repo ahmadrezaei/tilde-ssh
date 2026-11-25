@@ -1,5 +1,28 @@
+/* $OpenBSD: bcrypt_pbkdf.c,v 1.4 2013/07/29 00:55:53 tedu Exp $ */
+/*
+ * Copyright (c) 2013 Ted Unangst <tedu@openbsd.org>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *
+ * Tilde modifications: symbols renamed citadel_* -> tilde_*, the SHA-512
+ * function is supplied by the caller, and a cancellation flag is polled
+ * between rounds (tilde_bcrypt_pbkdf_cancellable).
+ */
+
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifndef __APPLE__
 #include <sys/random.h>
@@ -86,9 +109,34 @@ bcrypt_hash(uint8_t *sha2pass, uint8_t *sha2salt, uint8_t *out)
     explicit_bzero(&state, sizeof(state));
 }
 
+struct tilde_cancel {
+    int requested;
+};
+
+tilde_cancel_t *tilde_cancel_create(void) {
+    return calloc(1, sizeof(struct tilde_cancel));
+}
+
+void tilde_cancel_request(tilde_cancel_t *cancel) {
+    if (cancel) __atomic_store_n(&cancel->requested, 1, __ATOMIC_SEQ_CST);
+}
+
+void tilde_cancel_destroy(tilde_cancel_t *cancel) {
+    free(cancel);
+}
+
+#define TILDE_IS_CANCELLED(c) ((c) != NULL && __atomic_load_n(&(c)->requested, __ATOMIC_SEQ_CST) != 0)
+
 int
 tilde_bcrypt_pbkdf(const unsigned char *pass, size_t passlen, const uint8_t *salt, size_t saltlen,
-                     uint8_t *key, size_t keylen, unsigned int rounds)
+                   uint8_t *key, size_t keylen, unsigned int rounds)
+{
+    return tilde_bcrypt_pbkdf_cancellable(pass, passlen, salt, saltlen, key, keylen, rounds, NULL);
+}
+
+int
+tilde_bcrypt_pbkdf_cancellable(const unsigned char *pass, size_t passlen, const uint8_t *salt, size_t saltlen,
+                               uint8_t *key, size_t keylen, unsigned int rounds, tilde_cancel_t *cancel)
 {
     uint8_t sha2pass[SHA512_DIGEST_LENGTH];
     uint8_t sha2salt[SHA512_DIGEST_LENGTH];
@@ -129,6 +177,13 @@ tilde_bcrypt_pbkdf(const unsigned char *pass, size_t passlen, const uint8_t *sal
         memcpy(out, tmpout, sizeof(out));
         
         for (i = 1; i < rounds; i++) {
+            if (TILDE_IS_CANCELLED(cancel)) {
+                free(countsalt);
+                explicit_bzero(out, sizeof(out));
+                explicit_bzero(tmpout, sizeof(tmpout));
+                memset(key, 0, origkeylen);
+                return -2;
+            }
             /* subsequent rounds, salt is previous output */
             tilde_crypto_hash_sha512(sha2salt, tmpout, sizeof(tmpout));
             bcrypt_hash(sha2pass, sha2salt, tmpout);

@@ -15,4 +15,14 @@ void tilde_set_crypto_hash_sha512(tilde_sha512_fn hash_fun);
 int tilde_bcrypt_pbkdf(const unsigned char *pass, size_t passlen, const uint8_t *salt, size_t saltlen,
                        uint8_t *key, size_t keylen, unsigned int rounds);
 
+/// A cancellation flag that another thread can raise while a derivation runs.
+typedef struct tilde_cancel tilde_cancel_t;
+tilde_cancel_t *tilde_cancel_create(void);
+void tilde_cancel_request(tilde_cancel_t *cancel);
+void tilde_cancel_destroy(tilde_cancel_t *cancel);
+
+/// Like `tilde_bcrypt_pbkdf`, but polls `cancel` between rounds. Returns -2 if cancelled (key is zeroed).
+int tilde_bcrypt_pbkdf_cancellable(const unsigned char *pass, size_t passlen, const uint8_t *salt, size_t saltlen,
+                                   uint8_t *key, size_t keylen, unsigned int rounds, tilde_cancel_t *cancel);
+
 #endif

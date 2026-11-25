@@ -10,7 +10,7 @@ public enum AuthorizedKeysCommand {
     /// One line for the user to paste into a shell (`ssh-copy-id` style).
     public static func oneLiner(publicKeyLine: String) -> String {
         let line = shellQuote(publicKeyLine)
-        return "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo \(line) >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+        return "mkdir -p ~/.ssh && chmod 700 ~/.ssh && printf '%s\\n' \(line) >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
     }
 
     /// Printed by `installCommand` when it appended the key.
@@ -26,7 +26,7 @@ public enum AuthorizedKeysCommand {
         let script = """
         umask 077; mkdir -p ~/.ssh && touch ~/.ssh/authorized_keys && chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys || exit 1; \
         if grep -qxF \(line) ~/.ssh/authorized_keys; then echo \(alreadyInstalledMarker); \
-        else if [ -n "$(tail -c1 ~/.ssh/authorized_keys)" ]; then echo >> ~/.ssh/authorized_keys; fi; \
+        else if [ -n "$(tail -c1 ~/.ssh/authorized_keys)" ]; then printf '\\n' >> ~/.ssh/authorized_keys; fi; \
         printf '%s\\n' \(line) >> ~/.ssh/authorized_keys && echo \(installedMarker); fi
         """
         return "sh -c " + shellQuote(script)

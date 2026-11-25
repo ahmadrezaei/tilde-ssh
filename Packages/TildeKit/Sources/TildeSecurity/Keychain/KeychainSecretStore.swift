@@ -29,15 +29,28 @@ public struct KeychainSecretStore: SecretStore {
     private let accessGroup: String?
     private let useDataProtectionKeychain: Bool
 
+    /// `true` when this process can use the data-protection keychain. Always `true` on iOS. On macOS it needs the
+    /// `keychain-access-groups` entitlement, which unsigned and ad-hoc builds lack; they use the file keychain instead
+    /// (works, but cannot sync through iCloud).
+    public static var dataProtectionKeychainIsAvailable: Bool {
+        #if os(macOS)
+        guard let task = SecTaskCreateFromSelf(nil) else { return false }
+        return SecTaskCopyValueForEntitlement(task, "keychain-access-groups" as CFString, nil) != nil
+        #else
+        return true
+        #endif
+    }
+
     /// - Parameters:
     ///   - service: Keychain service name; override only in tests.
     ///   - accessGroup: explicit access group, or `nil` for none. Defaults to the Info.plist value (if signed).
-    ///   - useDataProtectionKeychain: macOS only. Pass `false` for unsigned test binaries, which lack the
-    ///     entitlement the data-protection keychain needs (it also cannot sync).
+    ///   - useDataProtectionKeychain: macOS only. Defaults to whether the process has the entitlement the
+    ///     data-protection keychain needs, so unsigned builds fall back to the file keychain instead of failing with
+    ///     `errSecMissingEntitlement`.
     public init(
         service: String = KeychainSecretStore.defaultService,
         accessGroup: String? = KeychainSecretStore.accessGroupFromInfoPlist(),
-        useDataProtectionKeychain: Bool = true
+        useDataProtectionKeychain: Bool = KeychainSecretStore.dataProtectionKeychainIsAvailable
     ) {
         self.service = service
         self.accessGroup = accessGroup
@@ -65,6 +78,8 @@ public struct KeychainSecretStore: SecretStore {
     // MARK: SecretStore
 
     public func write(_ data: Data, for ref: SecretRef, label: String, synchronizable: Bool) throws {
+        // The nil UUID is reserved for "nothing was saved" (see `SecretRef.isUnsavedSentinel`).
+        guard !ref.isUnsavedSentinel else { throw KeychainError(status: errSecParam) }
         let accessible = synchronizable ? kSecAttrAccessibleAfterFirstUnlock : kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         let query = itemQuery(for: ref, synchronizable: synchronizable)
         let updates: [CFString: Any] = [
@@ -78,6 +93,10 @@ public struct KeychainSecretStore: SecretStore {
             var attributes = query
             attributes.merge(updates) { _, new in new }
             status = SecItemAdd(attributes as CFDictionary, nil)
+            if status == errSecDuplicateItem {
+                // Someone (another device's sync, a concurrent write) added it between our update and add.
+                status = SecItemUpdate(query as CFDictionary, updates as CFDictionary)
+            }
         }
         guard status == errSecSuccess else { throw KeychainError(status: status) }
 

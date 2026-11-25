@@ -2,10 +2,12 @@ import CommonCrypto
 import CryptoKit
 import CTildeBcrypt
 import Foundation
+import TildeCore
 
 /// Block-cipher modes used to protect private keys at rest (`openssh-key-v1`, legacy PEM, PKCS#8).
 enum KeyCipherError: Error {
     case invalidParameters
+    case cancelled
     case failed(Int32)
 }
 
@@ -46,6 +48,12 @@ enum OpenSSHCipher: String {
         }
         return try AESCrypto.cbc(encrypt: encrypt, key: key, iv: iv, data: data)
     }
+}
+
+/// Calls `body` with the array's bytes (or `nil`), keeping the pointer inside the closure.
+private func withOptionalBytes<R>(_ bytes: [UInt8]?, _ body: (UnsafeRawPointer?) -> R) -> R {
+    guard let bytes else { return body(nil) }
+    return bytes.withUnsafeBytes { body($0.baseAddress) }
 }
 
 enum AESCrypto {
@@ -93,21 +101,67 @@ enum AESCrypto {
         if data.isEmpty { return [] }
         var output = [UInt8](repeating: 0, count: data.count + blockSize)
         var produced = 0
-        let status = key.withUnsafeBytes { keyBytes in
-            data.withUnsafeBytes { dataBytes in
-                output.withUnsafeMutableBytes { outBytes in
-                    CCCrypt(
-                        CCOperation(encrypt ? kCCEncrypt : kCCDecrypt), algorithm, options,
-                        keyBytes.baseAddress, key.count,
-                        iv?.withUnsafeBytes { $0.baseAddress },
-                        dataBytes.baseAddress, data.count,
-                        outBytes.baseAddress, outBytes.count, &produced
-                    )
+        let status = withOptionalBytes(iv) { ivPointer in
+            key.withUnsafeBytes { keyBytes in
+                data.withUnsafeBytes { dataBytes in
+                    output.withUnsafeMutableBytes { outBytes in
+                        CCCrypt(
+                            CCOperation(encrypt ? kCCEncrypt : kCCDecrypt), algorithm, options,
+                            keyBytes.baseAddress, key.count,
+                            ivPointer,
+                            dataBytes.baseAddress, data.count,
+                            outBytes.baseAddress, outBytes.count, &produced
+                        )
+                    }
                 }
             }
         }
         guard status == kCCSuccess else { throw KeyCipherError.failed(status) }
         return Array(output[0..<produced])
+    }
+}
+
+/// Lets the caller abandon a slow passphrase check (bcrypt-pbkdf with many rounds) from another task.
+///
+/// `CancellableKeyParsing.parse` installs one for the duration of a parse; `BcryptPBKDF` polls it between rounds.
+final class KeyParseCancellation: @unchecked Sendable {
+    /// The token for the parse running on the current task, if any.
+    @TaskLocal static var current: KeyParseCancellation?
+
+    fileprivate let flag: OpaquePointer
+
+    init() {
+        guard let flag = tilde_cancel_create() else { fatalError("Out of memory") }
+        self.flag = flag
+    }
+
+    deinit { tilde_cancel_destroy(flag) }
+
+    func cancel() { tilde_cancel_request(flag) }
+}
+
+/// Parsing that can be cancelled while it is deriving a key. Cancelling the surrounding task makes the parse throw
+/// `CancellationError` within one bcrypt round instead of running to the end.
+public enum CancellableKeyParsing {
+    /// Runs `service.parse(privateKey:passphrase:)` off the caller's actor, honouring task cancellation.
+    public static func parse(
+        service: any KeyService, privateKey: Data, passphrase: String?
+    ) async throws -> (PublicKeyInfo, PrivateKeyMaterial) {
+        let token = KeyParseCancellation()
+        return try await withTaskCancellationHandler {
+            try await run(service: service, privateKey: privateKey, passphrase: passphrase, token: token)
+        } onCancel: {
+            token.cancel()
+        }
+    }
+
+    @concurrent
+    private static func run(
+        service: any KeyService, privateKey: Data, passphrase: String?, token: KeyParseCancellation
+    ) async throws -> (PublicKeyInfo, PrivateKeyMaterial) {
+        try KeyParseCancellation.$current.withValue(token) {
+            try service.parse(privateKey: privateKey, passphrase: passphrase)
+        }
     }
 }
 
@@ -127,15 +181,17 @@ enum BcryptPBKDF {
         guard isInitialised, !passphrase.isEmpty, !salt.isEmpty, rounds > 0, outputLength > 0 else {
             throw KeyCipherError.invalidParameters
         }
+        let cancel = KeyParseCancellation.current?.flag
         var output = [UInt8](repeating: 0, count: outputLength)
         let result = passphrase.withUnsafeBufferPointer { pass in
             salt.withUnsafeBufferPointer { saltBytes in
                 output.withUnsafeMutableBufferPointer { out in
-                    tilde_bcrypt_pbkdf(pass.baseAddress, pass.count, saltBytes.baseAddress, saltBytes.count,
-                                       out.baseAddress, out.count, rounds)
+                    tilde_bcrypt_pbkdf_cancellable(pass.baseAddress, pass.count, saltBytes.baseAddress, saltBytes.count,
+                                                   out.baseAddress, out.count, rounds, cancel)
                 }
             }
         }
+        if result == -2 { throw KeyCipherError.cancelled }
         guard result == 0 else { throw KeyCipherError.invalidParameters }
         return output
     }
