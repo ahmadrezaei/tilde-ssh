@@ -127,26 +127,9 @@ private struct SplitRoot: View {
                 .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 460)
         } detail: {
             SessionContainer()
-                .toolbar { detailToolbar }
         }
         .navigationSplitViewStyle(.balanced)
         .onAppear { navigator.isCompact = false; navigator.isDeckPresented = false }
-    }
-
-    @ToolbarContentBuilder
-    private var detailToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
-            if let tab = navigator.selectedTab, tab.isConnected {
-                LatencyLabel(milliseconds: tab.latencyMilliseconds, kind: tab.latencyMilliseconds == nil ? .live : nil)
-                    .padding(.horizontal, 8)
-            }
-            Button { navigator.present(.palette(.snippets)) } label: { Image(systemName: "bolt") }
-                .accessibilityLabel("Snippets")
-                .help("Snippets (⇧⌘S)")
-            Button { navigator.present(.palette(.newTab)) } label: { Image(systemName: "plus") }
-                .accessibilityLabel("New tab")
-                .help("New tab (⌘T)")
-        }
     }
 }
 

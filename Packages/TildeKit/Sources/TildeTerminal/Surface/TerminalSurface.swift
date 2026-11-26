@@ -37,6 +37,7 @@ public struct TerminalSurface: View {
     public let onTitleChange: ((String) -> Void)?
 
     @State private var ownController = TerminalController()
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     public init(
         io: any TerminalIO,
@@ -85,13 +86,25 @@ public struct TerminalSurface: View {
 
     private var activeController: TerminalController { controller ?? ownController }
 
+    /// The inset between the window edge and the character grid. The emulator view is laid out inside it, so SwiftTerm
+    /// derives columns and rows (and mouse / selection coordinates) from the smaller frame: nothing is clipped.
+    /// `horizontalSizeClass` is nil on the Mac, which counts as regular.
+    private var horizontalInset: CGFloat {
+        sizeClass == .compact ? TildeSpacing.terminalInsetHorizontalCompact : TildeSpacing.terminalInsetHorizontal
+    }
+
+    private var verticalInset: CGFloat {
+        sizeClass == .compact ? TildeSpacing.terminalInsetVerticalCompact : TildeSpacing.terminalInsetVertical
+    }
+
     public var body: some View {
         let controller = activeController
         let background = Color(hex: theme.background)
         ZStack {
             background
             TerminalRepresentable(io: io, inputs: inputs(controller))
-                .padding(TildeSpacing.terminalPadding)
+                .padding(.horizontal, horizontalInset)
+                .padding(.vertical, verticalInset)
             if EnvTone(environment) != .none {
                 EnvironmentEdge(color: EnvTone(environment).color)
             }

@@ -4,6 +4,9 @@ import TildeDesign
 
 /// iPad/Mac detail column: the tab strip over the stack of terminals. Reads the window's tabs from the
 /// `SessionCoordinator` through the `AppNavigator`, so `SessionContainer()` works anywhere inside a `WindowHost`.
+///
+/// It also owns the window chrome that belongs to the session: the title (server name) and subtitle (`user@host`), and
+/// the toolbar with the connection readout, Snippets and New Tab.
 public struct SessionContainer: View {
     @Environment(SessionCoordinator.self) private var coordinator
     @Environment(AppNavigator.self) private var navigator
@@ -28,83 +31,72 @@ public struct SessionContainer: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TildeColor.bg.ignoresSafeArea())
+        .navigationTitle(selected?.title ?? "Tilde")
+        .navigationSubtitle(selected.map { Self.subtitle(for: $0.server.target) } ?? "")
+        #if !os(macOS)
+        .navigationBarTitleDisplayMode(.inline)
+        // The container paints the same background under the bar, so the bar reads as one surface with the strip below.
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        #endif
+        .toolbar { sessionToolbar(selected: selected) }
     }
-}
 
-/// The in-window tab strip (design sections 3.3 and 3.4): env stripe on top of every tab, status dot, title,
-/// close button, and a `+` button.
-struct TabStrip: View {
-    let tabs: [SessionTab]
-    let selectedID: UUID?
-    @Environment(SessionCoordinator.self) private var coordinator
-    @Environment(AppNavigator.self) private var navigator
+    /// `deploy@10.0.1.12`, with `:port` only when it is not 22.
+    static func subtitle(for target: ConnectionTarget) -> String {
+        let port = target.port == 22 ? "" : ":\(target.port)"
+        return "\(target.username)@\(target.host)\(port)"
+    }
 
-    var body: some View {
-        HStack(spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 1) {
-                    ForEach(Array(tabs.enumerated()), id: \.element.id) { index, tab in
-                        TabStripItem(tab: tab, index: index + 1, isSelected: tab.id == selectedID)
-                    }
-                }
+    // MARK: Toolbar
+
+    /// Status first, then Snippets and New Tab as two buttons of their own. A fixed `ToolbarSpacer` between items keeps
+    /// the glass capsules apart; without one, neighbouring items merge into a single crowded group.
+    @ToolbarContentBuilder
+    private func sessionToolbar(selected: SessionTab?) -> some ToolbarContent {
+        if let tab = selected {
+            ToolbarItem(placement: .primaryAction) {
+                SessionStatusReadout(tab: tab)
             }
-            Button { navigator.present(.palette(.newTab)) } label: {
-                Image(systemName: "plus").font(.system(size: 13, weight: .semibold)).frame(width: 36, height: 34)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(TildeColor.text2)
-            .accessibilityLabel("New tab")
+            .sharedBackgroundVisibility(.hidden)
+            ToolbarSpacer(.fixed, placement: .primaryAction)
         }
-        .frame(height: 34)
-        .background(TildeColor.surface)
-        .overlay(alignment: .bottom) { Rectangle().fill(TildeColor.border).frame(height: TildeSpacing.hairline) }
+        ToolbarItem(placement: .primaryAction) {
+            Button { navigator.present(.palette(.snippets)) } label: { Image(systemName: "bolt") }
+                .accessibilityLabel("Snippets")
+                .help("Snippets (⇧⌘S)")
+        }
+        ToolbarSpacer(.fixed, placement: .primaryAction)
+        ToolbarItem(placement: .primaryAction) {
+            Button { navigator.present(.palette(.newTab)) } label: { Image(systemName: "plus") }
+                .accessibilityLabel("New tab")
+                .help("New tab (⌘T)")
+        }
     }
 }
 
-private struct TabStripItem: View {
+/// `● 23 ms`, or what the session is doing instead of a latency: connecting, reconnecting, disconnected.
+struct SessionStatusReadout: View {
     let tab: SessionTab
-    let index: Int
-    let isSelected: Bool
-    @Environment(SessionCoordinator.self) private var coordinator
-    @Environment(AppNavigator.self) private var navigator
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        VStack(spacing: 0) {
-            EnvStripe(tab.tone)
-            HStack(spacing: 6) {
-                StatusDot(tab.isLive && tab.isConnected ? .live : tab.statusKind)
-                Text(tab.title)
-                    .tildeMono(12, weight: isSelected ? .semibold : .regular, relativeTo: .footnote)
-                    .lineLimit(1)
-                Button { coordinator.close(tab) } label: {
-                    Image(systemName: "xmark").font(.system(size: 9, weight: .bold)).frame(width: 18, height: 18)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(TildeColor.text3)
-                .accessibilityLabel("Close \(tab.title)")
+        switch tab.state {
+        case .idle, .connecting:
+            StatusReadout(.busy, text: "Connecting…")
+        case .reconnecting:
+            StatusReadout(.slow, text: "Reconnecting…")
+        case .disconnected(let reason):
+            if case .error = reason {
+                StatusReadout(.bad, text: "Connection failed")
+            } else {
+                StatusReadout(.idle, text: "Disconnected")
             }
-            .padding(.horizontal, 10)
-            .frame(maxHeight: .infinity)
+        case .connected:
+            if let ms = tab.latencyMilliseconds {
+                StatusReadout(StatusReadout.Quality(latencyMilliseconds: ms), text: "\(ms) ms", accessibilityText: "Latency \(ms) milliseconds")
+            } else {
+                StatusReadout(.good, text: "Connected")
+            }
         }
-        .frame(minWidth: 110, maxWidth: 220)
-        .foregroundStyle(isSelected ? TildeColor.text : TildeColor.text2)
-        .background(isSelected ? TildeColor.bg : TildeColor.surface2.opacity(0.6))
-        .overlay(alignment: .bottom) {
-            if isSelected { Rectangle().fill(TildeColor.accent).frame(height: 2) }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { coordinator.select(tab) }
-        .contextMenu {
-            SessionMenuItems(tab: tab)
-            Button {
-                let id = coordinator.moveToOwnWindow(tab)
-                openWindow(id: "session", value: SessionWindowValue(sessionID: id))
-            } label: { Label("Open in New Window", systemImage: "macwindow.badge.plus") }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Tab \(index), \(tab.title)")
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
