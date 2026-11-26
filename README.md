@@ -58,15 +58,15 @@ Tilde is an **SSH client** and **terminal** built for the people who get paged: 
 
 <img src="design/screenshots/ipad-terminal.png" alt="Tilde on iPad: sidebar with servers, a terminal tab and the SSH key bar above the keyboard" width="720">
 
-**Mac** (sidebar, tab strip and a terminal per tab):
+**Mac** (server sidebar, tabs and a status bar under each session):
 
-<img src="design/screenshots/mac-window.png" alt="Tilde on Mac: sidebar with servers and two terminal tabs" width="720">
+<img src="design/screenshots/mac-window.png" alt="Tilde on Mac: the server sidebar, terminal tabs and the status bar" width="720">
 
 The screenshots use demo servers (`prod-api-01`, `db-primary` and so on) and a mock session, not real hosts. Interactive mockups of every screen are in [`design/mockups.html`](design/mockups.html); open the file in a browser.
 
 ## Install
 
-**Mac (direct download):** grab [Tilde-1.0.0-macOS.zip](https://github.com/ahmadrezaei/tilde-ssh/releases/latest) from the latest release, unzip it and drag Tilde to Applications. It's signed with a Developer ID and notarized by Apple. Requires macOS 26 or later.
+**Mac (direct download):** grab [Tilde-1.1.0-macOS.zip](https://github.com/ahmadrezaei/tilde-ssh/releases/latest) from the latest release, unzip it and drag Tilde to Applications. It's signed with a Developer ID and notarized by Apple. Requires macOS 26 or later.
 
 **App Store:** _link coming soon_ (`https://apps.apple.com/app/id0000000000`). Free, no in-app purchases.
 

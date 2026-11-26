@@ -1,8 +1,8 @@
-First release.
+A new Mac design, and smoother sessions everywhere.
 
-• Servers with groups, tags, environments and Quick Connect
-• Ed25519 key generation and Ed25519 / ECDSA / RSA key import
-• Host key verification with a hard stop when a fingerprint changes
-• SSH keyboard for iPhone and iPad, tabs and menus on iPad and Mac
-• iCloud sync for servers; passwords and keys stay in iCloud Keychain
-• Jump host, auto-reconnect, tmux attach, Face ID / Touch ID app lock
+• Mac: a compact sidebar, a start page with recent servers, flat tabs and a status bar with latency, cipher and size
+• Mac: the host-key check appears inside its own tab, so other sessions keep running
+• Mac: a native server editor, a real Settings window, and Keys and Snippets windows
+• Typing exit closes the tab and takes you back to your servers
+• The terminal is ready to type into as soon as it connects
+• Cleaner sheets, tabs and terminal padding on iPad and Mac

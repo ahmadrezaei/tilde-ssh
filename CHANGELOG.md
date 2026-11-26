@@ -4,6 +4,33 @@ All notable changes to Tilde are documented here. The format follows [Keep a Cha
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-26
+
+A new Mac design, plus session fixes on every platform.
+
+### Added
+
+- Mac: a source-list sidebar with one compact row per server, collapsible groups, tag filters, favorites starred and sorted first, and Quick Connect in the sidebar search (⌘L).
+- Mac: a start page when no session is open, with Quick Connect, recent servers, environment health and a "shell exited" banner with Reopen (⇧⌘T).
+- Mac: a status bar under each session with environment, address, key, latency, cipher and terminal size.
+- Mac: the unknown-host prompt appears inside its own tab, so other sessions keep running. Trusting stays click-only.
+- Mac: a native server editor with pop-up menus, a tag field, an environment-variables table, Test Connection and a copyable `ssh` command line.
+- Mac: a Settings window with General, Terminal, Security, Sync and Known Hosts panes; Known Hosts is a sortable table.
+- Mac: Keys (⌥⌘K) and Snippets (⌥⌘S) open in their own windows; ⌃⌘S toggles the sidebar.
+
+### Changed
+
+- Typing `exit` (or `logout`, Ctrl-D) closes the session's tab and returns to the server list.
+- The terminal takes keyboard focus as soon as a session connects and on every tab switch.
+- iPad and Mac: opening a session hides the sidebar; it comes back when the last tab closes.
+- Mac: flat full-width tabs with an environment stripe on top, a red tint on PROD and ⌘-number hints; the PROD edge stripe beside the terminal is gone.
+- iPad and Mac: every sheet uses one padded layout with proper labels, the toolbar buttons are spaced apart, and the terminal has padding.
+
+### Fixed
+
+- Mac: typed keys can no longer reach a hidden tab's shell when focus is handed back after a sheet closes.
+- Mac: a crash when a session opened from the sidebar or the start page.
+
 ## [1.0.0] - 2026-11-26
 
 First release.
