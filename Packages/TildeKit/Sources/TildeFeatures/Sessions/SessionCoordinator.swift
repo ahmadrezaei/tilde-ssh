@@ -263,6 +263,7 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         return await withCheckedContinuation { (continuation: CheckedContinuation<HostKeyDecision, Never>) in
             let request = HostKeyRequest(challenge: challenge, tabID: tabID, windowID: tab?.windowID, continuation: continuation)
             hostKeyQueue.append(request)
+            request.deadline = request.askedAt.addingTimeInterval(hostKeyTimeout.timeInterval)
             // An unknown host never auto-trusts: after 120 s the handshake gives up.
             request.timeoutTask = Task { [weak self, weak request] in
                 try? await Task.sleep(for: self?.hostKeyTimeout ?? Self.defaultHostKeyTimeout)

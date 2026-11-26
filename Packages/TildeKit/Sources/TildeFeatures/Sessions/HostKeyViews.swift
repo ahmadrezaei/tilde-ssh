@@ -107,6 +107,81 @@ struct UnknownHostSheet: View {
     }
 }
 
+#if os(macOS)
+/// The Mac's unknown-host prompt for a tab: a card over that tab's dimmed terminal instead of a window sheet, so the
+/// other tabs stay usable while the fingerprint is checked. It carries the same three answers as `UnknownHostSheet`
+/// and reuses `UnknownHostAction`, so the same rules apply: Trust & Connect is click-only (no Return), Cancel is
+/// bound to Esc, and nothing auto-trusts: when the time runs out the coordinator rejects.
+struct InTabHostKeyCard: View {
+    let request: HostKeyRequest
+    let onDecision: (HostKeyDecision) -> Void
+
+    var body: some View {
+        let challenge = request.challenge
+        let key = challenge.presented
+        VStack(alignment: .leading, spacing: TildeSpacing.m) {
+            HStack(alignment: .top, spacing: TildeSpacing.m) {
+                Image(systemName: "checkmark.shield")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(TildeColor.warn)
+                    .frame(width: 34, height: 34)
+                    .background(TildeColor.warn.opacity(0.16), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Verify \(challenge.serverName ?? challenge.endpoint.host)'s host key")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(TildeColor.text)
+                        .accessibilityAddTraits(.isHeader)
+                    Text("First connection to \(HostKeyFormat.endpointLabel(challenge.endpoint)). Only this tab is waiting; the others keep running.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(TildeColor.text2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            FingerprintBlock {
+                FingerprintRow(label: "Fingerprint", algorithm: HostKeyFormat.label(key.algorithm),
+                               fingerprint: key.fingerprintSHA256, tint: TildeColor.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Compare with").tildeSectionHeader()
+                Text("ssh-keygen -lf /etc/ssh/\(HostKeyFormat.serverKeyFile(key.algorithm))")
+                    .tildeMono(12, relativeTo: .caption)
+                    .foregroundStyle(TildeColor.text2)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: TildeSpacing.s) {
+                countdown
+                Spacer(minLength: TildeSpacing.m)
+                ForEach(UnknownHostAction.allCases, id: \.self) { action in
+                    TildeActionButton(action.title, role: action.role) { onDecision(action.decision) }
+                }
+            }
+            .padding(.top, TildeSpacing.xs)
+        }
+        .padding(TildeSpacing.l)
+        .frame(maxWidth: 560)
+        .background(TildeColor.surface2, in: RoundedRectangle(cornerRadius: TildeRadius.sheet, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: TildeRadius.sheet, style: .continuous).stroke(TildeColor.border, lineWidth: 1))
+        .shadow(color: .black.opacity(0.45), radius: 24, y: 8)
+        .padding(TildeSpacing.l)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var countdown: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let deadline = request.deadline ?? request.askedAt.addingTimeInterval(SessionCoordinator.defaultHostKeyTimeout.timeInterval)
+            Text("Waiting · \(HostKeyCountdown.text(remaining: deadline.timeIntervalSince(context.date))) left")
+                .font(.system(size: 11))
+                .foregroundStyle(TildeColor.text3)
+        }
+    }
+}
+#endif
+
 // MARK: - Changed key takeover
 
 /// The scariest screen in the app (design section 4.6): a full-window danger takeover that cannot be swiped

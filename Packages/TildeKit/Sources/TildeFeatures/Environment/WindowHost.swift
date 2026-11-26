@@ -182,7 +182,8 @@ struct SessionPromptHost: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        let hostKey = suppressed ? nil : coordinator.pendingHostKey(in: navigator.windowID)
+        // On the Mac an unknown host asked by a tab is shown inside that tab (`SessionScreen`), not here.
+        let hostKey = suppressed ? nil : coordinator.pendingWindowHostKey(in: navigator.windowID)
         content
             .overlay {
                 if let hostKey, hostKey.isChangedKey {

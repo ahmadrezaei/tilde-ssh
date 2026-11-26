@@ -2,7 +2,7 @@ import SwiftUI
 import TildeCore
 import TildeDesign
 
-/// The in-window tab strip (design sections 3.3 and 3.4): rounded tabs with an environment dot, the server name in
+/// The in-window tab strip. On iPad (design sections 3.3 and 3.4): rounded tabs with an environment dot, the server name in
 /// mono, a close button (on hover on the Mac, always on iPad), an accent edge under the selected tab, and a `+` after
 /// the last one. Tabs share the width equally between a minimum and a maximum; past the minimum the strip scrolls and
 /// keeps the selected tab in view.
@@ -45,6 +45,15 @@ struct TabStrip: View {
     }
 
     var body: some View {
+        #if os(macOS)
+        MacTabStrip(tabs: tabs, selectedID: selectedID)
+        #else
+        paddedStrip
+        #endif
+    }
+
+    /// The iPad strip: rounded tabs with a `+` after the last one.
+    private var paddedStrip: some View {
         GeometryReader { proxy in
             let count = max(tabs.count, 1)
             let area = max(proxy.size.width - 2 * Metrics.edge - Metrics.newTabSize - Metrics.gap, Metrics.minTabWidth)
