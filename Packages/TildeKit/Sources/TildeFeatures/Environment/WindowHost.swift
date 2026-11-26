@@ -58,7 +58,7 @@ private struct WindowHostBody<Content: View>: View {
     var body: some View {
         @Bindable var navigator = navigator
         content
-            .modifier(SessionPromptHost(suppressed: navigator.sheet != nil || navigator.isDeckPresented))
+            .modifier(SessionPromptHost(suppressed: navigator.isShowingSheet || navigator.isDeckPresented))
             .modifier(AppSheetHost(isActive: !navigator.isDeckPresented))
             .windowCommandActions(windowActions)
             .sessionCommandActions(sessionActions)
@@ -116,10 +116,8 @@ private struct WindowHostBody<Content: View>: View {
         actions.themes = TerminalTheme.builtIn.map { ThemeChoice(id: $0.id, name: $0.name) }
         actions.selectedThemeID = terminalSettings.theme.id
         actions.selectTheme = { terminalSettings.themeID = $0 }
-        #if !os(macOS)
-        // On the Mac the system's own sidebar toggle handles this; on iPad the split view column is ours to flip.
+        // iPad and Mac: the split view column is ours to flip (⌃⌘S), which also keeps `columnVisibility` the one truth.
         if !navigator.isCompact { actions.toggleSidebar = { navigator.toggleSidebar() } }
-        #endif
         actions.showKeys = { navigator.present(.keys) }
         actions.showSnippets = { navigator.present(.snippets) }
         if let lockNow { actions.lockNow = { lockNow() } }
@@ -230,12 +228,28 @@ struct AppSheetHost: ViewModifier {
 
     func body(content: Content) -> some View {
         @Bindable var navigator = navigator
+        #if os(macOS)
+        // Keys, Snippets and Settings are windows on the Mac: the router opens them and the binding never shows them.
+        content
+            .sheet(item: Binding(
+                get: { isActive && navigator.isShowingSheet ? navigator.sheet : nil },
+                set: { newValue in
+                    // A dismissal writes `nil`; it must not wipe a value the router has not handed over yet.
+                    if newValue == nil, navigator.sheet != nil, !navigator.isShowingSheet { return }
+                    navigator.sheet = newValue
+                }
+            )) { sheet in
+                AppSheetView(sheet: sheet)
+            }
+            .modifier(MacUtilityWindowRouter())
+        #else
         content.sheet(item: Binding(
             get: { isActive ? navigator.sheet : nil },
             set: { navigator.sheet = $0 }
         )) { sheet in
             AppSheetView(sheet: sheet)
         }
+        #endif
     }
 }
 

@@ -6,11 +6,14 @@ import TildeTerminal
 /// (it contributes rows). Reads and writes `TerminalSettings` (pass your own instance, or use the shared one).
 public struct AppearanceSettingsSection: View {
     @Bindable private var settings: TerminalSettings
-    /// The app shell reads this key to apply `preferredColorScheme`.
-    @AppStorage(TildeSettings.appearanceKey) private var appAppearance = AppAppearance.dark.rawValue
 
-    public init(settings: TerminalSettings = .shared) {
+    private let includesAppAppearance: Bool
+
+    /// - Parameter includesAppAppearance: show the "App appearance" row. The Mac Settings window puts that row on its
+    ///   General pane and leaves the terminal rows (theme, font, cursor, bell) on the Terminal pane.
+    public init(settings: TerminalSettings = .shared, includesAppAppearance: Bool = true) {
         self.settings = settings
+        self.includesAppAppearance = includesAppAppearance
     }
 
     public var body: some View {
@@ -21,9 +24,7 @@ public struct AppearanceSettingsSection: View {
         }
         ThemePreview(theme: settings.theme, font: settings.font, size: settings.fontSize)
             .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-        Picker("App appearance", selection: $appAppearance) {
-            ForEach(AppAppearance.allCases) { Text($0.title).tag($0.rawValue) }
-        }
+        if includesAppAppearance { AppAppearanceRow() }
         Picker("Font", selection: $settings.font) {
             // Only typefaces this device can draw. A saved choice that is gone stays listed so the picker shows it.
             ForEach(TerminalFontChoice.allCases.filter { $0.isAvailable || $0 == settings.font }) { choice in
@@ -43,6 +44,17 @@ public struct AppearanceSettingsSection: View {
         Toggle("Blinking cursor", isOn: $settings.cursorBlink)
         Picker("Bell", selection: $settings.bell) {
             ForEach(TerminalBellMode.allCases) { Text($0.displayName).tag($0) }
+        }
+    }
+}
+
+/// The "App appearance" picker (stored under `TildeSettings.appearanceKey`; the app shell applies it).
+struct AppAppearanceRow: View {
+    @AppStorage(TildeSettings.appearanceKey) private var appAppearance = AppAppearance.dark.rawValue
+
+    var body: some View {
+        Picker("App appearance", selection: $appAppearance) {
+            ForEach(AppAppearance.allCases) { Text($0.title).tag($0.rawValue) }
         }
     }
 }

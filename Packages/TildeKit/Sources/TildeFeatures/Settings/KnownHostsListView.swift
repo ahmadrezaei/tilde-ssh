@@ -174,6 +174,251 @@ enum KnownHostFormat {
     }
 }
 
+/// One row of the Mac Known Hosts table: a pinned key split into the columns the table shows. A value type, so the
+/// table can sort and filter without touching the model objects, and so the logic is unit tested.
+struct KnownHostTableRow: Identifiable, Hashable {
+    let id: UUID
+    /// The canonical endpoint (`host` or `[host]:port`), as stored and as searched.
+    let endpoint: String
+    let host: String
+    let port: Int
+    /// The raw algorithm name (`ssh-ed25519`).
+    let algorithm: String
+    /// The short badge (`ED25519`).
+    let keyType: String
+    let fingerprint: String
+    let added: Date
+    let isConflicted: Bool
+
+    init(_ pin: KnownHost) {
+        let parsed = Self.parse(endpoint: pin.endpoint)
+        id = pin.id
+        endpoint = pin.endpoint
+        host = parsed.host
+        port = parsed.port
+        algorithm = pin.algorithm
+        keyType = KnownHostFormat.algorithmBadge(pin.algorithm)
+        fingerprint = pin.fingerprintSHA256
+        added = pin.firstSeenAt
+        isConflicted = pin.status == .conflicted
+    }
+
+    /// Splits a canonical endpoint. Only `[host]:port` carries a port; anything else is the host on port 22, which
+    /// includes a bare IPv6 address such as `::1`. A malformed bracket form is shown as it is, on port 22.
+    static func parse(endpoint: String) -> (host: String, port: Int) {
+        guard endpoint.hasPrefix("["), let close = endpoint.firstIndex(of: "]") else { return (endpoint, 22) }
+        let host = String(endpoint[endpoint.index(after: endpoint.startIndex)..<close])
+        let rest = endpoint[endpoint.index(after: close)...]
+        guard rest.hasPrefix(":"), let port = Int(rest.dropFirst()), (1...65535).contains(port) else { return (endpoint, 22) }
+        return (host, port)
+    }
+
+    /// Whether the row matches a search: the endpoint, the fingerprint or the algorithm contains `query`.
+    func matches(_ query: String) -> Bool {
+        let query = query.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return true }
+        return endpoint.localizedCaseInsensitiveContains(query)
+            || fingerprint.localizedCaseInsensitiveContains(query)
+            || algorithm.localizedCaseInsensitiveContains(query)
+    }
+
+    /// The selected ids that are still on screen. A search can hide selected rows, and Remove must never forget a
+    /// key the user cannot see.
+    static func visibleSelection(_ selection: Set<UUID>, in rows: [KnownHostTableRow]) -> Set<UUID> {
+        selection.intersection(rows.map(\.id))
+    }
+
+    /// The rows to show: forgotten pins left out, filtered by `query`, ordered by host name, then port, then algorithm.
+    static func rows(from pins: [KnownHost], matching query: String = "") -> [KnownHostTableRow] {
+        pins
+            .filter { $0.status != .revoked }
+            .map(KnownHostTableRow.init)
+            .filter { $0.matches(query) }
+            .sorted { lhs, rhs in
+                let byHost = lhs.host.localizedStandardCompare(rhs.host)
+                if byHost != .orderedSame { return byHost == .orderedAscending }
+                if lhs.port != rhs.port { return lhs.port < rhs.port }
+                return lhs.algorithm < rhs.algorithm
+            }
+    }
+}
+
+/// Forgetting several pins at once (the Mac table's multi-select). Each pin is its own save, so one failure must not
+/// stop the rest.
+@MainActor
+enum KnownHostRemoval {
+    /// Forgets every pin whose id is in `ids`. Returns the first error's message, or `nil` when all were forgotten.
+    static func forget(ids: Set<UUID>, from pins: [KnownHost], repository: KnownHostRepository) -> String? {
+        var firstError: String?
+        for pin in pins where ids.contains(pin.id) {
+            do {
+                try repository.forget(pin)
+            } catch {
+                firstError = firstError ?? error.localizedDescription
+            }
+        }
+        return firstError
+    }
+}
+
+#if os(macOS)
+/// The Mac Settings > Known Hosts pane: every pinned host key in a native `Table` (host, port, key type, SHA256
+/// fingerprint, added), with search, sortable columns, multi-select and Remove. A removal asks first: the key is
+/// forgotten on every device, and the next connection asks to trust it again. Conflicted pins are drawn in red.
+struct KnownHostsTable: View {
+    @Environment(\.modelContext) private var context
+    @Query(sort: [SortDescriptor(\KnownHost.endpoint), SortDescriptor(\KnownHost.algorithm)]) private var allPins: [KnownHost]
+
+    @State private var searchText = ""
+    @State private var selection: Set<UUID> = []
+    @State private var sortOrder: [KeyPathComparator<KnownHostTableRow>] = []
+    @State private var pendingForget: Set<UUID> = []
+    @State private var errorMessage: String?
+
+    private var pins: [KnownHost] { allPins.filter { $0.status != .revoked } }
+    private var rows: [KnownHostTableRow] { KnownHostTableRow.rows(from: allPins, matching: searchText).sorted(using: sortOrder) }
+    private var conflictCount: Int { pins.filter { $0.status == .conflicted }.count }
+    private var visibleSelection: Set<UUID> { KnownHostTableRow.visibleSelection(selection, in: rows) }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if pins.isEmpty {
+                emptyState
+            } else {
+                searchField
+                Divider().overlay(TildeColor.border)
+                if conflictCount > 0 { conflictBanner }
+                table
+            }
+            Divider().overlay(TildeColor.border)
+            footer
+        }
+        .background(TildeColor.bg)
+        .confirmationDialog(
+            pendingTitle,
+            isPresented: Binding(get: { !pendingForget.isEmpty }, set: { if !$0 { pendingForget = [] } }),
+            titleVisibility: .visible
+        ) {
+            Button(pendingForget.count == 1 ? "Forget Host Key" : "Forget Host Keys", role: .destructive) {
+                errorMessage = KnownHostRemoval.forget(ids: pendingForget, from: allPins, repository: KnownHostRepository(context: context))
+                selection.subtract(pendingForget)
+                pendingForget = []
+            }
+        } message: {
+            Text("The key is removed from all your devices. The next connection to this host asks you to trust its key again.")
+        }
+        .alert("Could not forget the host key", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "")
+        }
+    }
+
+    private var pendingTitle: String {
+        if pendingForget.count == 1, let pin = allPins.first(where: { pendingForget.contains($0.id) }) {
+            return "Forget the host key for \(pin.endpoint)?"
+        }
+        return "Forget \(pendingForget.count) host keys?"
+    }
+
+    // MARK: Pieces
+
+    private var searchField: some View {
+        HStack(spacing: TildeSpacing.s) {
+            Image(systemName: "magnifyingglass").foregroundStyle(TildeColor.text3).accessibilityHidden(true)
+            TextField("", text: $searchText, prompt: Text("Search hosts or fingerprints").foregroundStyle(TildeColor.text3))
+                .textFieldStyle(.plain)
+                .autocorrectionDisabled()
+                .accessibilityLabel("Search hosts or fingerprints")
+        }
+        .padding(.horizontal, TildeSpacing.l)
+        .frame(minHeight: 38)
+        .background(TildeColor.surface)
+    }
+
+    private var conflictBanner: some View {
+        Banner(
+            .error,
+            headline: conflictCount == 1 ? "1 host key is in conflict" : "\(conflictCount) host keys are in conflict",
+            detail: "Two of your devices trusted different keys for the same host. Connect to the host and compare the fingerprint before you trust either."
+        )
+        .padding(TildeSpacing.m)
+    }
+
+    private var table: some View {
+        Table(rows, selection: $selection, sortOrder: $sortOrder) {
+            TableColumn("Host", value: \.host) { row in
+                HStack(spacing: TildeSpacing.xs) {
+                    if row.isConflicted {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(TildeColor.danger).accessibilityLabel("Conflicted")
+                    }
+                    Text(row.host).foregroundStyle(row.isConflicted ? TildeColor.danger : TildeColor.text)
+                }
+            }
+            .width(min: 120, ideal: 170)
+            TableColumn("Port", value: \.port) { row in
+                Text(verbatim: "\(row.port)").foregroundStyle(row.isConflicted ? TildeColor.danger : TildeColor.text2)
+            }
+            .width(min: 44, ideal: 56, max: 72)
+            TableColumn("Key Type", value: \.keyType) { row in
+                Text(row.keyType).foregroundStyle(row.isConflicted ? TildeColor.danger : TildeColor.text2)
+            }
+            .width(min: 70, ideal: 90, max: 120)
+            TableColumn("Fingerprint", value: \.fingerprint) { row in
+                Text(row.fingerprint)
+                    .font(TildeFont.mono(12))
+                    .foregroundStyle(row.isConflicted ? TildeColor.danger : TildeColor.text)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
+            .width(min: 180, ideal: 280)
+            TableColumn("Added", value: \.added) { row in
+                Text(KnownHostFormat.date(row.added)).foregroundStyle(TildeColor.text2)
+            }
+            .width(min: 90, ideal: 110, max: 140)
+        }
+        .tableStyle(.inset)
+        .scrollContentBackground(.hidden)
+        .overlay {
+            if rows.isEmpty { ContentUnavailableView.search(text: searchText) }
+        }
+        .contextMenu(forSelectionType: UUID.self) { ids in
+            if !ids.isEmpty {
+                if ids.count == 1, let id = ids.first, let row = rows.first(where: { $0.id == id }) {
+                    Button("Copy Fingerprint", systemImage: "doc.on.doc") { Platform.copy(row.fingerprint) }
+                }
+                Button(ids.count == 1 ? "Forget Host Key…" : "Forget Host Keys…", systemImage: "trash", role: .destructive) { pendingForget = ids }
+            }
+        }
+        .onDeleteCommand { if !visibleSelection.isEmpty { pendingForget = visibleSelection } }
+    }
+
+    private var footer: some View {
+        HStack(spacing: TildeSpacing.m) {
+            Button("Remove", systemImage: "minus") { pendingForget = visibleSelection }
+                .disabled(visibleSelection.isEmpty)
+            Text(pins.count == 1 ? "1 host key" : "\(pins.count) host keys")
+                .font(TildeFont.caption)
+                .foregroundStyle(TildeColor.text3)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, TildeSpacing.l)
+        .frame(minHeight: 40)
+        .background(TildeColor.surface)
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No known hosts.", systemImage: "checkmark.shield")
+        } description: {
+            Text("Host keys appear here after you trust a server on first connect. Pins sync across your devices.")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+#endif
+
 /// One pinned key: algorithm badge, fingerprint in mono, last seen date. A conflicted pin is drawn in danger red.
 struct KnownHostRow: View {
     let host: KnownHost
