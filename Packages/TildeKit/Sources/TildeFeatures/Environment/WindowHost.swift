@@ -249,11 +249,23 @@ struct AppSheetView: View {
         Group {
             switch sheet {
             case .newServer:
+                #if os(macOS)
+                MacServerEditor()
+                #else
                 ServerEditor()
+                #endif
             case .editServer(let id):
+                #if os(macOS)
+                if let server = server(id) { MacServerEditor(server: server) } else { Color.clear.onAppear { dismiss() } }
+                #else
                 if let server = server(id) { ServerEditor(server: server) } else { Color.clear.onAppear { dismiss() } }
+                #endif
             case .saveServer(let request):
+                #if os(macOS)
+                MacServerEditor(prefill: request)
+                #else
                 ServerEditor(prefill: request)
+                #endif
             case .palette(let mode):
                 CommandPalette(mode: mode)
             case .keys:
