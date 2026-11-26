@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Sizes for the status bar. TODO: move to `TildeSpacing` once the tokens stream adds a status bar height.
+/// Sizes for the status bar.
 public enum StatusBarMetrics {
-    public static let height: CGFloat = 24
+    public static let height: CGFloat = TildeSpacing.statusBarHeight
 }
 
 /// The 24 pt bar under a session (Mac): segments on the left, segments on the right, a hairline on top. It holds

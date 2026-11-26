@@ -13,9 +13,8 @@ struct MacTabStrip: View {
     let selectedID: UUID?
     @Environment(AppNavigator.self) private var navigator
 
-    // TODO: use the tab bar height token once the tokens stream lands it.
     private enum Metrics {
-        static let height: CGFloat = 30
+        static let height: CGFloat = TildeSpacing.tabBarHeight
         static let minTabWidth: CGFloat = 120
         static let newTabWidth: CGFloat = 34
     }
