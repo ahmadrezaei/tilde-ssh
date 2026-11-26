@@ -122,9 +122,14 @@ private struct SplitRoot: View {
     var body: some View {
         @Bindable var navigator = navigator
         NavigationSplitView(columnVisibility: $navigator.columnVisibility) {
+            #if os(macOS)
+            MacSidebar()
+                .navigationSplitViewColumnWidth(min: 220, ideal: 248, max: 300)
+            #else
             ServerList()
                 .safeAreaInset(edge: .bottom, spacing: 0) { SidebarFooter() }
                 .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 460)
+            #endif
         } detail: {
             SessionContainer()
         }
@@ -133,24 +138,17 @@ private struct SplitRoot: View {
     }
 }
 
-/// Keys · Snippets · Settings at the foot of the sidebar (design section 3.3).
+#if !os(macOS)
+/// Keys · Snippets · Settings at the foot of the iPad sidebar (design section 3.3). The Mac sidebar has a sync status
+/// line instead; Keys, Snippets and Settings are in the menu bar there.
 private struct SidebarFooter: View {
     @Environment(AppNavigator.self) private var navigator
-    #if os(macOS)
-    @Environment(\.openSettings) private var openSettings
-    #endif
 
     var body: some View {
         HStack(spacing: TildeSpacing.l) {
             footerButton("Keys", systemImage: "key") { navigator.present(.keys) }
             footerButton("Snippets", systemImage: "bolt") { navigator.present(.snippets) }
-            footerButton("Settings", systemImage: "gearshape") {
-                #if os(macOS)
-                openSettings()
-                #else
-                navigator.present(.settings)
-                #endif
-            }
+            footerButton("Settings", systemImage: "gearshape") { navigator.present(.settings) }
             Spacer()
         }
         .padding(.horizontal, TildeSpacing.l)
@@ -169,6 +167,7 @@ private struct SidebarFooter: View {
         .help(title)
     }
 }
+#endif
 
 #Preview("Root: phone") {
     TildePreviewHost(openSession: false) { _ in RootView() }

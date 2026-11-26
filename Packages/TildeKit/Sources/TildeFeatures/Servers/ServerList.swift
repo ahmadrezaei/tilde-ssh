@@ -5,7 +5,7 @@ import TildeDesign
 import TildeStore
 
 /// The server list (design section 4.1): pinned search / Quick Connect field, tag chips, LIVE, FAVORITES, one
-/// collapsible section per group, then the rest. Used as the iPhone Servers tab and as the iPad / Mac sidebar.
+/// collapsible section per group, then the rest. Used as the iPhone Servers tab and as the iPad sidebar (the Mac sidebar is `MacSidebar`).
 public struct ServerList: View {
     @Environment(\.modelContext) private var context
     @Environment(\.tildeServices) private var services
@@ -94,21 +94,14 @@ public struct ServerList: View {
         }
     }
 
-    private var results: [Server] {
-        let q = query
-        return visibleServers
-            .compactMap { server in q.score(server.searchItem).map { (server, $0) } }
-            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : ServerMapper.displayName($0.0).localizedStandardCompare(ServerMapper.displayName($1.0)) == .orderedAscending }
-            .map(\.0)
-    }
+    private var results: [Server] { ServerListing.ranked(visibleServers, query: query) }
 
     /// The `↵ Connect to ...` candidate: the text parses as a target and looks like one (not just a word that
     /// happens to match a server name).
     private var connectCandidate: QuickConnectResult? {
         let text = searchText.trimmingCharacters(in: .whitespaces)
         guard !text.isEmpty, let result = launcher.parse(text) else { return nil }
-        let looksLikeTarget = text.contains("@") || text.contains(":") || text.contains(".") || text.hasPrefix("ssh")
-        return looksLikeTarget || results.isEmpty ? result : nil
+        return ServerListing.looksLikeTarget(text) || results.isEmpty ? result : nil
     }
 
     private var liveTabs: [SessionTab] { navigator.tabs.filter(\.isLive) }
@@ -116,16 +109,7 @@ public struct ServerList: View {
     private var ungrouped: [Server] { sorted(visibleServers.filter { $0.group == nil }) }
     private func servers(in group: ServerGroup) -> [Server] { sorted(visibleServers.filter { $0.group?.id == group.id }) }
 
-    private func sorted(_ list: [Server]) -> [Server] {
-        switch sortMode {
-        case .manual:
-            return list.sorted { ($0.sortIndex, $0.name) < ($1.sortIndex, $1.name) }
-        case .name:
-            return list.sorted { ServerMapper.displayName($0).localizedStandardCompare(ServerMapper.displayName($1)) == .orderedAscending }
-        case .lastUsed:
-            return list.sorted { ($0.lastConnectedAt ?? .distantPast) > ($1.lastConnectedAt ?? .distantPast) }
-        }
-    }
+    private func sorted(_ list: [Server]) -> [Server] { ServerListing.sorted(list, mode: sortMode) }
 
     private func probeTarget(_ server: Server) -> ConnectionTarget {
         // Servers behind a jump host probe the bastion instead (design section 4.1).
@@ -404,12 +388,15 @@ public struct ServerList: View {
     private var deleteTitle: String { "Delete \(pendingDelete.map(ServerMapper.displayName) ?? "server")?" }
 
     private func submit() {
-        if let candidate = connectCandidate, results.isEmpty || searchText.contains("@") || searchText.contains(":") {
-            launcher.connect(candidate)
-        } else if let first = results.first {
-            launcher.open(first)
-        } else if let candidate = connectCandidate {
-            launcher.connect(candidate)
+        let candidate = connectCandidate
+        let found = results
+        switch ServerListing.submission(hasCandidate: candidate != nil, rawText: searchText, hasResults: !found.isEmpty) {
+        case .connect:
+            if let candidate { launcher.connect(candidate) }
+        case .openFirstResult:
+            if let first = found.first { launcher.open(first) }
+        case .nothing:
+            break
         }
         searchText = ""
     }

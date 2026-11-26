@@ -54,14 +54,7 @@ struct ServerRow: View {
         }
     }
 
-    private var dotKind: StatusDot.Kind {
-        if isLive { return .live }
-        switch status {
-        case .unknown, .probing: return .unknown
-        case .reachable(let ms): return StatusDot.Kind(latencyMilliseconds: ms)
-        case .unreachable: return .unreachable
-        }
-    }
+    private var dotKind: StatusDot.Kind { StatusDot.Kind(isLive: isLive, status: status) }
 
     private var accessibilityLabel: String {
         var parts = [ServerMapper.displayName(server), subtitle]
@@ -73,6 +66,73 @@ struct ServerRow: View {
         return parts.joined(separator: ", ")
     }
 }
+
+extension StatusDot.Kind {
+    /// A mint, pulsing dot while a session is open, otherwise the last probe's result.
+    init(isLive: Bool, status: ReachabilityMonitor.Status) {
+        if isLive {
+            self = .live
+            return
+        }
+        switch status {
+        case .unknown, .probing: self = .unknown
+        case .reachable(let ms): self = StatusDot.Kind(latencyMilliseconds: ms)
+        case .unreachable: self = .unreachable
+        }
+    }
+}
+
+#if os(macOS)
+/// One line of the Mac sidebar source list: status dot (mint while a session is open), SF Mono name, a star for
+/// favorites, a compact environment badge and the latency at the trailing edge. The address is in the tooltip.
+struct MacServerRow: View {
+    let server: Server
+    let isLive: Bool
+    let status: ReachabilityMonitor.Status
+
+    var body: some View {
+        HStack(spacing: 6) {
+            StatusDot(StatusDot.Kind(isLive: isLive, status: status))
+            Text(ServerMapper.displayName(server))
+                .font(TildeFont.sidebarRow)
+                .foregroundStyle(TildeColor.text)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            if server.isFavorite {
+                Image(systemName: "star.fill").font(.system(size: 8)).foregroundStyle(TildeColor.warn).accessibilityLabel("Favorite")
+            }
+            Spacer(minLength: 4)
+            EnvBadge(EnvTone(ServerMapper.environment(server)), size: .compact)
+            if let ms = status.latencyMilliseconds {
+                Text("\(ms)ms")
+                    .font(TildeFont.sidebarCaption)
+                    .foregroundStyle(TildeColor.text3)
+                    .lineLimit(1)
+            }
+        }
+        .frame(minHeight: TildeSpacing.sidebarRowHeight)
+        .contentShape(Rectangle())
+        .help(address)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var address: String {
+        let base = "\(server.username)@\(server.host)"
+        return server.port == 22 ? base : "\(base):\(server.port)"
+    }
+
+    private var accessibilityLabel: String {
+        var parts = [ServerMapper.displayName(server), address]
+        let env = EnvTone(ServerMapper.environment(server))
+        if env != .none { parts.append(env.accessibilityName) }
+        if isLive { parts.append("session open") }
+        else if let ms = status.latencyMilliseconds { parts.append("reachable, \(ms) milliseconds") }
+        else if case .unreachable = status { parts.append("unreachable") }
+        return parts.joined(separator: ", ")
+    }
+}
+#endif
 
 /// A row in the LIVE section: an open session.
 struct LiveSessionRow: View {
