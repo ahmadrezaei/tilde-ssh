@@ -49,15 +49,22 @@ public struct SSHConfigImportView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
+        TildeSheet(
+            "Import from ~/.ssh/config",
+            subtitle: model?.sourceName.map { "Reading \($0)" } ?? "Choose your OpenSSH config file",
+            idealHeight: 640
+        ) {
             content
-            Divider()
-            footer
+        } leading: {
+            Button("Choose File…") { present(.config) }.buttonStyle(.tildeSheetSecondary)
+        } actions: {
+            TildeCancelButton {
+                onFinish([])
+                dismiss()
+            }
+            TildeDefaultButton(importTitle) { finish() }
+                .disabled(!(model?.canImport ?? false))
         }
-        .frame(minWidth: 520, idealWidth: 600, minHeight: 440, idealHeight: 560)
-        .background(TildeColor.bg)
         .fileImporter(
             isPresented: $showingImporter,
             allowedContentTypes: [.item],
@@ -70,19 +77,6 @@ public struct SSHConfigImportView: View {
 
     // MARK: Pieces
 
-    private var header: some View {
-        HStack(spacing: TildeSpacing.m) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Import from ~/.ssh/config").font(.headline)
-                Text(model?.sourceName.map { "Reading \($0)" } ?? "Choose your OpenSSH config file")
-                    .font(.subheadline).foregroundStyle(TildeColor.text2)
-            }
-            Spacer()
-            Button("Choose File…") { present(.config) }
-        }
-        .padding(TildeSpacing.l)
-    }
-
     @ViewBuilder
     private var content: some View {
         if let model, !model.plan.rows.isEmpty {
@@ -93,52 +87,53 @@ public struct SSHConfigImportView: View {
             } description: {
                 Text(message)
             } actions: {
-                Button("Choose Another File…") { present(.config) }
+                Button("Choose Another File…") { present(.config) }.buttonStyle(.tildeSheetSecondary)
             }
+            .frame(maxWidth: .infinity, minHeight: 300)
         } else {
             ContentUnavailableView {
                 Label("Import ~/.ssh/config", systemImage: "square.and.arrow.down")
             } description: {
                 Text("Tilde runs in the App Sandbox, so it can only read files you pick. Choose your config file and review the servers before anything is saved.")
             } actions: {
-                Button("Choose ~/.ssh/config…") { present(.config) }
-                    .buttonStyle(.borderedProminent)
+                Button("Choose ~/.ssh/config…") { present(.config) }.buttonStyle(.tildeSheetPrimary)
             }
+            .frame(maxWidth: .infinity, minHeight: 300)
         }
     }
 
     private func list(_ model: SSHConfigImportModel) -> some View {
-        List {
-            Section {
-                ForEach(model.plan.rows) { row in
-                    rowView(row, model: model)
-                }
-            } header: {
+        VStack(alignment: .leading, spacing: TildeSpacing.l) {
+            if let error = model.errorMessage {
+                TildeNotice(error, tone: .danger)
+            }
+            VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("\(model.plan.rows.count) servers").tildeSectionHeader()
                     Spacer()
-                    Button("All") { model.selectAll() }.buttonStyle(.borderless)
-                    Button("None") { model.selectNone() }.buttonStyle(.borderless)
+                    Button("All") { model.selectAll() }
+                    Button("None") { model.selectNone() }
                 }
-            } footer: {
-                if !model.plan.skippedPatterns.isEmpty {
-                    Text("Skipped \(model.plan.skippedPatterns.count) wildcard \(model.plan.skippedPatterns.count == 1 ? "entry" : "entries"): \(model.plan.skippedPatterns.joined(separator: ", "))")
-                        .font(.footnote).foregroundStyle(TildeColor.text3)
+                .buttonStyle(.borderless)
+                .padding(.horizontal, 4)
+                TildeFormSection(
+                    footer: model.plan.skippedPatterns.isEmpty ? nil
+                        : "Skipped \(model.plan.skippedPatterns.count) wildcard \(model.plan.skippedPatterns.count == 1 ? "entry" : "entries"): \(model.plan.skippedPatterns.joined(separator: ", "))"
+                ) {
+                    ForEach(model.plan.rows) { row in
+                        rowView(row, model: model)
+                    }
                 }
             }
 
             let jumpsMissing = model.unselectedJumpAliases
             if !jumpsMissing.isEmpty {
-                Section {
-                    Label("Selected servers jump through \(jumpsMissing.joined(separator: ", ")), which isn't checked. Check it too, or they will connect without the jump.",
-                          systemImage: "arrow.triangle.branch")
-                        .font(.footnote).foregroundStyle(TildeColor.warn)
-                }
+                TildeNotice("Selected servers jump through \(jumpsMissing.joined(separator: ", ")), which isn't checked. Check it too, or they will connect without the jump.",
+                            tone: .warning, systemImage: "arrow.triangle.branch")
             }
 
             keysSection(model)
         }
-        .listStyle(.inset)
     }
 
     private func rowView(_ row: SSHConfigImportRow, model: SSHConfigImportModel) -> some View {
@@ -150,20 +145,23 @@ public struct SSHConfigImportView: View {
         )) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: TildeSpacing.s) {
-                    Text(row.host.alias).font(TildeFont.rowTitle).foregroundStyle(TildeColor.text)
+                    Text(row.host.alias).tildeMono(15, weight: .semibold).foregroundStyle(TildeColor.text)
                     if let conflict = row.conflict {
                         Text(conflictText(conflict))
-                            .font(.caption).foregroundStyle(TildeColor.warn)
+                            .tildeText(12, relativeTo: .caption).foregroundStyle(TildeColor.warn)
                     }
                 }
-                Text(row.summary).font(TildeFont.rowSubtitle).foregroundStyle(TildeColor.text2)
+                Text(row.summary).tildeMono(12, relativeTo: .caption).foregroundStyle(TildeColor.text2)
+                    .fixedSize(horizontal: false, vertical: true)
                 ForEach(notes(for: row), id: \.self) { note in
-                    Text(note).font(.caption).foregroundStyle(TildeColor.text3)
+                    Text(note).tildeText(12, relativeTo: .caption).foregroundStyle(TildeColor.text3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .toggleStyle(CheckboxToggleStyle())
-        .padding(.vertical, 2)
+        .padding(.vertical, 6)
         .accessibilityElement(children: .combine)
     }
 
@@ -171,43 +169,25 @@ public struct SSHConfigImportView: View {
     private func keysSection(_ model: SSHConfigImportModel) -> some View {
         let wanted = model.requestedIdentityFiles
         if !wanted.isEmpty {
-            Section {
+            TildeFormSection(
+                "Keys used by these servers",
+                footer: "The config only names key files. Pick them here and Tilde will import them into your Keychain. Skip this to link keys later."
+            ) {
                 ForEach(wanted, id: \.self) { path in
                     let chosen = model.keyFiles.contains { $0.configPaths.contains(path) }
                     HStack {
                         Image(systemName: chosen ? "checkmark.circle.fill" : "key")
                             .foregroundStyle(chosen ? TildeColor.ok : TildeColor.text3)
                             .accessibilityHidden(true)
-                        Text(path).font(TildeFont.rowSubtitle)
+                        Text(path).tildeMono(12, relativeTo: .caption).foregroundStyle(TildeColor.text)
+                            .fixedSize(horizontal: false, vertical: true)
                         Spacer()
                     }
+                    .padding(.vertical, 6)
                 }
-                Button("Choose Key Files…") { present(.keys) }
-                Text("The config only names key files. Pick them here and Tilde will import them into your Keychain. Skip this to link keys later.")
-                    .font(.footnote).foregroundStyle(TildeColor.text3)
-            } header: {
-                Text("Keys used by these servers").tildeSectionHeader()
+                TildeActionRow("Choose Key Files…", systemImage: "folder") { present(.keys) }
             }
         }
-    }
-
-    private var footer: some View {
-        HStack {
-            if let model, let error = model.errorMessage, !model.plan.rows.isEmpty {
-                Text(error).font(.footnote).foregroundStyle(TildeColor.danger)
-            }
-            Spacer()
-            Button("Cancel", role: .cancel) {
-                onFinish([])
-                dismiss()
-            }
-            .keyboardShortcut(.cancelAction)
-            Button(importTitle) { finish() }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(!(model?.canImport ?? false))
-        }
-        .padding(TildeSpacing.l)
     }
 
     // MARK: Behaviour
@@ -290,5 +270,4 @@ public struct SSHConfigImportView: View {
         existingServers: [PreviewServers.bastion],
         previewText: "preview"
     )
-    .frame(width: 600, height: 560)
 }

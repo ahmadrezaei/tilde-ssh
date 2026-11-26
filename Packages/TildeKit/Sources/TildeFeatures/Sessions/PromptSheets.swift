@@ -13,37 +13,25 @@ struct PasswordPromptSheet: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    SecureField("Password", text: $password)
+        TildeSheet(request.headline, subtitle: request.target.displayString, subtitleIsMono: true, size: .compact, scrolls: false) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                TildeFormSection(footer: request.detail) {
+                    TildeTextRow("Password", text: $password, isSecure: true, contentType: .password)
                         .focused($focused)
-                        .textContentType(.password)
                         .submitLabel(.go)
                         .onSubmit(submit)
-                        .tildeMono(15)
-                } header: {
-                    Text(request.target.displayString).tildeMono(12, relativeTo: .caption).textCase(nil)
-                } footer: {
-                    Text(request.detail)
                 }
                 if request.canUpdateSaved && request.reason == .rejected {
-                    Section { Toggle("Update saved password", isOn: $updateSaved) }
+                    TildeFormSection { TildeToggleRow("Update saved password", isOn: $updateSaved) }
                 }
                 if request.canSaveServer {
-                    Section { Toggle("Save server", isOn: $saveServer) }
+                    TildeFormSection { TildeToggleRow("Save server", isOn: $saveServer) }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(TildeColor.bg)
-            .navigationTitle(request.headline)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { onAnswer(nil, false, false) } }
-                ToolbarItem(placement: .confirmationAction) { Button("Connect", action: submit).disabled(password.isEmpty) }
-            }
+            .padding(TildeSheetMetrics.padding)
+        } actions: {
+            TildeCancelButton { onAnswer(nil, false, false) }
+            TildeDefaultButton("Connect", action: submit).disabled(password.isEmpty)
         }
         .presentationDetents([.medium])
         .interactiveDismissDisabled()
@@ -64,39 +52,43 @@ struct PasteConfirmationSheet: View {
     var body: some View {
         let tone = EnvTone(request.environment)
         let accent = tone == .none ? TildeColor.accent : tone.color
-        VStack(alignment: .leading, spacing: TildeSpacing.l) {
-            HStack(spacing: 8) {
-                Text("Paste \(request.lineCount) \(request.lineCount == 1 ? "line" : "lines") into \(request.serverName)?")
-                    .tildeText(18, weight: .bold, relativeTo: .headline)
-                    .foregroundStyle(TildeColor.text)
-                EnvBadge(tone)
-            }
-            .accessibilityElement(children: .combine)
-
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(Array(request.previewLines.enumerated()), id: \.offset) { _, line in
-                    Text(line).lineLimit(1).truncationMode(.tail)
+        TildeSheet(
+            "Paste \(request.lineCount) \(request.lineCount == 1 ? "line" : "lines") into \(request.serverName)?",
+            size: .compact, scrolls: false
+        ) {
+            VStack(alignment: .leading, spacing: TildeSpacing.m) {
+                if tone != .none {
+                    HStack(spacing: 8) {
+                        EnvBadge(tone)
+                        Text(request.serverName).tildeMono(12, relativeTo: .caption).foregroundStyle(TildeColor.text2)
+                    }
                 }
-                if request.truncated {
-                    Text("…").foregroundStyle(TildeColor.text3)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(request.previewLines.enumerated()), id: \.offset) { _, line in
+                        Text(line).lineLimit(1).truncationMode(.tail)
+                    }
+                    if request.truncated {
+                        Text("…").foregroundStyle(TildeColor.text3)
+                    }
                 }
-            }
-            .tildeMono(12, relativeTo: .caption)
-            .foregroundStyle(TildeColor.text)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(TildeSpacing.m)
-            .background(TildeColor.bg, in: RoundedRectangle(cornerRadius: TildeRadius.card))
-            .overlay(RoundedRectangle(cornerRadius: TildeRadius.card).stroke(accent.opacity(0.4), lineWidth: 1))
+                .tildeMono(12, relativeTo: .caption)
+                .foregroundStyle(TildeColor.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(TildeSpacing.m)
+                .background(TildeColor.surface, in: RoundedRectangle(cornerRadius: TildeRadius.card))
+                .overlay(RoundedRectangle(cornerRadius: TildeRadius.card).stroke(accent.opacity(0.5), lineWidth: 1))
 
-            Text("Each line runs as soon as it arrives.").tildeText(12, relativeTo: .caption).foregroundStyle(TildeColor.text3)
-
-            HStack(spacing: TildeSpacing.s) {
-                Button("Cancel") { onAnswer(false) }.buttonStyle(.tildeSecondary).keyboardShortcut(.cancelAction)
-                Button("Paste") { onAnswer(true) }.buttonStyle(.tildePrimary).keyboardShortcut(.defaultAction)
+                Text("Each line runs as soon as it arrives.")
+                    .tildeText(12, relativeTo: .caption).foregroundStyle(TildeColor.text3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(TildeSheetMetrics.padding)
+        } actions: {
+            TildeCancelButton { onAnswer(false) }
+            // On a production server a stray Return must not run the pasted lines.
+            TildeDefaultButton("Paste", requiresClick: tone == .prod) { onAnswer(true) }
         }
-        .padding(TildeSpacing.l)
-        .background(TildeColor.surface)
         .presentationDetents([.height(380), .medium])
         .interactiveDismissDisabled()
     }

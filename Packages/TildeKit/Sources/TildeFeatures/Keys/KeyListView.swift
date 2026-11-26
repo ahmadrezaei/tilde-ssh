@@ -25,7 +25,17 @@ public struct KeyListView: View {
 
     public init() {}
 
+    @Environment(\.dismiss) private var dismiss
+
     public var body: some View {
+        #if os(macOS)
+        macBody
+        #else
+        iosBody
+        #endif
+    }
+
+    private var iosBody: some View {
         Group {
             if keys.isEmpty {
                 emptyState
@@ -47,26 +57,65 @@ public struct KeyListView: View {
         .background(TildeColor.bg)
         .navigationTitle("Keys")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button("Generate Key…", systemImage: "wand.and.sparkles") { sheet = .generate }
-                    Button("Import Key…", systemImage: "square.and.arrow.down") { sheet = .importKey(pasted: nil) }
-                    Button("Paste Key from Clipboard…", systemImage: "doc.on.clipboard") {
-                        sheet = .importKey(pasted: SecureClipboard.currentString())
-                    }
-                } label: {
-                    Label("Add Key", systemImage: "plus")
-                }
-                .accessibilityLabel("Add key")
-            }
+            ToolbarItem(placement: .primaryAction) { addMenu }
         }
-        .sheet(item: $sheet) { sheet in
-            switch sheet {
-            case .generate:
-                GenerateKeySheet()
-            case .importKey(let pasted):
-                ImportKeySheet(initialText: pasted ?? "")
+        .sheet(item: $sheet) { sheet in sheetContent(sheet) }
+    }
+
+    #if os(macOS)
+    /// On the Mac the key manager is a sheet: the same scaffold as every other modal, with Add Key in the action bar.
+    private var macBody: some View {
+        TildeSheet("Keys", subtitle: keys.isEmpty ? nil : "\(keys.count) \(keys.count == 1 ? "key" : "keys")", scrolls: true, idealHeight: 520) {
+            if keys.isEmpty {
+                emptyState.frame(maxWidth: .infinity, minHeight: 280)
+            } else {
+                TildeFormSection {
+                    ForEach(keys) { key in
+                        NavigationLink {
+                            KeyDetailView(key: key)
+                        } label: {
+                            HStack(spacing: TildeSpacing.s) {
+                                KeyRow(key: key)
+                                Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(TildeColor.text3)
+                            }
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
+        } leading: {
+            addMenu.menuStyle(.button).buttonStyle(.tildeSheetSecondary).fixedSize()
+        } actions: {
+            TildeDefaultButton("Done") { dismiss() }
+        }
+        // The sheet is wrapped in a NavigationStack so a key can push its detail page; without this its empty system
+        // title bar would sit above the sheet's own title row. Pushed screens bring their own bar and back button.
+        .sheet(item: $sheet) { sheet in sheetContent(sheet) }
+    }
+    #endif
+
+    private var addMenu: some View {
+        Menu {
+            Button("Generate Key…", systemImage: "wand.and.sparkles") { sheet = .generate }
+            Button("Import Key…", systemImage: "square.and.arrow.down") { sheet = .importKey(pasted: nil) }
+            Button("Paste Key from Clipboard…", systemImage: "doc.on.clipboard") {
+                sheet = .importKey(pasted: SecureClipboard.currentString())
+            }
+        } label: {
+            Label("Add Key", systemImage: "plus")
+        }
+        .accessibilityLabel("Add key")
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ sheet: Sheet) -> some View {
+        switch sheet {
+        case .generate:
+            GenerateKeySheet()
+        case .importKey(let pasted):
+            ImportKeySheet(initialText: pasted ?? "")
         }
     }
 

@@ -22,7 +22,6 @@ public struct ServerEditor: View {
     @Query(sort: \Tag.name) private var allTags: [Tag]
 
     @State private var model: ServerEditorModel?
-    @State private var showsGenerateKey = false
     @State private var showsNewGroup = false
     @State private var newGroupName = ""
     @State private var confirmsForgetKey = false
@@ -44,11 +43,11 @@ public struct ServerEditor: View {
     }
 
     public var body: some View {
-        NavigationStack {
+        Group {
             if let model {
-                form(model)
+                sheet(model)
             } else {
-                Color.clear
+                Color.clear.frame(minWidth: 520, idealWidth: 560, minHeight: 360, idealHeight: 660)
             }
         }
         .task {
@@ -57,47 +56,36 @@ public struct ServerEditor: View {
             else if let prefill { model = ServerEditorModel(prefill: prefill, keys: keys) }
             else { model = ServerEditorModel(keys: keys) }
         }
-        #if os(macOS)
-        .frame(minWidth: 460, minHeight: 560)
-        #endif
     }
 
     // MARK: Form
 
     @ViewBuilder
-    private func form(_ model: ServerEditorModel) -> some View {
+    private func sheet(_ model: ServerEditorModel) -> some View {
         @Bindable var model = model
-        Form {
-            connectionSection($model)
-            authenticationSection($model)
-            organizeSection($model)
-            advancedSection($model)
-            testSection(model)
-            if !model.isNew { dangerSection(model) }
-        }
-        .scrollContentBackground(.hidden)
-        .background(TildeColor.bg)
-        .navigationTitle(model.isNew ? "New Server" : "Edit Server")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { model.cancelTest(); dismiss() } }
-            ToolbarItem(placement: .confirmationAction) { Button("Save") { save(model, connect: false) }.disabled(!model.canSave) }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            VStack(spacing: TildeSpacing.s) {
-                if let error = model.saveError { saveErrorBanner(error, model: model) }
-                Button { save(model, connect: true) } label: { Text("Save & Connect") }
-                    .buttonStyle(.tildePrimary)
-                    .disabled(!model.canSave)
+        TildeSheet(model.isNew ? "New Server" : "Edit Server", idealHeight: 660) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                connectionSection($model)
+                authenticationSection($model)
+                organizeSection($model)
+                advancedSection($model)
+                testSection(model)
+                if !model.isNew { dangerSection(model) }
             }
-            .padding(.horizontal, TildeSpacing.l)
-            .padding(.vertical, TildeSpacing.m)
-            .background(.bar)
+        } actions: {
+            TildeCancelButton { model.cancelTest(); dismiss() }
+            // Return in a connection field saves (`submitsSave`); connecting is a separate, deliberate click. Save has
+            // no key binding of its own, so Return in the Tags field can only add a tag.
+            TildeDefaultButton("Save", requiresClick: true) { save(model, connect: false) }
+                .disabled(!model.canSave)
+            Button("Save & Connect") { save(model, connect: true) }
+                .buttonStyle(.tildeSheetPrimary)
+                .disabled(!model.canSave)
+        }
+        .banner(model.saveError != nil) {
+            if let error = model.saveError { saveErrorBanner(error, model: model) }
         }
         .onChange(of: model.host) { model.splitPastedCommand(using: services.quickConnect, servers: allServers) }
-        .sheet(isPresented: $showsGenerateKey) { GenerateKeySheet() }
         .alert("New Group", isPresented: $showsNewGroup) {
             TextField("Name", text: $newGroupName)
             Button("Create") {
@@ -125,29 +113,33 @@ public struct ServerEditor: View {
 
     private func connectionSection(_ model: Bindable<ServerEditorModel>) -> some View {
         let m = model.wrappedValue
-        return Section {
-            LabeledRow("Name") { TextField(m.namePlaceholder, text: model.name).tildeMono(15).multilineTextAlignment(.trailing).autocorrectionDisabled() }
-            LabeledRow("Host", issue: m.showsValidation ? m.issue(for: .host) : nil) {
-                MonoField("hostname or IP", text: model.host).multilineTextAlignment(.trailing)
-                    #if os(iOS)
-                    .keyboardType(.URL)
-                    #endif
-            }
-            LabeledRow("Port", issue: m.showsValidation ? m.issue(for: .port) : nil) {
-                TextField("22", text: model.portText).tildeMono(15).multilineTextAlignment(.trailing)
-                    #if os(iOS)
-                    .keyboardType(.numberPad)
-                    #endif
-            }
-            LabeledRow("Username") {
-                MonoField(TildeSettings.currentDefaultUser, text: model.username).multilineTextAlignment(.trailing)
-            }
-        } header: { Text("Connection").tildeSectionHeader() }
+        return TildeFormSection("Connection") {
+            TildeTextRow("Name", prompt: m.namePlaceholder, text: model.name)
+            TildeTextRow("Host", prompt: "hostname or IP", text: model.host, issue: m.showsValidation ? m.issue(for: .host) : nil)
+                #if os(iOS)
+                .keyboardType(.URL)
+                #endif
+            TildeTextRow("Port", prompt: "22", text: model.portText, issue: m.showsValidation ? m.issue(for: .port) : nil)
+                #if os(iOS)
+                .keyboardType(.numberPad)
+                #endif
+            TildeTextRow("Username", prompt: TildeSettings.currentDefaultUser, text: model.username, contentType: .username)
+        }
+        .onSubmit { submitsSave(m) }
+    }
+
+    /// Return in a connection or password field saves, like the default button would. The Tags field has its own
+    /// submit (add a tag) and sits outside these sections, so it never saves.
+    private func submitsSave(_ model: ServerEditorModel) {
+        if model.canSave { save(model, connect: false) }
     }
 
     private func authenticationSection(_ model: Bindable<ServerEditorModel>) -> some View {
         let m = model.wrappedValue
-        return Section {
+        let footer: String? = m.isPasswordAuth
+            ? (m.asksEveryTime ? "Nothing is stored. You are asked at every connection." : "Stored in iCloud Keychain, never in the synced database.")
+            : nil
+        return TildeFormSection("Authentication", footer: footer) {
             Picker("Method", selection: Binding(
                 get: { m.auth == .key ? AuthChoice.key : .password },
                 set: { choice in
@@ -162,106 +154,109 @@ public struct ServerEditor: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .listRowBackground(Color.clear)
+            #if os(macOS)
+            .fixedSize()
+            #endif
 
             if m.auth == .key {
-                KeyPicker(selection: model.key)
-                if m.showsValidation, let issue = m.issue(for: .key) { IssueText(issue) }
-                Button { showsGenerateKey = true } label: { Label("Generate new Ed25519…", systemImage: "plus.circle") }
-                    .foregroundStyle(TildeColor.accent)
+                KeyPicker(selection: model.key, issue: m.showsValidation ? m.issue(for: .key) : nil)
             } else {
-                Toggle("Ask every time", isOn: model.asksEveryTime)
+                TildeToggleRow("Ask every time", isOn: model.asksEveryTime)
                 if !m.asksEveryTime {
-                    SecureField(m.hasSavedPassword ? "Saved. Type to replace." : "Password", text: model.password)
-                        .tildeMono(15)
-                        .textContentType(.password)
-                    if let issue = m.issue(for: .password) { IssueText(issue) }
+                    TildeTextRow("Password", prompt: m.hasSavedPassword ? "Saved. Type to replace." : "", text: model.password,
+                                 isSecure: true, contentType: .password, issue: m.issue(for: .password))
+                        .onSubmit { submitsSave(m) }
                 }
-            }
-        } header: {
-            Text("Authentication").tildeSectionHeader()
-        } footer: {
-            if m.isPasswordAuth {
-                Text(m.asksEveryTime ? "Nothing is stored. You are asked at every connection." : "Stored in iCloud Keychain, never in the synced database.")
             }
         }
     }
 
     private func organizeSection(_ model: Bindable<ServerEditorModel>) -> some View {
-        Section {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Environment").tildeText(13, relativeTo: .footnote).foregroundStyle(TildeColor.text2)
-                EnvironmentPicker(selection: model.environment)
-            }
-            .padding(.vertical, 2)
-
-            Picker("Group", selection: model.group) {
+        TildeFormSection("Organize") {
+            TildeFieldRow("Environment") { EnvironmentPicker(selection: model.environment) }
+            TildePickerRow("Group", selection: model.group) {
                 Text("None").tag(ServerGroup?.none)
                 ForEach(groups) { group in Label(group.name, systemImage: group.symbol).tag(Optional(group)) }
             }
-            Button { showsNewGroup = true } label: { Label("New group…", systemImage: "folder.badge.plus") }
-                .foregroundStyle(TildeColor.accent)
-
+            TildeActionRow("New group…", systemImage: "folder.badge.plus") { showsNewGroup = true }
             TagTokenField(tags: model.tags, suggestions: allTags.map(\.name))
-            Toggle("Favorite", isOn: model.isFavorite)
-        } header: { Text("Organize").tildeSectionHeader() }
+            TildeToggleRow("Favorite", isOn: model.isFavorite)
+        }
     }
 
     private func advancedSection(_ model: Bindable<ServerEditorModel>) -> some View {
         let m = model.wrappedValue
-        return Section {
-            DisclosureGroup("Advanced", isExpanded: $showsAdvanced) {
-                Picker("Jump host", selection: model.jump) {
-                    Text("None").tag(Server?.none)
-                    ForEach(allServers.filter { $0.id != m.original?.id }) { Text(ServerMapper.displayName($0)).tag(Optional($0)) }
+        return VStack(alignment: .leading, spacing: TildeSpacing.l) {
+            Button { withAnimation(.easeOut(duration: 0.15)) { showsAdvanced.toggle() } } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .rotationEffect(.degrees(showsAdvanced ? 90 : 0))
+                        .accessibilityHidden(true)
+                    Text("Advanced").tildeText(14, weight: .medium, relativeTo: .body)
+                    Spacer(minLength: 0)
                 }
-                if m.showsValidation, let issue = m.issue(for: .jump) { IssueText(issue) }
+                .foregroundStyle(TildeColor.text2)
+                .padding(.horizontal, 4)
+                .frame(minHeight: 28)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(showsAdvanced ? "Expanded" : "Collapsed")
 
-                LabeledRow("Startup") {
-                    MonoField("tmux new -A -s tilde", text: model.startupCommand).multilineTextAlignment(.trailing)
-                }
-                Toggle("Auto-attach tmux", isOn: model.autoTmux)
-                if m.autoTmux {
-                    LabeledRow("tmux session") { MonoField("tilde", text: model.tmuxSessionName).multilineTextAlignment(.trailing) }
-                }
-                Stepper(value: model.keepAliveSeconds, in: 0...300, step: 5) {
-                    HStack {
-                        Text("Keep-alive")
-                        Spacer()
-                        Text(m.keepAliveSeconds == 0 ? "off" : "\(m.keepAliveSeconds) s").tildeMono(13).foregroundStyle(TildeColor.text2)
+            if showsAdvanced {
+                TildeFormSection {
+                    TildePickerRow("Jump host", selection: model.jump, issue: m.showsValidation ? m.issue(for: .jump) : nil) {
+                        Text("None").tag(Server?.none)
+                        ForEach(allServers.filter { $0.id != m.original?.id }) { Text(ServerMapper.displayName($0)).tag(Optional($0)) }
                     }
+                    TildeTextRow("Startup", prompt: "tmux new -A -s tilde", text: model.startupCommand)
+                    TildeToggleRow("Auto-attach tmux", isOn: model.autoTmux)
+                    if m.autoTmux {
+                        TildeTextRow("tmux session", prompt: "tilde", text: model.tmuxSessionName)
+                    }
+                    TildeFieldRow("Keep-alive") {
+                        HStack(spacing: 10) {
+                            Text(m.keepAliveSeconds == 0 ? "off" : "\(m.keepAliveSeconds) s")
+                                .tildeMono(13)
+                                .foregroundStyle(TildeColor.text)
+                            Stepper("Keep-alive", value: model.keepAliveSeconds, in: 0...300, step: 5).labelsHidden()
+                        }
+                    }
+                    TildeTextRow("TERM", prompt: "xterm-256color", text: model.termType)
                 }
-                LabeledRow("TERM") { MonoField("xterm-256color", text: model.termType).multilineTextAlignment(.trailing) }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Environment variables").tildeText(13, relativeTo: .footnote).foregroundStyle(TildeColor.text2)
+                TildeFormSection(
+                    "Environment variables",
+                    footer: m.showsValidation ? (m.issue(for: .envVars) ?? "Servers may reject these (AcceptEnv).") : "KEY=value, one per line. Servers may reject these (AcceptEnv).",
+                    footerTint: m.showsValidation && m.issue(for: .envVars) != nil ? TildeColor.danger : TildeColor.text3
+                ) {
                     TextEditor(text: model.envVarsText)
                         .tildeMono(13)
-                        .frame(minHeight: 60)
+                        .frame(minHeight: 72)
                         .scrollContentBackground(.hidden)
                         .autocorrectionDisabled()
                         #if os(iOS)
                         .textInputAutocapitalization(.never)
                         #endif
-                    Text(m.showsValidation ? (m.issue(for: .envVars) ?? "Servers may reject these (AcceptEnv).") : "KEY=value, one per line. Servers may reject these (AcceptEnv).")
-                        .tildeText(11, relativeTo: .caption2)
-                        .foregroundStyle(m.showsValidation && m.issue(for: .envVars) != nil ? TildeColor.danger : TildeColor.text3)
+                        .padding(.vertical, 6)
+                        .accessibilityLabel("Environment variables")
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Notes").tildeText(13, relativeTo: .footnote).foregroundStyle(TildeColor.text2)
-                    TextEditor(text: model.notes).tildeMono(13).frame(minHeight: 60).scrollContentBackground(.hidden)
+                TildeFormSection("Notes") {
+                    TextEditor(text: model.notes)
+                        .tildeMono(13)
+                        .frame(minHeight: 72)
+                        .scrollContentBackground(.hidden)
+                        .padding(.vertical, 6)
+                        .accessibilityLabel("Notes")
                 }
             }
         }
     }
 
     private func testSection(_ model: ServerEditorModel) -> some View {
-        Section {
-            Button { model.test(services: services, coordinator: coordinator) } label: {
-                HStack {
-                    Label("Test connection", systemImage: "bolt.horizontal")
-                    Spacer()
-                    if model.testState == .running { ProgressView() }
-                }
+        TildeFormSection {
+            TildeActionRow("Test connection", systemImage: "bolt.horizontal", action: { model.test(services: services, coordinator: coordinator) }) {
+                if model.testState == .running { ProgressView().controlSize(.small) }
             }
             .disabled(model.testState == .running)
             switch model.testState {
@@ -270,20 +265,24 @@ public struct ServerEditor: View {
             case .success(let text):
                 Label(text, systemImage: "checkmark.circle.fill")
                     .tildeMono(12, relativeTo: .caption).foregroundStyle(TildeColor.ok)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 8)
             case .failure(let copy):
                 VStack(alignment: .leading, spacing: 4) {
                     Label(copy.headline, systemImage: "xmark.octagon.fill").tildeText(14, weight: .semibold, relativeTo: .subheadline).foregroundStyle(TildeColor.danger)
                     if let detail = copy.detail { Text(detail).tildeMono(12, relativeTo: .caption).foregroundStyle(TildeColor.text2) }
                 }
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.vertical, 8)
             }
         }
     }
 
     private func dangerSection(_ model: ServerEditorModel) -> some View {
-        Section {
-            Button("Forget host key", role: .destructive) { confirmsForgetKey = true }
-            Button("Delete server", role: .destructive) { confirmsDelete = true }
-        } header: { Text("Danger zone").tildeSectionHeader() }
+        TildeFormSection("Danger zone") {
+            TildeActionRow("Forget host key", tone: .danger) { confirmsForgetKey = true }
+            TildeActionRow("Delete server", tone: .danger) { confirmsDelete = true }
+        }
     }
 
     // MARK: Actions
@@ -312,39 +311,6 @@ public struct ServerEditor: View {
 }
 
 private enum AuthChoice: Hashable { case key, password }
-
-// MARK: - Form building blocks
-
-/// A form row with a secondary-colour label on the left and the field on the right, with an optional validation line.
-private struct LabeledRow<Field: View>: View {
-    let label: String
-    let issue: String?
-    let field: Field
-
-    init(_ label: String, issue: String? = nil, @ViewBuilder field: () -> Field) {
-        self.label = label
-        self.issue = issue
-        self.field = field()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: TildeSpacing.m) {
-                Text(label).tildeText(15, relativeTo: .body).foregroundStyle(TildeColor.text2).frame(minWidth: 70, alignment: .leading)
-                field
-            }
-            if let issue { IssueText(issue) }
-        }
-    }
-}
-
-private struct IssueText: View {
-    let text: String
-    init(_ text: String) { self.text = text }
-    var body: some View {
-        Text(text).tildeText(12, relativeTo: .caption).foregroundStyle(TildeColor.danger)
-    }
-}
 
 /// None / Dev / Staging / Prod / Lab, with the environment colour dots (Prod is red when selected).
 struct EnvironmentPicker: View {
@@ -393,7 +359,7 @@ struct TagTokenField: View {
     @State private var draft = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             if !tags.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
@@ -414,11 +380,10 @@ struct TagTokenField: View {
                         }
                     }
                 }
+                .padding(.top, 8)
             }
-            HStack {
-                Text("Tags").tildeText(15, relativeTo: .body).foregroundStyle(TildeColor.text2)
-                MonoField("add tag", text: $draft)
-                    .multilineTextAlignment(.trailing)
+            TildeFieldRow("Tags") {
+                TildeTextField("Tags", prompt: "add tag", text: $draft)
                     .onSubmit(commit)
                     .onChange(of: draft) { if draft.hasSuffix(",") { commit() } }
             }
@@ -427,6 +392,7 @@ struct TagTokenField: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) { ForEach(Array(matches), id: \.self) { s in TagChip(s, isOn: false) { draft = s; commit() } } }
                 }
+                .padding(.bottom, 8)
             }
         }
     }

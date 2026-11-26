@@ -11,7 +11,11 @@ public struct MonoField: View {
     }
 
     public var body: some View {
-        TextField(title, text: $text)
+        // An empty title plus a prompt: a Mac `Form` would otherwise promote the title to the row label and show it
+        // twice (once as the label, once as an empty field).
+        TextField("", text: $text, prompt: Text(title).foregroundStyle(TildeColor.text3))
+            .labelsHidden()
+            .accessibilityLabel(title)
             .tildeMono(15, relativeTo: .body)
             .autocorrectionDisabled()
             #if os(iOS)

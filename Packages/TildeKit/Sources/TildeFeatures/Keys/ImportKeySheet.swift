@@ -57,52 +57,41 @@ public struct ImportKeySheet: View {
     }
 
     public var body: some View {
-        NavigationStack {
-            Form {
+        TildeSheet("Import Key", subtitle: "Choose a file, paste, or drop a private key", idealHeight: 680) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
                 keySection
                 if needsPassphrase { passphraseSection }
                 if let message {
-                    Section {
-                        Label(message.text, systemImage: message.isError ? "exclamationmark.triangle.fill" : "info.circle.fill")
-                            .foregroundStyle(message.isError ? TildeColor.danger : TildeColor.text2)
-                            .font(.system(size: 14))
-                    }
-                    .listRowBackground(TildeColor.surface2)
+                    TildeNotice(message.text, tone: message.isError ? .danger : .info)
                 }
                 if let parsed { resultSection(parsed) }
             }
-            .tildeFormStyle()
-            .navigationTitle("Import Key")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Import") { importKey() }
-                        .disabled(parsed == nil || trimmedName.isEmpty || duplicate != nil || isWorking)
-                }
-            }
-            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
-                if case .success(let urls) = result, let url = urls.first { load(url) }
-            }
-            .onChange(of: text) { _, _ in textChanged() }
-            .onAppear { if !text.isEmpty { textChanged() } }
-            .dropDestination(for: URL.self) { urls, _ in
-                guard let url = urls.first else { return false }
-                load(url)
-                return true
-            }
+        } leading: {
+            if isWorking { ProgressView().controlSize(.small).accessibilityLabel("Working") }
+        } actions: {
+            TildeCancelButton { dismiss() }
+            TildeDefaultButton("Import") { importKey() }
+                .disabled(parsed == nil || trimmedName.isEmpty || duplicate != nil || isWorking)
         }
-        #if os(macOS)
-        .frame(minWidth: 480, minHeight: 520)
-        #endif
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first { load(url) }
+        }
+        .onChange(of: text) { _, _ in textChanged() }
+        .onAppear { if !text.isEmpty { textChanged() } }
+        .dropDestination(for: URL.self) { urls, _ in
+            guard let url = urls.first else { return false }
+            load(url)
+            return true
+        }
         .presentationDetents([.large])
     }
 
     // MARK: Sections
 
     private var keySection: some View {
-        Section {
+        TildeFormSection("Private key", footer: "OpenSSH, PEM (PKCS#1, SEC1) and PKCS#8 keys: Ed25519, ECDSA, RSA.") {
             TextEditor(text: $text)
-                .font(TildeFont.mono(11))
+                .tildeMono(11)
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
                 .autocorrectionDisabled()
@@ -110,93 +99,77 @@ public struct ImportKeySheet: View {
                 .textInputAutocapitalization(.never)
                 #endif
                 .accessibilityLabel("Private key text")
+                .padding(.vertical, 6)
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
                         Text("Paste a private key, or choose a file.\n-----BEGIN OPENSSH PRIVATE KEY-----")
-                            .font(TildeFont.mono(11))
+                            .tildeMono(11)
                             .foregroundStyle(TildeColor.text3)
-                            .padding(.top, 8).padding(.leading, 5)
+                            .padding(.top, 14).padding(.leading, 5)
                             .allowsHitTesting(false)
                             .accessibilityHidden(true)
                     }
                 }
-            HStack {
+            HStack(spacing: 8) {
                 Button("Choose File…", systemImage: "folder") { showFileImporter = true }
-                Spacer()
                 Button("Paste", systemImage: "doc.on.clipboard") {
                     if let pasted = SecureClipboard.currentString() { text = pasted }
                 }
                 #if os(macOS)
                 Button("~/.ssh…", systemImage: "terminal") { chooseFromSSHFolder() }
                 #endif
+                Spacer(minLength: 0)
             }
-            .buttonStyle(.bordered)
-            .tint(TildeColor.accent)
-        } header: {
-            Text("Private key").tildeSectionHeader()
-        } footer: {
-            Text("OpenSSH, PEM (PKCS#1, SEC1) and PKCS#8 keys: Ed25519, ECDSA, RSA.")
+            .buttonStyle(.tildeSheetSecondary)
+            .padding(.vertical, 6)
         }
-        .listRowBackground(TildeColor.surface2)
     }
 
     private var passphraseSection: some View {
-        Section {
-            SecureField("Passphrase", text: $passphrase)
+        TildeFormSection(
+            "This key is encrypted",
+            footer: passphraseWasWrong ? "That passphrase is wrong." : "The passphrase is used once to decrypt the key and is not stored.",
+            footerTint: passphraseWasWrong ? TildeColor.danger : TildeColor.text3
+        ) {
+            TildeTextRow("Passphrase", text: $passphrase, isMono: false, isSecure: true)
                 .onSubmit { Task { await unlock() } }
-                .accessibilityLabel("Key passphrase")
-            Button(isWorking ? "Unlocking…" : "Unlock Key") { Task { await unlock() } }
+            TildeActionRow(isWorking ? "Unlocking…" : "Unlock Key", systemImage: "lock.open") { Task { await unlock() } }
                 .disabled(passphrase.isEmpty || isWorking)
-        } header: {
-            Text("This key is encrypted").tildeSectionHeader()
-        } footer: {
-            Text(passphraseWasWrong ? "That passphrase is wrong." : "The passphrase is used once to decrypt the key and is not stored.")
-                .foregroundStyle(passphraseWasWrong ? TildeColor.danger : TildeColor.text3)
         }
-        .listRowBackground(TildeColor.surface2)
     }
 
     private func resultSection(_ parsed: Parsed) -> some View {
-        Group {
-            Section {
-                HStack {
-                    Text(parsed.info.algorithm.shortLabel(bits: parsed.info.bits))
-                        .font(TildeFont.mono(13, weight: .semibold))
-                    Spacer()
-                    TypeBadge(text: parsed.info.algorithm.badge(bits: parsed.info.bits), tinted: true)
+        VStack(alignment: .leading, spacing: TildeSpacing.l) {
+            TildeFormSection("Key found") {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(parsed.info.algorithm.shortLabel(bits: parsed.info.bits))
+                            .tildeMono(13, weight: .semibold)
+                            .foregroundStyle(TildeColor.text)
+                        Spacer()
+                        TypeBadge(text: parsed.info.algorithm.badge(bits: parsed.info.bits), tinted: true)
+                    }
+                    Text(parsed.info.fingerprintSHA256)
+                        .tildeMono(11)
+                        .foregroundStyle(TildeColor.text2)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityLabel("Fingerprint \(parsed.info.fingerprintSHA256)")
                 }
-                Text(parsed.info.fingerprintSHA256)
-                    .font(TildeFont.mono(11))
-                    .foregroundStyle(TildeColor.text2)
-                    .textSelection(.enabled)
-                    .accessibilityLabel("Fingerprint \(parsed.info.fingerprintSHA256)")
-                if let bits = parsed.info.bits, bits < 2048 {
-                    Label("This RSA key is only \(bits) bits. Keys under 2048 bits are weak, and many servers refuse them.", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(TildeColor.warn)
-                        .font(.system(size: 14))
-                }
-                if let duplicate {
-                    Label("Already imported as “\(duplicate.name)”.", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(TildeColor.warn)
-                        .font(.system(size: 14))
-                }
-            } header: {
-                Text("Key found").tildeSectionHeader()
+                .padding(.vertical, 8)
             }
-            .listRowBackground(TildeColor.surface2)
+            if let bits = parsed.info.bits, bits < 2048 {
+                TildeNotice("This RSA key is only \(bits) bits. Keys under 2048 bits are weak, and many servers refuse them.", tone: .warning)
+            }
+            if let duplicate {
+                TildeNotice("Already imported as “\(duplicate.name)”.", tone: .warning)
+            }
 
-            Section {
-                LabeledContent("Name") {
-                    MonoField("Name", text: $name).multilineTextAlignment(.trailing)
-                }
-                LabeledContent("Comment") {
-                    MonoField("Comment", text: $comment).multilineTextAlignment(.trailing)
-                }
-                Toggle("Sync via iCloud Keychain", isOn: $synchronizable)
-            } footer: {
-                Text("The key is stored unencrypted inside the Keychain, which protects it.")
+            TildeFormSection(footer: "The key is stored unencrypted inside the Keychain, which protects it.") {
+                TildeTextRow("Name", prompt: "my-key", text: $name)
+                TildeTextRow("Comment", prompt: "optional", text: $comment)
+                TildeToggleRow("Sync via iCloud Keychain", isOn: $synchronizable)
             }
-            .listRowBackground(TildeColor.surface2)
         }
     }
 

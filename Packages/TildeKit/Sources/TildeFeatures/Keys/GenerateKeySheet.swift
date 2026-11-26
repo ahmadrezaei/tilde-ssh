@@ -30,65 +30,34 @@ public struct GenerateKeySheet: View {
     }
 
     public var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    LabeledContent("Name") {
-                        MonoField("iphone-ed25519", text: $name)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    Picker("Type", selection: $choice) {
+        TildeSheet("New Key", subtitle: "A new SSH key pair", idealHeight: 520) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                TildeFormSection(footer: choice.detail) {
+                    TildeTextRow("Name", prompt: "iphone-ed25519", text: $name)
+                    TildePickerRow("Type", selection: $choice) {
                         ForEach(KeyTypeChoice.allCases) { Text($0.title).tag($0) }
                     }
-                    LabeledContent("Comment") {
-                        MonoField("tilde@iphone", text: $comment)
-                            .multilineTextAlignment(.trailing)
-                    }
-                } footer: {
-                    Text(choice.detail)
+                    TildeTextRow("Comment", prompt: "tilde@iphone", text: $comment)
                 }
-                .listRowBackground(TildeColor.surface2)
-
-                Section {
-                    Toggle("Sync via iCloud Keychain", isOn: $synchronizable)
-                } footer: {
-                    Text(synchronizable
-                        ? "The private key is stored in iCloud Keychain, end-to-end encrypted, and appears on your other devices."
-                        : "The private key stays on this device and is not backed up to iCloud.")
+                TildeFormSection(footer: synchronizable
+                    ? "The private key is stored in iCloud Keychain, end-to-end encrypted, and appears on your other devices."
+                    : "The private key stays on this device and is not backed up to iCloud.") {
+                    TildeToggleRow("Sync via iCloud Keychain", isOn: $synchronizable)
                 }
-                .listRowBackground(TildeColor.surface2)
-
                 if let errorMessage {
-                    Section {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(TildeColor.danger)
-                            .font(.system(size: 14))
-                    }
-                    .listRowBackground(TildeColor.surface2)
+                    TildeNotice(errorMessage, tone: .danger)
                 }
             }
-            .tildeFormStyle()
-            .navigationTitle("New Key")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(isGenerating)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    if isGenerating {
-                        ProgressView().accessibilityLabel("Generating key")
-                    } else {
-                        Button("Generate") { Task { await generate() } }
-                            .disabled(trimmedName.isEmpty)
-                    }
-                }
-            }
-            .onAppear(perform: applyDefaults)
-            .onChange(of: choice) { _, _ in applyDefaults() }
-            .interactiveDismissDisabled(isGenerating)
+        } leading: {
+            if isGenerating { ProgressView().controlSize(.small).accessibilityLabel("Generating key") }
+        } actions: {
+            TildeCancelButton { dismiss() }.disabled(isGenerating)
+            TildeDefaultButton("Generate") { Task { await generate() } }
+                .disabled(trimmedName.isEmpty || isGenerating)
         }
-        #if os(macOS)
-        .frame(minWidth: 420, minHeight: 360)
-        #endif
+        .onAppear(perform: applyDefaults)
+        .onChange(of: choice) { _, _ in applyDefaults() }
+        .interactiveDismissDisabled(isGenerating)
         .presentationDetents([.medium, .large])
     }
 

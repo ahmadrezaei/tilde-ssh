@@ -112,18 +112,14 @@ struct CommandPalette: View {
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        NavigationStack {
+        TildeSheet(title, scrolls: false, idealHeight: 560) {
             VStack(spacing: 0) {
                 field
                 Divider().overlay(TildeColor.border)
                 resultList
             }
-            .background(TildeColor.bg)
-            .navigationTitle(title)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        } actions: {
+            TildeCancelButton { dismiss() }
         }
         .task(id: query) {
             guard mode != .newTab else { return }
@@ -137,9 +133,6 @@ struct CommandPalette: View {
                 dismiss()
             }
         }
-        #if os(macOS)
-        .frame(minWidth: 520, minHeight: 420)
-        #endif
     }
 
     private var title: String {
@@ -156,8 +149,9 @@ struct CommandPalette: View {
 
     private var field: some View {
         HStack(spacing: TildeSpacing.s) {
-            Image(systemName: "magnifyingglass").foregroundStyle(TildeColor.text3)
-            TextField(mode == .snippets ? "Search snippets" : "Search, or user@host:port", text: $query)
+            Image(systemName: "magnifyingglass").foregroundStyle(TildeColor.text3).accessibilityHidden(true)
+            TextField("", text: $query, prompt: Text(mode == .snippets ? "Search snippets" : "Search, or user@host:port").foregroundStyle(TildeColor.text3))
+                .textFieldStyle(.plain)
                 .tildeMono(16)
                 .autocorrectionDisabled()
                 #if os(iOS)
@@ -169,36 +163,43 @@ struct CommandPalette: View {
                 .onKeyPress(.downArrow) { move(1); return .handled }
                 .onKeyPress(.upArrow) { move(-1); return .handled }
                 .onKeyPress(.escape) { dismiss(); return .handled }
+                .accessibilityLabel(mode == .snippets ? "Search snippets" : "Search")
         }
-        .padding(.horizontal, TildeSpacing.l)
-        .padding(.vertical, TildeSpacing.m)
+        .padding(.horizontal, TildeSheetMetrics.padding)
+        .frame(minHeight: 52)
         .background(TildeColor.surface)
     }
 
     private var resultList: some View {
         ScrollViewReader { proxy in
-            List {
-                ForEach(PaletteItem.Section.allCases, id: \.self) { section in
-                    let rows = items.filter { $0.section == section }
-                    if !rows.isEmpty {
-                        Section {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(PaletteItem.Section.allCases, id: \.self) { section in
+                        let rows = items.filter { $0.section == section }
+                        if !rows.isEmpty {
+                            SectionHeader(section.title)
+                                .padding(.horizontal, TildeSheetMetrics.padding)
+                                .padding(.top, TildeSpacing.l)
+                                .padding(.bottom, TildeSpacing.xs)
                             ForEach(rows) { item in
-                                Button { run(item) } label: { PaletteRow(item: item, isHighlighted: item.id == (highlighted ?? items.first?.id)) }
+                                let isOn = item.id == (highlighted ?? items.first?.id)
+                                Button { run(item) } label: { PaletteRow(item: item, isHighlighted: isOn) }
                                     .buttonStyle(.plain)
-                                    .listRowBackground(item.id == (highlighted ?? items.first?.id) ? TildeColor.accentSoft : TildeColor.surface)
+                                    .background(isOn ? TildeColor.accentSoft : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+                                    .padding(.horizontal, TildeSpacing.s)
                                     .id(item.id)
                             }
-                        } header: {
-                            SectionHeader(section.title)
                         }
                     }
+                    if items.isEmpty {
+                        ContentUnavailableView(emptyTitle, systemImage: "magnifyingglass", description: Text(emptyMessage))
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, TildeSpacing.xxl)
+                    }
                 }
-                if items.isEmpty {
-                    ContentUnavailableView(emptyTitle, systemImage: "magnifyingglass", description: Text(emptyMessage))
-                        .listRowBackground(Color.clear)
-                }
+                .padding(.bottom, TildeSpacing.l)
             }
-            .tildeList()
+            .background(TildeColor.bg)
             .onChange(of: highlighted) { _, id in if let id { proxy.scrollTo(id) } }
             .onChange(of: query) { highlighted = nil }
         }
@@ -333,7 +334,9 @@ private struct PaletteRow: View {
             EnvBadge(EnvTone(item.environment))
             if isHighlighted { Image(systemName: "return").font(.system(size: 11)).foregroundStyle(TildeColor.text3).accessibilityHidden(true) }
         }
-        .tildeRowHeight()
+        .padding(.horizontal, TildeSpacing.m)
+        .padding(.vertical, 6)
+        .frame(minHeight: TildeSheetMetrics.rowHeight + 4)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }

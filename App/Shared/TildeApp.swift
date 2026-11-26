@@ -50,7 +50,8 @@ struct TildeApp: App {
             if case .success(let environment) = launch {
                 LockedWindow(environment: environment) { SettingsRoot() }
                     .preferredColorScheme(colorScheme)
-                    .frame(minWidth: 520, minHeight: 420)
+                    .frame(width: 640)
+                    .frame(minHeight: 480, idealHeight: 720)
             }
         }
         #endif

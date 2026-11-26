@@ -17,7 +17,89 @@ public struct SnippetList: View {
 
     public init() {}
 
+    @Environment(\.dismiss) private var dismiss
+
     public var body: some View {
+        #if os(macOS)
+        macBody
+        #else
+        iosBody
+        #endif
+    }
+
+    #if os(macOS)
+    /// On the Mac the snippet manager is a sheet: the shared scaffold, a search field, and New Snippet in the action bar.
+    private var macBody: some View {
+        TildeSheet("Snippets", subtitle: snippets.isEmpty ? nil : "\(snippets.count) saved", scrolls: false, idealHeight: 600) {
+            VStack(spacing: 0) {
+                HStack(spacing: TildeSpacing.s) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(TildeColor.text3).accessibilityHidden(true)
+                    TextField("", text: $searchText, prompt: Text("Search snippets").foregroundStyle(TildeColor.text3))
+                        .textFieldStyle(.plain)
+                        .tildeMono(15)
+                        .autocorrectionDisabled()
+                        .accessibilityLabel("Search snippets")
+                }
+                .padding(.horizontal, TildeSheetMetrics.padding)
+                .frame(minHeight: 48)
+                .background(TildeColor.surface)
+                Divider().overlay(TildeColor.border)
+                if snippets.isEmpty {
+                    EmptyState("No snippets.", message: "Save the commands you type all the time. Use <name> for parts you fill in.") {
+                        Button("Add snippet") { navigator.present(.newSnippet) }.buttonStyle(.tildeSheetPrimary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                            if filtered.isEmpty {
+                                ContentUnavailableView.search(text: searchText).frame(maxWidth: .infinity)
+                            }
+                            let favorites = filtered.filter(\.isFavorite)
+                            if !favorites.isEmpty { macSection("Favorites", favorites) }
+                            ForEach(folderNames, id: \.self) { folder in
+                                macSection(folder, filtered.filter { $0.folder == folder })
+                            }
+                            let loose = filtered.filter { ($0.folder ?? "").isEmpty }
+                            if !loose.isEmpty { macSection(folderNames.isEmpty ? "Snippets" : "Other", loose) }
+                        }
+                        .padding(TildeSheetMetrics.padding)
+                    }
+                    .background(TildeColor.bg)
+                }
+            }
+        } leading: {
+            Button { navigator.present(.newSnippet) } label: { Label("New Snippet", systemImage: "plus") }
+                .buttonStyle(.tildeSheetSecondary)
+        } actions: {
+            TildeDefaultButton("Done") { dismiss() }
+        }
+        // The host wraps this sheet in a NavigationStack; hide its empty system title bar so only the sheet's own
+        // title row shows.
+        .sheet(item: $pendingFill) { snippet in
+            SnippetFillSheet(snippet: snippet) { values in
+                coordinator.insert(snippet, values: values, in: navigator.windowID)
+                pendingFill = nil
+            }
+        }
+        .confirmationDialog("Delete \"\(pendingDelete?.name ?? "")\"?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), titleVisibility: .visible) {
+            Button("Delete Snippet", role: .destructive) {
+                if let snippet = pendingDelete { context.delete(snippet); try? context.save() }
+                pendingDelete = nil
+            }
+        }
+    }
+
+    private func macSection(_ title: String, _ items: [Snippet]) -> some View {
+        TildeFormSection(title) {
+            ForEach(items) { snippet in
+                row(snippet).padding(.vertical, 6)
+            }
+        }
+    }
+    #endif
+
+    private var iosBody: some View {
         List {
             if filtered.isEmpty && !snippets.isEmpty {
                 ContentUnavailableView.search(text: searchText).listRowBackground(Color.clear)
@@ -162,12 +244,12 @@ public struct SnippetEditor: View {
     public init(snippet: Snippet? = nil) { self.snippet = snippet }
 
     public var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Name", text: $name)
+        TildeSheet(snippet == nil ? "New Snippet" : "Edit Snippet", idealHeight: 640) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                TildeFormSection(footer: "Wrap a part in <angle brackets>, like <unit>, to fill it in when you insert the snippet.") {
+                    TildeTextRow("Name", prompt: "service status", text: $name, isMono: false)
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Command").tildeText(13, relativeTo: .footnote).foregroundStyle(TildeColor.text2)
+                        Text("Command").tildeText(13, relativeTo: .footnote).foregroundStyle(TildeColor.text2).padding(.top, 8)
                         TextEditor(text: $command)
                             .tildeMono(14)
                             .frame(minHeight: 96)
@@ -176,6 +258,18 @@ public struct SnippetEditor: View {
                             #if os(iOS)
                             .textInputAutocapitalization(.never)
                             #endif
+                            .accessibilityLabel("Command")
+                            .overlay(alignment: .topLeading) {
+                                if command.isEmpty {
+                                    Text("systemctl status <unit>")
+                                        .tildeMono(14)
+                                        .foregroundStyle(TildeColor.text3)
+                                        .padding(.leading, 5)
+                                        .allowsHitTesting(false)
+                                        .accessibilityHidden(true)
+                                }
+                            }
+                            .padding(.bottom, 6)
                     }
                     if !placeholders.isEmpty {
                         HStack(spacing: 6) {
@@ -187,49 +281,43 @@ public struct SnippetEditor: View {
                             }
                         }
                     }
-                } footer: {
-                    Text("Wrap a part in <angle brackets>, like <unit>, to fill it in when you insert the snippet.")
                 }
-                Section {
-                    Picker("When inserted", selection: $runsOnInsert) {
-                        Text("Type only").tag(false)
-                        Text("Type and run").tag(true)
+                TildeFormSection(footer: runsOnInsert ? "Presses Return after typing. Multi-line snippets ask first on production servers." : "Types the command so you can edit it before pressing Return.") {
+                    TildeFieldRow("When inserted") {
+                        Picker("When inserted", selection: $runsOnInsert) {
+                            Text("Type only").tag(false)
+                            Text("Type and run").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        #if os(macOS)
+                        .fixedSize()
+                        #endif
                     }
-                    .pickerStyle(.segmented)
-                    TextField("Folder (optional)", text: $folder)
-                    Toggle("Favorite", isOn: $isFavorite)
-                    Picker("Available on", selection: $scopeServer) {
+                    TildeTextRow("Folder", prompt: "optional", text: $folder, isMono: false)
+                    TildeToggleRow("Favorite", isOn: $isFavorite)
+                    TildePickerRow("Available on", selection: $scopeServer) {
                         Text("All servers").tag(Server?.none)
                         ForEach(servers) { Text(ServerMapper.displayName($0)).tag(Optional($0)) }
                     }
-                } footer: {
-                    Text(runsOnInsert ? "Presses Return after typing. Multi-line snippets ask first on production servers." : "Types the command so you can edit it before pressing Return.")
                 }
                 if snippet != nil {
-                    Section { Button("Delete snippet", role: .destructive) { confirmsDelete = true } }
+                    TildeFormSection {
+                        TildeActionRow("Delete snippet", tone: .danger) { confirmsDelete = true }
+                    }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(TildeColor.bg)
-            .navigationTitle(snippet == nil ? "New Snippet" : "Edit Snippet")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).disabled(!canSave) }
-            }
-            .confirmationDialog("Delete this snippet?", isPresented: $confirmsDelete, titleVisibility: .visible) {
-                Button("Delete Snippet", role: .destructive) {
-                    if let snippet { context.delete(snippet); try? context.save() }
-                    dismiss()
-                }
+        } actions: {
+            TildeCancelButton { dismiss() }
+            TildeDefaultButton("Save", action: save).disabled(!canSave)
+        }
+        .confirmationDialog("Delete this snippet?", isPresented: $confirmsDelete, titleVisibility: .visible) {
+            Button("Delete Snippet", role: .destructive) {
+                if let snippet { context.delete(snippet); try? context.save() }
+                dismiss()
             }
         }
         .onAppear(perform: load)
-        #if os(macOS)
-        .frame(minWidth: 420, minHeight: 440)
-        #endif
     }
 
     private var placeholders: [String] { SnippetTemplate.placeholders(in: command) }
@@ -279,37 +367,33 @@ struct SnippetFillSheet: View {
 
     var body: some View {
         let names = SnippetTemplate.placeholders(in: snippet.command)
-        NavigationStack {
-            Form {
-                Section {
+        TildeSheet(snippet.name, subtitle: "Fill in the parts to insert", size: .compact, scrolls: false) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                TildeFormSection {
                     ForEach(names, id: \.self) { name in
-                        LabeledContent(name) {
-                            TextField("value", text: Binding(get: { values[name] ?? "" }, set: { values[name] = $0 }))
-                                .tildeMono(15)
-                                .multilineTextAlignment(.trailing)
-                                .autocorrectionDisabled()
-                                #if os(iOS)
-                                .textInputAutocapitalization(.never)
-                                #endif
+                        TildeFieldRow(name) {
+                            TildeTextField(name, prompt: "value", text: Binding(get: { values[name] ?? "" }, set: { values[name] = $0 }))
                                 .focused($focused, equals: name)
                                 .submitLabel(.go)
                                 .onSubmit { onInsert(values) }
                         }
                     }
-                } footer: {
-                    Text(SnippetTemplate.fill(snippet.command, values: values)).tildeMono(12, relativeTo: .caption).foregroundStyle(TildeColor.text2)
                 }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Result").tildeSectionHeader()
+                    Text(SnippetTemplate.fill(snippet.command, values: values))
+                        .tildeMono(12, relativeTo: .caption)
+                        .foregroundStyle(TildeColor.text2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+                .padding(.horizontal, 4)
             }
-            .scrollContentBackground(.hidden)
-            .background(TildeColor.bg)
-            .navigationTitle(snippet.name)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button(snippet.runOnInsert ? "Insert & Run" : "Insert") { onInsert(values) } }
-            }
+            .padding(TildeSheetMetrics.padding)
+        } actions: {
+            TildeCancelButton { dismiss() }
+            TildeDefaultButton(snippet.runOnInsert ? "Insert & Run" : "Insert") { onInsert(values) }
         }
         .presentationDetents([.medium])
         .onAppear { focused = names.first }

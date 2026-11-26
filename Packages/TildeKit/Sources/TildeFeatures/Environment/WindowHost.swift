@@ -198,12 +198,10 @@ struct SessionPromptHost: ViewModifier {
                 case .unknownHost(let request):
                     UnknownHostSheet(request: request) { coordinator.answerHostKey(request, $0) }
                         .presentationDetents([.medium, .large])
-                        .modifier(SheetSizing())
                 case .password(let request):
                     PasswordPromptSheet(request: request) { password, save, update in
                         coordinator.answerPassword(request, password: password, saveServer: save, updateSaved: update)
                     }
-                    .modifier(SheetSizing())
                 }
             }
     }
@@ -217,16 +215,6 @@ struct SessionPromptHost: ViewModifier {
             },
             set: { _ in }   // dismissal is disabled; answers go through the coordinator
         )
-    }
-}
-
-private struct SheetSizing: ViewModifier {
-    func body(content: Content) -> some View {
-        #if os(macOS)
-        content.frame(minWidth: 460, minHeight: 360)
-        #else
-        content
-        #endif
     }
 }
 
@@ -269,9 +257,18 @@ struct AppSheetView: View {
             case .palette(let mode):
                 CommandPalette(mode: mode)
             case .keys:
+                #if os(macOS)
+                // On the Mac the list draws its own TildeSheet action bar (with Done), so no toolbar Done here.
+                NavigationStack { KeyListView() }
+                #else
                 NavigationStack { KeyListView().toolbar { doneButton } }
+                #endif
             case .snippets:
+                #if os(macOS)
+                NavigationStack { SnippetList() }
+                #else
                 NavigationStack { SnippetList().toolbar { doneButton } }
+                #endif
             case .settings:
                 SettingsRoot(showsDone: true)
             case .generateKey:
@@ -299,9 +296,6 @@ struct AppSheetView: View {
         }
         .modifier(SessionPromptHost())
         .presentationBackground(TildeColor.bg)
-        #if os(macOS)
-        .frame(minWidth: 480, minHeight: 420)
-        #endif
     }
 
     @ToolbarContentBuilder
@@ -330,20 +324,19 @@ struct LinkConnectSheet: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: TildeSpacing.l) {
-            Text("Connect to \(target.displayString)?")
-                .tildeMono(18, weight: .bold, relativeTo: .headline)
-                .foregroundStyle(TildeColor.text)
-                .fixedSize(horizontal: false, vertical: true)
-            Text("A link asked Tilde to open this connection. Check the address before you continue. You will be asked for a password; no saved key or server settings are used.")
-                .tildeText(14, relativeTo: .subheadline)
-                .foregroundStyle(TildeColor.text2)
-            Spacer(minLength: 0)
-            Button("Connect", action: onConnect).buttonStyle(.tildePrimary).keyboardShortcut(.defaultAction)
-            Button("Cancel", action: onCancel).buttonStyle(.tildeSecondary).keyboardShortcut(.cancelAction)
+        TildeSheet("Connect to \(target.displayString)?", size: .compact, scrolls: false) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                Text("A link asked Tilde to open this connection. Check the address before you continue. You will be asked for a password; no saved key or server settings are used.")
+                    .tildeText(14, relativeTo: .subheadline)
+                    .foregroundStyle(TildeColor.text2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(TildeSheetMetrics.padding)
+        } actions: {
+            TildeCancelButton(action: onCancel)
+            // The address came from outside the app, so connecting takes a click, not a stray Return.
+            TildeDefaultButton("Connect", requiresClick: true, action: onConnect)
         }
-        .padding(TildeSpacing.l)
-        .background(TildeColor.bg)
         .interactiveDismissDisabled()
         .presentationDetents([.medium])
         .accessibilityElement(children: .contain)

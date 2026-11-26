@@ -29,23 +29,23 @@ struct InstallKeySheet: View {
     private var selected: Server? { servers.first { $0.id == selectedID } }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    HStack {
-                        Text(key.name).font(TildeFont.mono(13, weight: .semibold))
-                        Spacer()
-                        TypeBadge(text: key.typeBadge, tinted: true)
+        TildeSheet("Install on Server", subtitle: key.name, subtitleIsMono: true, idealHeight: 640) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                TildeFormSection(footer: "Adds this public key to ~/.ssh/authorized_keys on the server. Nothing is added twice.") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(key.name).tildeMono(13, weight: .semibold).foregroundStyle(TildeColor.text)
+                            Spacer()
+                            TypeBadge(text: key.typeBadge, tinted: true)
+                        }
+                        Text(key.shortFingerprint)
+                            .tildeMono(11)
+                            .foregroundStyle(TildeColor.text2)
                     }
-                    Text(key.shortFingerprint)
-                        .font(TildeFont.mono(11))
-                        .foregroundStyle(TildeColor.text2)
-                } footer: {
-                    Text("Adds this public key to ~/.ssh/authorized_keys on the server. Nothing is added twice.")
+                    .padding(.vertical, 8)
                 }
-                .listRowBackground(TildeColor.surface2)
 
-                Section {
+                TildeFormSection("Server", footer: "Choose a server you can already sign in to, for example with a password.") {
                     if servers.isEmpty {
                         Text("No servers yet.").foregroundStyle(TildeColor.text3)
                     }
@@ -59,49 +59,30 @@ struct InstallKeySheet: View {
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(server.id == selectedID ? .isSelected : [])
                     }
-                } header: {
-                    Text("Server").tildeSectionHeader()
-                } footer: {
-                    Text("Choose a server you can already sign in to, for example with a password.")
                 }
-                .listRowBackground(TildeColor.surface2)
 
                 if let selected, AuthMethod(rawValue: selected.authMethodRaw) != .key || selected.key == nil {
-                    Section {
-                        SecureField("Password (optional)", text: $password)
-                            .accessibilityLabel("Password for \(selected.name)")
-                    } footer: {
-                        Text("Used once for this install if the server asks for a password and none is saved. It is not stored.")
+                    TildeFormSection(footer: "Used once for this install if the server asks for a password and none is saved. It is not stored.") {
+                        TildeTextRow("Password", prompt: "optional", text: $password, isMono: false, isSecure: true, contentType: .password)
                     }
-                    .listRowBackground(TildeColor.surface2)
                 }
 
                 if let selected {
-                    Section {
-                        Toggle("Use this key for \(selected.name) afterwards", isOn: $switchServerToKey)
+                    TildeFormSection {
+                        TildeToggleRow("Use this key for \(selected.name) afterwards", isOn: $switchServerToKey)
                     }
-                    .listRowBackground(TildeColor.surface2)
                 }
 
                 statusSection
             }
-            .tildeFormStyle()
-            .navigationTitle("Install on Server")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(isFinished ? "Done" : "Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    if phase == .running {
-                        ProgressView().accessibilityLabel("Installing")
-                    } else {
-                        Button("Install") { Task { await install() } }
-                            .disabled(selected == nil || isFinished)
-                    }
-                }
-            }
+        } leading: {
+            if phase == .running { ProgressView().controlSize(.small).accessibilityLabel("Installing") }
+        } actions: {
+            TildeCancelButton(isFinished ? "Done" : "Cancel") { dismiss() }
+            // Installing writes to a remote authorized_keys: click only, never Return.
+            TildeDefaultButton("Install", requiresClick: true) { Task { await install() } }
+                .disabled(selected == nil || isFinished || phase == .running)
         }
-        #if os(macOS)
-        .frame(minWidth: 460, minHeight: 480)
-        #endif
         .presentationDetents([.large])
         .onDisappear { password = "" }
     }
@@ -116,19 +97,9 @@ struct InstallKeySheet: View {
         case .idle, .running:
             EmptyView()
         case .installed(let already):
-            Section {
-                Label(already ? "This key was already installed." : "Key installed. You can sign in with it now.",
-                      systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(TildeColor.ok)
-            }
-            .listRowBackground(TildeColor.surface2)
+            TildeNotice(already ? "This key was already installed." : "Key installed. You can sign in with it now.", tone: .success)
         case .failed(let message):
-            Section {
-                Label(message, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(TildeColor.danger)
-                    .font(.system(size: 14))
-            }
-            .listRowBackground(TildeColor.surface2)
+            TildeNotice(message, tone: .danger)
         }
     }
 
@@ -191,6 +162,8 @@ private struct ServerChoiceRow: View {
             Spacer()
             EnvBadge(EnvTone(rawValue: server.environmentRaw) ?? .none)
         }
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }

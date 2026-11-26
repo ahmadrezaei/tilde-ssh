@@ -26,86 +26,66 @@ struct ExportPrivateKeySheet: View {
     @State private var copied = false
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Label {
-                        Text("Anyone who has this file can sign in to your servers as you. Share it only with yourself, and prefer a passphrase.")
-                            .font(.system(size: 14))
-                    } icon: {
-                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(TildeColor.danger)
-                    }
-                }
-                .listRowBackground(TildeColor.danger.opacity(0.12))
+        TildeSheet("Export Key", subtitle: key.name, subtitleIsMono: true, idealHeight: 520) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                TildeNotice("Anyone who has this file can sign in to your servers as you. Share it only with yourself, and prefer a passphrase.", tone: .danger)
 
                 if exported == nil {
-                    Section {
-                        Toggle("Protect with a passphrase", isOn: $protectWithPassphrase)
+                    TildeFormSection(footer: protectWithPassphrase
+                        ? "The exported file is encrypted with aes256-ctr and bcrypt-pbkdf, like ssh-keygen does."
+                        : "The exported file will be readable by anyone who gets it.") {
+                        TildeToggleRow("Protect with a passphrase", isOn: $protectWithPassphrase)
                         if protectWithPassphrase {
-                            SecureField("Passphrase (5+ characters)", text: $passphrase)
-                            SecureField("Repeat passphrase", text: $confirmation)
+                            TildeTextRow("Passphrase", prompt: "5+ characters", text: $passphrase, isMono: false, isSecure: true)
+                            TildeTextRow("Repeat", prompt: "Repeat passphrase", text: $confirmation, isMono: false, isSecure: true)
                         }
-                    } footer: {
-                        Text(protectWithPassphrase
-                            ? "The exported file is encrypted with aes256-ctr and bcrypt-pbkdf, like ssh-keygen does."
-                            : "The exported file will be readable by anyone who gets it.")
                     }
-                    .listRowBackground(TildeColor.surface2)
-
-                    Section {
-                        Button(isWorking ? "Preparing…" : "Prepare Export") { Task { await prepare() } }
-                            .disabled(!canPrepare || isWorking)
-                    }
-                    .listRowBackground(TildeColor.surface2)
                 } else if let exported {
-                    Section {
-                        Button(copied ? "Copied" : "Copy Private Key", systemImage: copied ? "checkmark" : "doc.on.doc") {
+                    TildeFormSection(footer: clipboardFooter) {
+                        TildeActionRow(copied ? "Copied" : "Copy Private Key", systemImage: copied ? "checkmark" : "doc.on.doc", tone: .neutral) {
                             SecureClipboard.copySecret(exported)
                             copied = true
                         }
                         ShareLink(item: exported, subject: Text("Private key \(key.name)")) {
                             Label("Share…", systemImage: "square.and.arrow.up")
+                                .tildeText(14, weight: .medium, relativeTo: .body)
+                                .foregroundStyle(TildeColor.text)
+                                .frame(maxWidth: .infinity, minHeight: TildeSheetMetrics.rowHeight, alignment: .leading)
+                                .contentShape(Rectangle())
                         }
-                        Button("Save to File…", systemImage: "folder") { showFileExporter = true }
-                    } footer: {
-                        Text(clipboardFooter)
+                        .buttonStyle(.plain)
+                        TildeActionRow("Save to File…", systemImage: "folder", tone: .neutral) { showFileExporter = true }
                     }
-                    .listRowBackground(TildeColor.surface2)
                 }
 
                 if let errorMessage {
-                    Section {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(TildeColor.danger)
-                            .font(.system(size: 14))
-                    }
-                    .listRowBackground(TildeColor.surface2)
+                    TildeNotice(errorMessage, tone: .danger)
                 }
             }
-            .tildeFormStyle()
-            .navigationTitle("Export Key")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
-            }
-            .fileExporter(
-                isPresented: $showFileExporter,
-                document: KeyFileDocument(data: Data((exported ?? "").utf8)),
-                contentType: .data,
-                defaultFilename: fileName
-            ) { _ in }
-            .onDisappear(perform: wipe)
-            // The lock screen lives in its own window above this sheet, but the exported key must not outlive the
-            // lock: drop it and close the sheet the moment the app locks or leaves the foreground.
-            .onChange(of: appLock?.isLocked ?? false) { _, locked in
-                if locked { closeAndWipe() }
-            }
-            .onChange(of: scenePhase) { _, phase in
-                if phase == .background { closeAndWipe() }
+        } actions: {
+            if exported == nil {
+                TildeCancelButton { dismiss() }
+                TildeDefaultButton(isWorking ? "Preparing…" : "Prepare Export") { Task { await prepare() } }
+                    .disabled(!canPrepare || isWorking)
+            } else {
+                TildeDefaultButton("Done") { dismiss() }
             }
         }
-        #if os(macOS)
-        .frame(minWidth: 440, minHeight: 380)
-        #endif
+        .fileExporter(
+            isPresented: $showFileExporter,
+            document: KeyFileDocument(data: Data((exported ?? "").utf8)),
+            contentType: .data,
+            defaultFilename: fileName
+        ) { _ in }
+        .onDisappear(perform: wipe)
+        // The lock screen lives in its own window above this sheet, but the exported key must not outlive the
+        // lock: drop it and close the sheet the moment the app locks or leaves the foreground.
+        .onChange(of: appLock?.isLocked ?? false) { _, locked in
+            if locked { closeAndWipe() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { closeAndWipe() }
+        }
         .presentationDetents([.medium, .large])
     }
 
