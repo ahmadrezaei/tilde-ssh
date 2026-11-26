@@ -388,7 +388,7 @@ struct KnownHostsTable: View {
                 if ids.count == 1, let id = ids.first, let row = rows.first(where: { $0.id == id }) {
                     Button("Copy Fingerprint", systemImage: "doc.on.doc") { Platform.copy(row.fingerprint) }
                 }
-                Button(ids.count == 1 ? "Forget Host Key…" : "Forget Host Keys…", systemImage: "trash", role: .destructive) { pendingForget = ids }
+                Button(ids.count == 1 ? "Forget Host Key…" : "Forget Host Keys…", systemImage: "trash", role: .destructive) { pendingForget = KnownHostTableRow.visibleSelection(ids, in: rows) }
             }
         }
         .onDeleteCommand { if !visibleSelection.isEmpty { pendingForget = visibleSelection } }

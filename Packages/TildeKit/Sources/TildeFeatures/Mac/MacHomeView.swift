@@ -58,7 +58,7 @@ public struct MacHomeView: View {
 
     /// The tab that just closed in this window, while nothing is open and the banner was not dismissed.
     private var visibleClosure: ClosedSession? {
-        guard navigator.tabs.isEmpty, let closure = coordinator.lastClosure, closure.windowID == navigator.windowID,
+        guard navigator.tabs.isEmpty, let closure = coordinator.lastClosure(in: navigator.windowID),
               closure.id != dismissedClosureID else { return nil }
         return closure
     }

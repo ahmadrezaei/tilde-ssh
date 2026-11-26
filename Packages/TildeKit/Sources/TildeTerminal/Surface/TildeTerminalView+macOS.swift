@@ -152,6 +152,18 @@ final class TildeTerminalView: TerminalView, TerminalViewActions {
     func openExternally(_ url: URL) { NSWorkspace.shared.open(url) }
 
     func focusTerminal() { window?.makeFirstResponder(self) }
+
+    /// Replies the emulator generates itself (cursor position, device attributes) go straight to the session: only
+    /// typed input is held back for a tab that may not take the keyboard (`TerminalHost.send`).
+    nonisolated override func send(source: Terminal, data: ArraySlice<UInt8>) {
+        let bytes = Data(data)
+        // The view is main-actor bound and only touched inside `deliver`, which runs on the main actor.
+        nonisolated(unsafe) weak var view = self
+        let deliver: @MainActor @Sendable () -> Void = {
+            (view?.terminalDelegate as? TerminalHost)?.reply(bytes)
+        }
+        if Thread.isMainThread { MainActor.assumeIsolated(deliver) } else { DispatchQueue.main.async(execute: deliver) }
+    }
     func resignTerminalFocus() {
         if window?.firstResponder === self { window?.makeFirstResponder(nil) }
     }

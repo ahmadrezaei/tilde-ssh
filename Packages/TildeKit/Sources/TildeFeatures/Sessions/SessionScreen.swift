@@ -62,7 +62,7 @@ struct SessionScreen: View {
     private var inTabHostKey: HostKeyRequest? {
         #if os(macOS)
         // While a sheet is up the card would sit behind it; the sheet's own prompt host shows the question instead.
-        guard navigator.sheet == nil, navigator.selectedTab?.id == tab.id else { return nil }
+        guard !navigator.isShowingSheet, navigator.selectedTab?.id == tab.id else { return nil }
         return coordinator.pendingInTabHostKey(for: tab.id)
         #else
         return nil
@@ -142,7 +142,7 @@ private struct InTabHostKeyPrompt: View {
         .onAppear { tab.terminal.resignFocus() }
         .onDisappear {
             // Also fires when the user switches to another tab; only hand focus back if this one is still on screen.
-            if navigator.sheet == nil, navigator.selectedTab?.id == tab.id { tab.terminal.focus() }
+            if !navigator.isShowingSheet, navigator.selectedTab?.id == tab.id { tab.terminal.focus() }
         }
     }
 }

@@ -216,6 +216,13 @@ public final class TerminalController {
     /// Takes keyboard focus away from this terminal, only if it has it (a prompt over the terminal asks for this).
     public func resignFocus() { actions?.resignTerminalFocus() }
 
+    /// Whether the terminal may take the keyboard (Mac). A hidden tab, or a tab with a question in front of it, sets
+    /// this to `false` so AppKit cannot hand it focus back (for example when a sheet closes) and keystrokes cannot
+    /// reach a shell the user is not looking at.
+    @ObservationIgnored public var acceptsKeyboardFocus = true {
+        didSet { if !acceptsKeyboardFocus { resignFocus() } }
+    }
+
     // MARK: Sending
 
     /// Types `text` into the terminal as if the user had entered it.

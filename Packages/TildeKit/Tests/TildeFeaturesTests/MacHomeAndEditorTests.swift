@@ -128,6 +128,17 @@ private func server(_ name: String, env: ServerEnvironment = .none, used: TimeIn
         #expect(coordinator.recentlyClosed.first?.id == PreviewServers.prodAPI.id)
     }
 
+    @Test func eachWindowKeepsItsOwnLastClosure() {
+        let coordinator = coordinator()
+        let a = UUID(), b = UUID()
+        coordinator.close(coordinator.open(PreviewServers.prodAPI, in: a))
+        coordinator.close(coordinator.open(PreviewServers.dbPrimary, in: b))
+        #expect(coordinator.lastClosure(in: a)?.server == PreviewServers.prodAPI)
+        #expect(coordinator.lastClosure(in: b)?.server == PreviewServers.dbPrimary)
+        coordinator.windowClosed(a)
+        #expect(coordinator.lastClosure(in: a) == nil)
+    }
+
     @Test func aShellThatExitedKeepsItsStatus() {
         let coordinator = coordinator()
         let window = UUID()

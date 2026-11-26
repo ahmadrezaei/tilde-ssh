@@ -213,9 +213,17 @@ final class TerminalHost: TerminalViewDelegate {
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
 
     func send(source: TerminalView, data: ArraySlice<UInt8>) {
+        #if os(macOS)
+        // Keystrokes reach the session only from the visible tab with no question over it. Every tab's terminal stays
+        // in the window, and AppKit can hand keyboard focus back to a hidden one (for example when a sheet closes).
+        guard inputs.controller.acceptsKeyboardFocus else { return }
+        #endif
         // Typed input can contain a password: never log it.
         io?.send(Data(data))
     }
+
+    /// The emulator's own replies to the remote program, never gated.
+    func reply(_ data: Data) { io?.send(data) }
 
     func scrolled(source: TerminalView, position: Double) {}
 

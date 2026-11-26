@@ -44,6 +44,10 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
     /// The tab that was closed last, with the window it belonged to and why its session ended (the Mac start page
     /// reads it for "prod-api-01: shell exited").
     public private(set) var lastClosure: ClosedSession?
+    /// The same, per window, so closing a tab in one window doesn't clear another window's start-page banner.
+    private var lastClosures: [UUID: ClosedSession] = [:]
+
+    public func lastClosure(in window: UUID) -> ClosedSession? { lastClosures[window] }
 
     /// Called when a session reaches `connected` (the app throttles and stores `Server.lastConnectedAt`).
     public var onConnected: (@MainActor (ServerSnapshot) -> Void)?
@@ -81,6 +85,7 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         for tab in tabs(in: window) { close(tab) }
         selectedTabIDs[window] = nil
         navigators[window] = nil
+        lastClosures[window] = nil
         for request in hostKeyQueue where request.windowID == window { answerHostKey(request, .reject) }
         for request in passwordQueue where request.windowID == window { answerPassword(request, password: nil) }
     }
@@ -174,7 +179,9 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         recentlyClosed.insert(tab.server, at: 0)
         let reason: SessionEndReason
         if case .disconnected(let ended) = tab.state { reason = ended } else { reason = .userClosed }
-        lastClosure = ClosedSession(server: tab.server, windowID: window, reason: reason)
+        let closure = ClosedSession(server: tab.server, windowID: window, reason: reason)
+        lastClosure = closure
+        lastClosures[window] = closure
         if recentlyClosed.count > 10 { recentlyClosed.removeLast() }
 
         let remaining = tabs(in: window)

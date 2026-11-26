@@ -53,6 +53,8 @@ struct TildeApp: App {
             }
         }
         .keyboardShortcut("k", modifiers: [.command, .option])
+        // Never the target of an ssh:// or tilde:// link: those belong to a main window, which confirms and connects.
+        .handlesExternalEvents(matching: [])
         .defaultSize(width: 600, height: 640)
         .windowResizability(.contentSize)
         .restorationBehavior(.disabled)
@@ -64,6 +66,8 @@ struct TildeApp: App {
             }
         }
         .keyboardShortcut("s", modifiers: [.command, .option])
+        // Never the target of an ssh:// or tilde:// link: those belong to a main window, which confirms and connects.
+        .handlesExternalEvents(matching: [])
         .defaultSize(width: 640, height: 680)
         .windowResizability(.contentSize)
         .restorationBehavior(.disabled)
