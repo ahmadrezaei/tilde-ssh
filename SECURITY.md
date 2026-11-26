@@ -10,7 +10,7 @@ Tilde holds the keys to people's servers, so security reports are taken seriousl
 2. Choose **Report a vulnerability** (a private security advisory).
 3. Describe the problem, the affected platform and version, and how to reproduce it.
 
-If you cannot use GitHub advisories, email the maintainers at `security@tildessh.app` (placeholder until the project domain is live; check the repository's Security tab for the current contact).
+Report privately at https://github.com/ahmadrezaei/tilde-ssh/security/advisories/new. If you cannot use GitHub advisories, open an issue at https://github.com/ahmadrezaei/tilde-ssh/issues asking for a private contact, without including any vulnerability details.
 
 Please include:
 

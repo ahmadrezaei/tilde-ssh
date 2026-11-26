@@ -1,1 +1,1 @@
-https://tildessh.app/support
+https://github.com/ahmadrezaei/tilde-ssh/issues

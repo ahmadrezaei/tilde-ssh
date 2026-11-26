@@ -59,9 +59,9 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-conduct@tildessh.app (placeholder until the project domain is live; until then,
-use the private contact listed on the repository's Security tab).
+reported to the community leaders responsible for enforcement by opening an
+issue at https://github.com/ahmadrezaei/tilde-ssh/issues (keep details minimal
+in public; maintainers will move the conversation somewhere private).
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the

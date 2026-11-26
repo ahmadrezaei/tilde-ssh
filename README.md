@@ -159,6 +159,10 @@ Details and rationale are in [`docs/DESIGN.md`](docs/DESIGN.md#8-mvp-scope-vs-ro
 
 Issues and pull requests are welcome. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), which covers the module boundaries, how to run the tests, and what a good pull request looks like. Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Privacy
+
+Tilde collects no data. Read the full [Privacy Policy](PRIVACY.md).
+
 ## License
 
 Code is licensed under [Apache-2.0](LICENSE). Third-party notices are in [`NOTICE`](NOTICE).
