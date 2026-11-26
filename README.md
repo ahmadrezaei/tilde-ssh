@@ -66,6 +66,8 @@ The screenshots use demo servers (`prod-api-01`, `db-primary` and so on) and a m
 
 ## Install
 
+**Mac (direct download):** grab [Tilde-1.0.0-macOS.zip](https://github.com/ahmadrezaei/tilde-ssh/releases/latest) from the latest release, unzip it and drag Tilde to Applications. It's signed with a Developer ID and notarized by Apple. Requires macOS 26 or later.
+
 **App Store:** _link coming soon_ (`https://apps.apple.com/app/id0000000000`). Free, no in-app purchases.
 
 **TestFlight:** _link coming soon_.
