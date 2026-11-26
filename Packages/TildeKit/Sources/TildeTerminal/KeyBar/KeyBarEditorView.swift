@@ -276,22 +276,25 @@ private struct SlotEditor: View {
     }
 
     var body: some View {
-        NavigationStack {
+        TildeSheet("Edit key", subtitle: "Pick what this slot sends", scrolls: false, idealHeight: 640) {
             VStack(spacing: 0) {
                 Picker("Editing", selection: $target) {
                     ForEach(Target.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
-                .padding()
+                .labelsHidden()
+                .padding(TildeSheetMetrics.padding)
                 HStack {
                     Text(target == .primary ? slot.displayLabel : (slot.displayAlternateLabel ?? "none"))
                         .font(TildeFont.mono(20, weight: .semibold))
+                        .foregroundStyle(TildeColor.text)
                     if target == .alternate, slot.alternate != nil {
                         Spacer()
                         Button("Remove", role: .destructive) { slot.alternate = nil; slot.alternateLabel = nil }
+                            .buttonStyle(.tildeSheetDestructive)
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, TildeSheetMetrics.padding)
                 KeyCatalog { action in
                     if target == .primary {
                         slot.primary = action
@@ -302,12 +305,8 @@ private struct SlotEditor: View {
                     }
                 }
             }
-            .background(TildeColor.bg)
-            .navigationTitle("Edit key")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        } actions: {
+            TildeDefaultButton("Done") { dismiss() }
         }
         .preferredColorScheme(.dark)
     }
@@ -338,7 +337,8 @@ private struct KeyCatalog: View {
                 group("Modifiers") { grid([.modifier(.ctrl), .modifier(.alt), .modifier(.shift)]) }
                 group("Send text") {
                     HStack {
-                        TextField("e.g. | grep -i ", text: $literal)
+                        TextField("", text: $literal, prompt: Text("e.g. | grep -i ").foregroundStyle(TildeColor.text3))
+                            .textFieldStyle(.plain)
                             .font(TildeFont.mono(14))
                             .noAutocapitalization()
                             .autocorrectionDisabled()

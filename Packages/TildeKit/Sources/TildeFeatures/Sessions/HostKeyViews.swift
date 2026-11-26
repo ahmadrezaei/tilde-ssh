@@ -40,17 +40,12 @@ struct UnknownHostSheet: View {
     var body: some View {
         let challenge = request.challenge
         let key = challenge.presented
-        ScrollView {
+        TildeSheet(
+            "First connection to \(challenge.serverName ?? challenge.endpoint.host)",
+            subtitle: "\(HostKeyFormat.endpointLabel(challenge.endpoint)) presented an \(HostKeyFormat.label(key.algorithm)) key",
+            subtitleIsMono: true, idealHeight: 400
+        ) {
             VStack(alignment: .leading, spacing: TildeSpacing.l) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("First connection to \(challenge.serverName ?? challenge.endpoint.host)")
-                        .tildeText(20, weight: .bold, relativeTo: .title3)
-                        .foregroundStyle(TildeColor.text)
-                    Text("\(HostKeyFormat.endpointLabel(challenge.endpoint)) presented an \(HostKeyFormat.label(key.algorithm)) key:")
-                        .tildeMono(12, relativeTo: .caption)
-                        .foregroundStyle(TildeColor.text2)
-                }
-
                 FingerprintBlock {
                     FingerprintRow(label: "Fingerprint", algorithm: HostKeyFormat.label(key.algorithm),
                                    fingerprint: key.fingerprintSHA256, tint: TildeColor.accent)
@@ -62,21 +57,20 @@ struct UnknownHostSheet: View {
                         .tildeMono(12, relativeTo: .caption)
                         .foregroundStyle(TildeColor.text2)
                         .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.horizontal, 4)
 
-                VStack(spacing: TildeSpacing.s) {
-                    Button("Trust & Connect") { onDecision(.trustAndSave) }.buttonStyle(.tildePrimary)
-                    Button("Connect Once") { onDecision(.connectOnce) }.buttonStyle(.tildeSecondary)
-                    Button("Cancel", role: .cancel) { onDecision(.reject) }
-                        .buttonStyle(.plain).foregroundStyle(TildeColor.text2)
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                }
                 Text("Trusting saves the key and syncs it to your other devices.")
                     .tildeText(12, relativeTo: .caption).foregroundStyle(TildeColor.text3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 4)
             }
-            .padding(TildeSpacing.l)
+        } actions: {
+            TildeCancelButton { onDecision(.reject) }
+            Button("Connect Once") { onDecision(.connectOnce) }.buttonStyle(.tildeSheetSecondary)
+            TildeDefaultButton("Trust & Connect") { onDecision(.trustAndSave) }
         }
-        .background(TildeColor.bg)
         .interactiveDismissDisabled()
         .accessibilityElement(children: .contain)
     }
@@ -198,30 +192,26 @@ private struct HowToVerifySheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: TildeSpacing.l) {
-                    Text("Check the key through a channel you already trust: the provider console, a colleague, or a terminal on the server itself.")
-                        .tildeText(15, relativeTo: .body)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("On the server").tildeSectionHeader()
-                        Text("ssh-keygen -lf /etc/ssh/\(HostKeyFormat.serverKeyFile(algorithm))")
-                            .tildeMono(12, relativeTo: .caption).textSelection(.enabled)
-                            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                            .background(TildeColor.surface2, in: RoundedRectangle(cornerRadius: 8))
-                    }
-                    Text("If the printed fingerprint equals **Received**, the server was reinstalled or its keys rotated: trust the new key. If you cannot verify it, disconnect.")
-                        .tildeText(15, relativeTo: .body)
+        TildeSheet("How to verify", size: .compact, idealHeight: 440) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                Text("Check the key through a channel you already trust: the provider console, a colleague, or a terminal on the server itself.")
+                    .tildeText(14, relativeTo: .body)
+                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("On the server").tildeSectionHeader()
+                    Text("ssh-keygen -lf /etc/ssh/\(HostKeyFormat.serverKeyFile(algorithm))")
+                        .tildeMono(12, relativeTo: .caption).textSelection(.enabled)
+                        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(TildeColor.surface, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(TildeColor.border, lineWidth: TildeSpacing.hairline))
                 }
-                .foregroundStyle(TildeColor.text)
-                .padding(TildeSpacing.l)
+                Text("If the printed fingerprint equals **Received**, the server was reinstalled or its keys rotated: trust the new key. If you cannot verify it, disconnect.")
+                    .tildeText(14, relativeTo: .body)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .background(TildeColor.bg)
-            .navigationTitle("How to verify")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .foregroundStyle(TildeColor.text)
+        } actions: {
+            TildeDefaultButton("Done") { dismiss() }
         }
         .presentationDetents([.medium])
     }

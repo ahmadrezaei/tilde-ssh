@@ -14,8 +14,11 @@ struct TerminalSettingsSection: View {
         LabeledContent("Default TERM") {
             MonoField("xterm-256color", text: $term).multilineTextAlignment(.trailing)
         }
-        Stepper(value: $keepAlive, in: 0...300, step: 5) {
-            LabeledContent("Keep-alive") { Text(keepAlive == 0 ? "off" : "\(keepAlive) s").tildeMono(13).foregroundStyle(TildeColor.text2) }
+        LabeledContent("Keep-alive") {
+            HStack(spacing: 10) {
+                Text(keepAlive == 0 ? "off" : "\(keepAlive) s").tildeMono(13).foregroundStyle(TildeColor.text2)
+                Stepper("Keep-alive", value: $keepAlive, in: 0...300, step: 5).labelsHidden()
+            }
         }
     }
 }
@@ -38,8 +41,11 @@ struct ConnectionSettingsSection: View {
             Text("None").tag("")
             ForEach(keys) { Text($0.name).tag($0.id.uuidString) }
         }
-        Stepper(value: $timeout, in: 5...120, step: 5) {
-            LabeledContent("Connect timeout") { Text("\(timeout) s").tildeMono(13).foregroundStyle(TildeColor.text2) }
+        LabeledContent("Connect timeout") {
+            HStack(spacing: 10) {
+                Text("\(timeout) s").tildeMono(13).foregroundStyle(TildeColor.text2)
+                Stepper("Connect timeout", value: $timeout, in: 5...120, step: 5).labelsHidden()
+            }
         }
         Toggle("Auto-reconnect", isOn: $autoReconnect)
         Toggle("Probe reachability", isOn: $probe)

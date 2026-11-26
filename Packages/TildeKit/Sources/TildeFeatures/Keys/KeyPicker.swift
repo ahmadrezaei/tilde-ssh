@@ -5,28 +5,31 @@ import TildeDesign
 import TildeStore
 
 /// Picker used by the server editor's Authentication section (docs/DESIGN.md section 4.2): the keys with type and
-/// fingerprint tail, plus "Generate new Ed25519…" inline. Embed it in a `Form` section.
+/// fingerprint tail, plus "Generate new Ed25519…" inline. Embed it in a `TildeFormSection`; it contributes rows.
 public struct KeyPicker: View {
     @Binding private var selection: SSHKeyRecord?
+    private let issue: String?
     @Query(sort: \SSHKeyRecord.name) private var keys: [SSHKeyRecord]
     @State private var showGenerate = false
 
-    public init(selection: Binding<SSHKeyRecord?>) {
+    /// - Parameter issue: a validation message shown under the picker.
+    public init(selection: Binding<SSHKeyRecord?>, issue: String? = nil) {
         self._selection = selection
+        self.issue = issue
     }
 
     public var body: some View {
         Group {
-            Picker("Key", selection: $selection) {
+            TildePickerRow("Key", selection: $selection, issue: issue) {
                 Text("None").tag(SSHKeyRecord?.none)
                 ForEach(keys) { key in
                     Text(label(for: key)).tag(Optional(key))
                 }
             }
-            Button("Generate new Ed25519…", systemImage: "wand.and.sparkles") { showGenerate = true }
-        }
-        .sheet(isPresented: $showGenerate) {
-            GenerateKeySheet { created in selection = created }
+            TildeActionRow("Generate new Ed25519…", systemImage: "wand.and.sparkles") { showGenerate = true }
+                .sheet(isPresented: $showGenerate) {
+                    GenerateKeySheet { created in selection = created }
+                }
         }
     }
 
@@ -39,7 +42,9 @@ public struct KeyPicker: View {
 
 #Preview("KeyPicker") {
     @Previewable @State var selection: SSHKeyRecord?
-    Form { KeyPicker(selection: $selection) }
+    TildeFormSection("Authentication") { KeyPicker(selection: $selection) }
+        .padding()
+        .background(TildeColor.bg)
         .modelContainer(ModelContainerFactory.preview())
         .preferredColorScheme(.dark)
 }

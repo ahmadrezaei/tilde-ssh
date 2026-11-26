@@ -24,54 +24,37 @@ struct DeleteKeySheet: View {
     private var affected: [Server] { (key.servers ?? []).sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending } }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
+        TildeSheet("Delete Key", subtitle: key.name, subtitleIsMono: true, idealHeight: 520) {
+            VStack(alignment: .leading, spacing: TildeSpacing.l) {
+                TildeFormSection("\(affected.count == 1 ? "1 server uses" : "\(affected.count) servers use") this key") {
                     ForEach(affected) { server in
                         HStack {
-                            Text(server.name.isEmpty ? server.host : server.name).font(TildeFont.mono(13))
+                            Text(server.name.isEmpty ? server.host : server.name).tildeMono(13)
+                                .foregroundStyle(TildeColor.text)
                             Spacer()
                             EnvBadge(EnvTone(rawValue: server.environmentRaw) ?? .none)
                         }
                     }
-                } header: {
-                    Text("\(affected.count == 1 ? "1 server uses" : "\(affected.count) servers use") this key").tildeSectionHeader()
                 }
-                .listRowBackground(TildeColor.surface2)
 
-                Section {
-                    Picker("Switch them to", selection: $replacementID) {
+                TildeFormSection(footer: "These servers are changed first, then “\(key.name)” is deleted from this device and iCloud Keychain. This cannot be undone.") {
+                    TildePickerRow("Switch them to", selection: $replacementID) {
                         Text("Ask for a password").tag(UUID?.none)
                         ForEach(otherKeys) { other in
                             Text("\(other.name) · \(other.typeBadge)").tag(Optional(other.id))
                         }
                     }
-                } footer: {
-                    Text("These servers are changed first, then “\(key.name)” is deleted from this device and iCloud Keychain. This cannot be undone.")
                 }
-                .listRowBackground(TildeColor.surface2)
 
                 if let errorMessage {
-                    Section {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(TildeColor.danger)
-                    }
-                    .listRowBackground(TildeColor.surface2)
+                    TildeNotice(errorMessage, tone: .danger)
                 }
-
-                Section {
-                    Button("Reassign and Delete", role: .destructive) { reassignAndDelete() }
-                }
-                .listRowBackground(TildeColor.surface2)
             }
-            .tildeFormStyle()
-            .navigationTitle("Delete Key")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            }
+        } actions: {
+            TildeCancelButton { dismiss() }
+            Button("Reassign and Delete") { reassignAndDelete() }
+                .buttonStyle(.tildeSheetDestructive)
         }
-        #if os(macOS)
-        .frame(minWidth: 420, minHeight: 380)
-        #endif
         .presentationDetents([.medium, .large])
     }
 

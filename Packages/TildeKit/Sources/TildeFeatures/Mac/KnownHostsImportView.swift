@@ -29,35 +29,39 @@ public struct KnownHostsImportView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
+        TildeSheet(
+            "Import known_hosts",
+            subtitle: model.sourceName.map { "Reading \($0)" } ?? "Choose your OpenSSH known_hosts file",
+            idealHeight: 600
+        ) {
             content
-            Divider()
-            footer
+        } leading: {
+            Button("Choose File…") { showingImporter = true }
+                .buttonStyle(.tildeSheetSecondary)
+                .disabled(model.isWorking)
+        } actions: {
+            if let summary = model.summary {
+                TildeDefaultButton("Done") {
+                    onFinish(summary)
+                    dismiss()
+                }
+            } else {
+                TildeCancelButton {
+                    onFinish(nil)
+                    dismiss()
+                }
+                TildeDefaultButton(importTitle) {
+                    Task { await model.importSelected(using: services.knownHosts) }
+                }
+                .disabled(model.selection.isEmpty || model.isWorking)
+            }
         }
-        .frame(minWidth: 520, idealWidth: 600, minHeight: 420, idealHeight: 540)
-        .background(TildeColor.bg)
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.item], allowsMultipleSelection: false, onCompletion: handlePicked)
         .startInSSHDirectory()
         .task { await prepare() }
     }
 
     // MARK: Pieces
-
-    private var header: some View {
-        HStack(spacing: TildeSpacing.m) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Import known_hosts").font(.headline)
-                Text(model.sourceName.map { "Reading \($0)" } ?? "Choose your OpenSSH known_hosts file")
-                    .font(.subheadline).foregroundStyle(TildeColor.text2)
-            }
-            Spacer()
-            Button("Choose File…") { showingImporter = true }
-                .disabled(model.isWorking)
-        }
-        .padding(TildeSpacing.l)
-    }
 
     @ViewBuilder
     private var content: some View {
@@ -71,76 +75,69 @@ public struct KnownHostsImportView: View {
             } description: {
                 Text(message)
             } actions: {
-                Button("Choose Another File…") { showingImporter = true }
+                Button("Choose Another File…") { showingImporter = true }.buttonStyle(.tildeSheetSecondary)
             }
+            .frame(maxWidth: .infinity, minHeight: 300)
         } else {
             ContentUnavailableView {
                 Label("Import known_hosts", systemImage: "lock.shield")
             } description: {
                 Text("Pin the host keys you already trust, so Tilde warns you if any of those servers ever presents a different key. Choose your known_hosts file and review the entries first.")
             } actions: {
-                Button("Choose ~/.ssh/known_hosts…") { showingImporter = true }
-                    .buttonStyle(.borderedProminent)
+                Button("Choose ~/.ssh/known_hosts…") { showingImporter = true }.buttonStyle(.tildeSheetPrimary)
             }
+            .frame(maxWidth: .infinity, minHeight: 300)
         }
     }
 
     private var list: some View {
-        List {
+        VStack(alignment: .leading, spacing: TildeSpacing.l) {
             let fresh = model.entries(.new)
             if !fresh.isEmpty {
-                Section {
-                    ForEach(fresh) { entry in checkRow(entry) }
-                } header: {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text("\(fresh.count) new").tildeSectionHeader()
                         Spacer()
-                        Button("All") { model.selection.formUnion(fresh.map(\.id)) }.buttonStyle(.borderless)
-                        Button("None") { model.selection.subtract(fresh.map(\.id)) }.buttonStyle(.borderless)
+                        Button("All") { model.selection.formUnion(fresh.map(\.id)) }
+                        Button("None") { model.selection.subtract(fresh.map(\.id)) }
+                    }
+                    .buttonStyle(.borderless)
+                    .padding(.horizontal, 4)
+                    TildeFormSection {
+                        ForEach(fresh) { entry in checkRow(entry) }
                     }
                 }
             }
 
             let conflicts = model.entries(.conflict)
             if !conflicts.isEmpty {
-                Section {
+                TildeFormSection("\(conflicts.count) conflicts") {
                     ForEach(conflicts) { entry in
                         entryLabel(entry, note: model.ambiguousIDs.contains(entry.id)
                             ? "This file lists more than one key of this type for the host. Not imported."
                             : "A different key is pinned for this host. Not imported. Connect to the host to review the change.")
                             .foregroundStyle(TildeColor.warn)
+                            .padding(.vertical, 6)
                     }
-                } header: {
-                    Text("\(conflicts.count) conflicts").tildeSectionHeader()
                 }
             }
 
             let trusted = model.entries(.alreadyTrusted)
             if !trusted.isEmpty {
-                Section {
-                    Label("\(trusted.count) already pinned with the same key", systemImage: "checkmark.seal")
-                        .foregroundStyle(TildeColor.text2)
-                }
+                TildeNotice("\(trusted.count) already pinned with the same key", tone: .info, systemImage: "checkmark.seal")
             }
 
             if model.result.hashedCount > 0 {
-                Section {
-                    Label("\(model.result.hashedCount) hashed entries skipped. Hashed host names can't be turned back into hosts.",
-                          systemImage: "number")
-                        .font(.footnote).foregroundStyle(TildeColor.text3)
-                }
+                TildeNotice("\(model.result.hashedCount) hashed entries skipped. Hashed host names can't be turned back into hosts.",
+                            tone: .info, systemImage: "number")
             }
 
             let others = model.result.otherSkips
             if !others.isEmpty {
-                Section {
-                    Label("\(others.count) other lines skipped (wildcards, certificate authorities, unsupported key types).",
-                          systemImage: "minus.circle")
-                        .font(.footnote).foregroundStyle(TildeColor.text3)
-                }
+                TildeNotice("\(others.count) other lines skipped (wildcards, certificate authorities, unsupported key types).",
+                            tone: .info, systemImage: "minus.circle")
             }
         }
-        .listStyle(.inset)
     }
 
     private func checkRow(_ entry: KnownHostsEntry) -> some View {
@@ -153,19 +150,20 @@ public struct KnownHostsImportView: View {
             entryLabel(entry, note: nil)
         }
         .toggleStyle(CheckboxToggleStyle())
-        .padding(.vertical, 2)
+        .padding(.vertical, 6)
         .accessibilityElement(children: .combine)
     }
 
     private func entryLabel(_ entry: KnownHostsEntry, note: String?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(entry.endpoint.port == 22 ? entry.endpoint.host : "\(entry.endpoint.host):\(entry.endpoint.port)")
-                .font(TildeFont.rowTitle).foregroundStyle(TildeColor.text)
+                .tildeMono(15, weight: .semibold).foregroundStyle(TildeColor.text)
             Text("\(algorithmLabel(entry.key.algorithm))  \(entry.key.fingerprintSHA256)")
-                .font(.system(size: 11, design: .monospaced)).foregroundStyle(TildeColor.text2)
+                .tildeMono(11).foregroundStyle(TildeColor.text2)
                 .lineLimit(1).truncationMode(.middle)
-            if let note { Text(note).font(.caption) }
+            if let note { Text(note).tildeText(12, relativeTo: .caption).fixedSize(horizontal: false, vertical: true) }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func resultView(_ summary: KnownHostsImportSummary) -> some View {
@@ -179,33 +177,7 @@ public struct KnownHostsImportView: View {
                 if summary.hashedSkipped > 0 { Text("\(summary.hashedSkipped) hashed entries could not be read.") }
             }
         }
-    }
-
-    private var footer: some View {
-        HStack {
-            Spacer()
-            if let summary = model.summary {
-                Button("Done") {
-                    onFinish(summary)
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-            } else {
-                Button("Cancel", role: .cancel) {
-                    onFinish(nil)
-                    dismiss()
-                }
-                .keyboardShortcut(.cancelAction)
-                Button(importTitle) {
-                    Task { await model.importSelected(using: services.knownHosts) }
-                }
-                .keyboardShortcut(.defaultAction)
-                .buttonStyle(.borderedProminent)
-                .disabled(model.selection.isEmpty || model.isWorking)
-            }
-        }
-        .padding(TildeSpacing.l)
+        .frame(maxWidth: .infinity, minHeight: 300)
     }
 
     // MARK: Behaviour
@@ -258,5 +230,4 @@ public struct KnownHostsImportView: View {
         [10.0.2.5]:2222 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
         |1|F1E1KeoE/eEWhi10WpGv4OdiO6Y=|3988QV0VbkuUlFskmfOfUZhJKxE= ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
         """)
-        .frame(width: 600, height: 540)
 }
