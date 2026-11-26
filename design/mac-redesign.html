@@ -1,0 +1,1511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tilde for Mac: redesign directions</title>
+<style>
+/* ===================================================================
+   Page (review chrome). Everything is local: system fonts, inline SVG.
+   =================================================================== */
+:root{
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro","Helvetica Neue",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  --p-bg:#05080B;--p-surface:#0C1116;--p-surface2:#111820;--p-line:#1A222C;--p-text:#E6EDF3;--p-text2:#9AA6B2;--p-text3:#5F6B78;
+  --p-accent:#2DD4BF;--p-danger:#F7525F;--p-warn:#F5B83D;--p-ok:#3FD68B;--p-info:#58A6FF;--p-lab:#C792EA;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-padding-top:118px}
+body{background:var(--p-bg);color:var(--p-text);font:15px/1.55 var(--ui);-webkit-font-smoothing:antialiased;padding-bottom:140px}
+code,.pm{font-family:var(--mono);font-size:.9em}
+code{background:var(--p-surface2);border:1px solid var(--p-line);padding:1px 5px;border-radius:5px;color:#C9D6E2}
+a{color:var(--p-accent);text-decoration:none}
+b,strong{color:#F2F6FA;font-weight:600}
+.wrap{max-width:1360px;margin:0 auto;padding:0 40px}
+
+/* hero */
+.hero{padding:60px 0 34px;background:radial-gradient(1100px 420px at 12% -20%,rgba(45,212,191,.11),transparent 62%)}
+.hero .wrap{display:flex;gap:26px;align-items:center}
+.hero h1{font-size:36px;line-height:1.1;font-weight:750;letter-spacing:-.025em}
+.hero h1 span{color:var(--p-accent)}
+.hero p{color:var(--p-text2);margin-top:8px;max-width:820px}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.meta span{font:600 11px/1 var(--mono);color:var(--p-text2);border:1px solid var(--p-line);background:var(--p-surface);padding:6px 9px;border-radius:999px}
+.meta span.hot{color:var(--p-accent);border-color:rgba(45,212,191,.35)}
+
+.intro{display:grid;grid-template-columns:1.15fr .85fr;gap:28px;padding-top:6px}
+.card{background:var(--p-surface);border:1px solid var(--p-line);border-radius:16px;padding:24px 26px}
+.card h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--p-text3);font-weight:700;margin-bottom:14px}
+.card ol,.card ul{padding-left:20px;display:grid;gap:10px;color:#C6D0DA}
+.card li::marker{color:var(--p-text3);font:600 12px var(--mono)}
+.card li b{color:#fff}
+.problems li b{color:#FF9AA2}
+.principles li b{color:#7CF5DD}
+
+/* sticky switcher */
+.switch{position:sticky;top:0;z-index:50;margin-top:40px;background:rgba(5,8,11,.86);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border-bottom:1px solid var(--p-line);border-top:1px solid var(--p-line)}
+.switch .wrap{display:flex;align-items:center;gap:8px;height:62px}
+.switch .brand{display:flex;align-items:center;gap:9px;font-weight:700;margin-right:14px;font-size:14px;color:var(--p-text2)}
+.switch button{appearance:none;border:1px solid var(--p-line);background:var(--p-surface);color:var(--p-text2);font:600 13.5px var(--ui);height:38px;padding:0 15px;border-radius:11px;cursor:pointer;display:flex;align-items:center;gap:9px}
+.switch button .L{font:700 12px var(--mono);width:22px;height:22px;border-radius:6px;display:grid;place-items:center;background:var(--p-surface2);color:var(--p-text2)}
+.switch button:hover{color:var(--p-text)}
+.switch button.on{background:rgba(45,212,191,.10);border-color:rgba(45,212,191,.45);color:#fff}
+.switch button.on .L{background:var(--p-accent);color:#03201C}
+.switch .rec-tag{font:700 10px var(--ui);letter-spacing:.06em;text-transform:uppercase;color:#03201C;background:var(--p-accent);padding:3px 6px;border-radius:5px}
+.switch .sp{flex:1}
+.subnav{display:flex;gap:6px;flex-wrap:wrap;padding:0 0 12px}
+.subnav a{font:600 12px var(--ui);color:var(--p-text2);padding:5px 10px;border-radius:8px;border:1px solid var(--p-line);background:var(--p-surface)}
+.subnav a:hover{color:#fff;border-color:#2A3542}
+
+/* direction panels */
+.panel{display:none;padding-top:34px}
+.panel.on{display:block}
+body.all .panel{display:block}
+.dhead{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start;margin-bottom:26px}
+.dletter{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;font:800 30px var(--mono);color:#03201C;background:linear-gradient(160deg,#7CF5DD,#14B8A6)}
+.dhead h2{font-size:30px;letter-spacing:-.02em;line-height:1.1}
+.dhead h2 small{display:block;font-size:15px;color:var(--p-text2);font-weight:500;letter-spacing:0;margin-top:6px}
+.why{display:grid;grid-template-columns:1.25fr 1fr;gap:20px;margin-bottom:34px}
+.why p{color:#C6D0DA}
+.why p+p{margin-top:10px}
+.tradeoffs{display:grid;gap:7px;font-size:14px}
+.tradeoffs div{display:grid;grid-template-columns:20px 1fr;gap:6px;color:#C6D0DA}
+.tradeoffs .pro::before{content:"+";color:var(--p-ok);font:700 15px var(--mono)}
+.tradeoffs .con::before{content:"−";color:var(--p-danger);font:700 15px var(--mono)}
+
+.shot{margin:0 0 54px}
+.shot h3{font-size:18px;letter-spacing:-.01em;display:flex;align-items:baseline;gap:10px;margin-bottom:4px}
+.shot h3 .k{font:700 12px var(--mono);color:var(--p-accent);border:1px solid rgba(45,212,191,.35);padding:3px 7px;border-radius:6px}
+.shot .lede{color:var(--p-text2);font-size:14px;margin-bottom:18px;max-width:1000px}
+.stage{position:relative;padding:34px 0 40px;border-radius:22px;background:radial-gradient(900px 500px at 50% 0%,#0F1823,#070A0E 70%);border:1px solid #111821;display:flex;justify-content:center;overflow:hidden}
+.stage.paper{background:radial-gradient(900px 500px at 50% 0%,#2A3442,#141B24 75%)}
+.stage.desk{background:radial-gradient(800px 500px at 25% 10%,#1F3A45,transparent 60%),radial-gradient(700px 500px at 85% 90%,#2A2140,transparent 60%),#0B1118}
+.scaler{position:relative;transform-origin:0 0}
+.scaled{position:relative}
+.notes{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px 26px;margin-top:16px;font-size:13.5px;color:#BAC5D0;counter-reset:n}
+.notes div{position:relative;padding-left:30px}
+.notes div::before{counter-increment:n;content:counter(n);position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;background:rgba(45,212,191,.14);color:var(--p-accent);font:700 11px/20px var(--mono);text-align:center}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.pair .stage{padding:26px 0 30px}
+
+.map{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
+.map th{text-align:left;font:700 11px var(--ui);letter-spacing:.07em;text-transform:uppercase;color:var(--p-text3);padding:8px 12px;border-bottom:1px solid var(--p-line)}
+.map td{padding:9px 12px;border-bottom:1px solid #121921;vertical-align:top;color:#C6D0DA}
+.map td:first-child{color:#fff;font-weight:600;white-space:nowrap}
+.map td code{font-size:12px}
+.tag-c{font:700 10px var(--ui);letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:4px;white-space:nowrap}
+.tag-c.n{color:var(--p-ok);background:rgba(63,214,139,.12)}
+.tag-c.c{color:var(--p-warn);background:rgba(245,184,61,.12)}
+.tag-c.x{color:var(--p-info);background:rgba(88,166,255,.12)}
+h4.sec{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--p-text3);font-weight:700;margin:6px 0 4px}
+
+.cmp td,.cmp th{text-align:center}
+.cmp td:first-child,.cmp th:first-child{text-align:left}
+.cmp .best{color:var(--p-accent);font-weight:700}
+.rec{border:1px solid rgba(45,212,191,.35);background:linear-gradient(180deg,rgba(45,212,191,.07),transparent 50%),var(--p-surface)}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.files{font-size:13.5px}
+.files td:first-child{font-family:var(--mono);font-weight:500;font-size:12.5px;color:#DDE6EE}
+.files td:last-child{white-space:nowrap;color:var(--p-text2);font-family:var(--mono);font-size:12.5px}
+
+@media (max-width:1100px){.intro,.why,.pair,.cols2{grid-template-columns:1fr}.wrap{padding:0 20px}}
+
+/* ===================================================================
+   Mock windows (macOS 26). Each .win carries its own token set, so a
+   window can be dark (default) or light independent of the page.
+   =================================================================== */
+.win{position:relative;overflow:hidden;border-radius:18px;font:13px/1.3 var(--ui);letter-spacing:-.003em;text-align:left;
+  --bg:#0B0F14;--surface:#11161D;--surface2:#171D25;--surface3:#1F2630;--border:#262E39;
+  --text:#E6EDF3;--text2:#9AA6B2;--text3:#5F6B78;
+  --accent:#2DD4BF;--accent-strong:#14B8A6;--on-accent:#04231F;--accent-soft:rgba(45,212,191,.15);
+  --ok:#3FD68B;--warn:#F5B83D;--danger:#F7525F;--info:#58A6FF;--lab:#C792EA;
+  --line:rgba(255,255,255,.075);--line2:rgba(255,255,255,.05);
+  --glass:rgba(40,48,60,.66);--glass-line:rgba(255,255,255,.11);--glass-hi:rgba(255,255,255,.09);
+  --panel:rgba(20,26,34,.94);--panel-line:rgba(255,255,255,.08);
+  --hover:rgba(255,255,255,.055);--sel:rgba(45,212,191,.17);--tabbar:#0D1116;
+  --ctrl:#29313C;--ctrl-line:rgba(255,255,255,.10);--field:#0D1217;--sheet:#161C24;--grp:rgba(255,255,255,.035);
+  --dim:rgba(3,5,8,.5);
+  --t-bg:#0B0F14;--t-fg:#D6DEE6;--t-dim:#5F6B78;--t-g:#3FD68B;--t-b:#58A6FF;--t-y:#F5B83D;--t-r:#F7525F;--t-c:#2DD4BF;--t-m:#C792EA;--t-w:#F5F8FA;
+  background:var(--bg);color:var(--text);
+  box-shadow:0 0 0 1px rgba(255,255,255,.11),0 50px 100px -30px rgba(0,0,0,.8),0 12px 36px rgba(0,0,0,.45)}
+.win.light{
+  --bg:#F6F8FA;--surface:#FFFFFF;--surface2:#F0F3F6;--surface3:#E7EBEF;--border:#D5DBE1;
+  --text:#1F2328;--text2:#59636E;--text3:#8C959F;
+  --accent:#0F9F8F;--accent-strong:#0B7D71;--on-accent:#FFFFFF;--accent-soft:rgba(15,159,143,.12);
+  --ok:#1A7F4B;--warn:#9A6700;--danger:#CF222E;--info:#0969DA;--lab:#8250DF;
+  --line:rgba(0,0,0,.09);--line2:rgba(0,0,0,.06);
+  --glass:rgba(255,255,255,.72);--glass-line:rgba(0,0,0,.08);--glass-hi:rgba(255,255,255,.9);
+  --panel:rgba(236,240,244,.92);--panel-line:rgba(0,0,0,.07);
+  --hover:rgba(0,0,0,.045);--sel:rgba(15,159,143,.15);--tabbar:#E8ECF0;
+  --ctrl:#FFFFFF;--ctrl-line:rgba(0,0,0,.13);--field:#FFFFFF;--sheet:#F7F8FA;--grp:rgba(0,0,0,.025);
+  --dim:rgba(30,35,40,.18);
+  --t-bg:#FBFCFD;--t-fg:#1F2328;--t-dim:#8C959F;--t-g:#1A7F4B;--t-b:#0969DA;--t-y:#9A6700;--t-r:#CF222E;--t-c:#0F9F8F;--t-m:#8250DF;--t-w:#000;
+  box-shadow:0 0 0 1px rgba(0,0,0,.14),0 50px 100px -30px rgba(0,0,0,.5),0 12px 36px rgba(0,0,0,.25)}
+.win *{box-sizing:border-box}
+.abs{position:absolute}
+.ic{display:inline-block;flex:none;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.ic.fill{fill:currentColor;stroke:none}
+.sp{flex:1}
+.m{font-family:var(--mono)}
+.t2{color:var(--text2)}.t3{color:var(--text3)}
+.acc{color:var(--accent)}
+
+/* traffic lights */
+.tl{position:absolute;display:flex;gap:8px;z-index:5}
+.tl i{display:block;width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.28)}
+.tl i:nth-child(1){background:#FF5F57}.tl i:nth-child(2){background:#FEBC2E}.tl i:nth-child(3){background:#28C840}
+.tl.off i{background:#3A424D!important}
+.light .tl.off i{background:#D3D8DE!important}
+
+/* env + status atoms */
+.e-prod{--e:var(--danger)}.e-staging{--e:var(--warn)}.e-dev{--e:var(--info)}.e-lab{--e:var(--lab)}.e-none{--e:transparent}
+.badge{display:inline-flex;align-items:center;height:16px;padding:0 5px;border-radius:4px;font:700 9.5px/1 var(--mono);letter-spacing:.04em;color:var(--e);background:color-mix(in srgb,var(--e) 14%,transparent);border:1px solid color-mix(in srgb,var(--e) 34%,transparent);flex:none}
+.badge.lg{height:18px;font-size:10px;padding:0 6px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--d,var(--text3));flex:none;display:inline-block}
+.d-ok{--d:var(--ok)}.d-warn{--d:var(--warn)}.d-bad{--d:var(--danger)}.d-off{--d:var(--text3)}
+.dot.live{--d:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 24%,transparent)}
+.edot{width:8px;height:8px;border-radius:50%;background:var(--e);flex:none;display:inline-block}
+.e-none.edot,.e-none .edot{background:transparent;box-shadow:inset 0 0 0 1.2px var(--text3)}
+.lat{font:11px var(--mono);color:var(--text3);text-align:right;flex:none}
+.lat.slow{color:var(--warn)}
+.kbd{font:500 10.5px var(--ui);color:var(--text3);border:1px solid var(--line);border-radius:5px;padding:1px 5px;background:var(--grp);flex:none}
+.kh{font:500 11px var(--ui);color:var(--text3);flex:none}
+
+/* glass toolbar items (Liquid Glass capsules) */
+.g{white-space:nowrap;overflow:hidden;height:32px;min-width:32px;border-radius:16px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 9px;color:var(--text);
+  background:var(--glass);border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi),0 3px 10px rgba(0,0,0,.18);font:500 12.5px var(--ui);flex:none}
+.g.grp{padding:0 3px;gap:0}
+.g.grp>span{width:32px;height:30px;display:flex;align-items:center;justify-content:center}
+.g.sm{height:28px;min-width:28px;border-radius:14px;padding:0 7px}
+.g.on{color:var(--accent)}
+.g.field{justify-content:flex-start;color:var(--text3);padding:0 11px}
+
+/* terminal */
+.tm{position:absolute;background:var(--t-bg);color:var(--t-fg);font:12.5px/17px var(--mono);white-space:pre;padding:10px 14px;overflow:hidden;letter-spacing:0}
+.tm .g1{color:var(--t-g)}.tm .b1{color:var(--t-b)}.tm .y1{color:var(--t-y)}.tm .r1{color:var(--t-r)}.tm .c1{color:var(--t-c)}.tm .m1{color:var(--t-m)}.tm .d1{color:var(--t-dim)}.tm .w1{color:var(--t-w);font-weight:600}
+.tm .cur{background:var(--t-c);color:var(--t-bg)}
+.tm .hl{background:color-mix(in srgb,var(--t-c) 20%,transparent)}
+
+/* generic Mac controls */
+.fld{height:24px;border-radius:7px;background:var(--field);border:1px solid var(--ctrl-line);display:flex;align-items:center;padding:0 8px;font:12.5px var(--ui);color:var(--text);gap:6px;min-width:0;box-shadow:inset 0 1px 1px rgba(0,0,0,.08)}
+.fld.m{font-family:var(--mono);font-size:12px}
+.fld.ph{color:var(--text3)}
+.fld.focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent)}
+.pop{height:24px;border-radius:7px;background:var(--ctrl);border:1px solid var(--ctrl-line);display:inline-flex;align-items:center;gap:7px;padding:0 6px 0 9px;font:12.5px var(--ui);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.15);white-space:nowrap}
+.pop .chev{margin-left:auto;width:16px;height:16px;border-radius:4px;display:grid;place-items:center;color:var(--text2)}
+.btn{height:26px;border-radius:13px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;font:500 12.5px var(--ui);color:var(--text);background:var(--ctrl);border:1px solid var(--ctrl-line);box-shadow:0 1px 2px rgba(0,0,0,.15);white-space:nowrap;flex:none}
+.btn.def{background:var(--accent);color:var(--on-accent);border-color:transparent;font-weight:600}
+.btn.dng{color:var(--danger)}
+.btn.sm{height:22px;padding:0 10px;font-size:12px;border-radius:11px}
+.chk{width:14px;height:14px;border-radius:4px;border:1px solid var(--ctrl-line);background:var(--ctrl);display:inline-grid;place-items:center;flex:none}
+.chk.on{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.rad{width:14px;height:14px;border-radius:50%;border:1px solid var(--ctrl-line);background:var(--ctrl);display:inline-grid;place-items:center;flex:none}
+.rad.on{background:var(--accent);border-color:transparent}
+.rad.on::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--on-accent)}
+.opt{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;white-space:nowrap}
+.sw{width:32px;height:18px;border-radius:9px;background:var(--ctrl);border:1px solid var(--ctrl-line);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:1px;left:1px;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sw.on{background:var(--accent);border-color:transparent}
+.sw.on::after{left:15px}
+.seg{display:inline-flex;height:22px;border-radius:7px;background:var(--grp);border:1px solid var(--ctrl-line);padding:1px;gap:1px}
+.seg span{display:flex;align-items:center;gap:5px;padding:0 9px;border-radius:5px;font:500 11.5px var(--ui);color:var(--text2)}
+.seg span.on{background:var(--ctrl);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.tok{display:inline-flex;align-items:center;gap:4px;height:18px;padding:0 4px 0 7px;border-radius:9px;background:var(--accent-soft);color:var(--accent);font:500 11.5px var(--mono)}
+
+/* grouped form (macOS Form .grouped) */
+.fsec{background:var(--grp);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.frow{display:flex;align-items:center;gap:10px;min-height:30px;padding:3px 12px;border-top:1px solid var(--line2);font-size:12.5px}
+.frow:first-child{border-top:0}
+.frow>.lb{color:var(--text);flex:none}
+.frow>.ct{margin-left:auto;display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:0}
+.frow .help{font-size:11px;color:var(--text3)}
+.fh{font:600 12px var(--ui);color:var(--text2);padding:12px 4px 5px}
+.fh:first-child{padding-top:0}
+
+/* sheets & panels */
+.dimmer{position:absolute;inset:0;background:var(--dim);z-index:7}
+.sheet{position:absolute;z-index:8;background:var(--sheet);border:1px solid var(--glass-line);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 .5px rgba(0,0,0,.4),inset 0 1px 0 var(--glass-hi);overflow:hidden}
+.light .sheet{box-shadow:0 30px 80px rgba(0,0,0,.25),0 0 0 .5px rgba(0,0,0,.1)}
+.fp{font:12px/1.45 var(--mono);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:9px 11px;color:var(--text);word-break:break-all}
+.art{font:11px/12px var(--mono);white-space:pre;color:var(--text2);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+</style>
+</head>
+<body>
+
+<!-- Icon sprite (24×24, stroked; SF Symbols stand-ins) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><path d="M9.5 4.5v15M5.6 8.5h1.6M5.6 11.5h1.6"/></symbol>
+  <symbol id="i-inspector" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><path d="M14.5 4.5v15M16.8 8.5h1.6M16.8 11.5h1.6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5.5 12h13"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.2 3 5.5 13.4h6l-1 7.6 7.8-10.6h-6z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/><circle cx="12" cy="12" r="6.6"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15.5" r="4"/><path d="m10.9 12.7 8.6-8.6M16.3 7.3l2.6 2.6M14 9.6l2 2"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/><path d="M7.5 7.5h.01M7.5 16.5h.01"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.8l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/></symbol>
+  <symbol id="i-chevd" viewBox="0 0 24 24"><path d="m6.5 9.5 5.5 5.5 5.5-5.5"/></symbol>
+  <symbol id="i-chevr" viewBox="0 0 24 24"><path d="m9.5 6.5 5.5 5.5-5.5 5.5"/></symbol>
+  <symbol id="i-updown" viewBox="0 0 24 24"><path d="m8 9.5 4-4 4 4M8 14.5l4 4 4-4"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M4 11.2 12 4.5l8 6.7V20h-5.2v-5.6H9.2V20H4z"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8" cy="8" r="1.3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10.2a4 4 0 0 0 .4-8 6 6 0 0 0-11.5 1.2A3.5 3.5 0 0 0 7 18.5z"/><path d="m9.4 14 1.9 1.9 3.5-3.5"/></symbol>
+  <symbol id="i-term" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="m7 9.5 3 2.5-3 2.5M12.5 15h4.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="m6.5 6.5 11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="3"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-ret" viewBox="0 0 24 24"><path d="M19.5 5v6.5a3 3 0 0 1-3 3H5.5M9.5 10.5l-4 4 4 4"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 19.5 6v5.8c0 4.7-3.2 7.8-7.5 9.2-4.3-1.4-7.5-4.5-7.5-9.2V6z"/></symbol>
+  <symbol id="i-shieldq" viewBox="0 0 24 24"><path d="M12 3 19.5 6v5.8c0 4.7-3.2 7.8-7.5 9.2-4.3-1.4-7.5-4.5-7.5-9.2V6z"/><path d="M10 10a2.1 2.1 0 1 1 3.1 1.8c-.7.4-1.1.8-1.1 1.6M12 16.3v.01"/></symbol>
+  <symbol id="i-shieldok" viewBox="0 0 24 24"><path d="M12 3 19.5 6v5.8c0 4.7-3.2 7.8-7.5 9.2-4.3-1.4-7.5-4.5-7.5-9.2V6z"/><path d="m8.8 12 2.2 2.2 4.2-4.4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2.2"/><path d="M15.5 8.5V6.7a2.2 2.2 0 0 0-2.2-2.2H6.7a2.2 2.2 0 0 0-2.2 2.2v6.6a2.2 2.2 0 0 0 2.2 2.2h1.8"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5.5 12.5 4.2 4.2 8.8-9.2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 17v.01"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4.5 7h15M7.5 12h9M10.5 17h3"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.8 20a7.2 7.2 0 0 1 14.4 0"/></symbol>
+  <symbol id="i-jump" viewBox="0 0 24 24"><path d="M4.5 19v-6a4 4 0 0 1 4-4h11M15.5 5l4 4-4 4"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="m10.2 8.6 5 3.4-5 3.4z"/></symbol>
+  <symbol id="i-sync" viewBox="0 0 24 24"><path d="M19.5 10.5a7.6 7.6 0 0 0-13.6-3.3L4.5 9M4.5 4.5V9H9M4.5 13.5a7.6 7.6 0 0 0 13.6 3.3l1.4-1.8M19.5 19.5V15H15"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8v.01"/></symbol>
+  <symbol id="i-cmd" viewBox="0 0 24 24"><path d="M9 9V6.5A2.5 2.5 0 1 0 6.5 9H9zm0 0h6m-6 0v6m6-6V6.5A2.5 2.5 0 1 1 17.5 9H15zm0 0v6m0 0h-6m6 0v2.5a2.5 2.5 0 1 0 2.5-2.5H15zM9 15H6.5A2.5 2.5 0 1 0 9 17.5V15z"/></symbol>
+  <symbol id="i-snip" viewBox="0 0 24 24"><path d="M5 7.5h9M5 12h14M5 16.5h7"/></symbol>
+  <symbol id="i-open" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M3.5 9h17"/></symbol>
+  <symbol id="i-tilde" viewBox="0 0 24 24"><path d="M3.5 13.8c1.3-3.4 4.4-3.9 6.4-1.4s5.1 2 6.4-1.4" stroke-width="2.6"/><rect x="18.2" y="8" width="3" height="8" rx=".6" fill="currentColor" stroke="none"/></symbol>
+</svg>
+
+<header class="hero">
+  <div class="wrap">
+    <svg width="78" height="78" viewBox="0 0 1024 1024" aria-hidden="true" style="flex:none;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.5)">
+      <defs><radialGradient id="hbg" cx="30%" cy="18%" r="95%"><stop offset="0" stop-color="#1D2733"/><stop offset=".55" stop-color="#0F151C"/><stop offset="1" stop-color="#070A0E"/></radialGradient>
+      <linearGradient id="hmint" x1="214" y1="420" x2="812" y2="620" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#9BF7E4"/><stop offset=".55" stop-color="#3EE0C3"/><stop offset="1" stop-color="#14B8A6"/></linearGradient></defs>
+      <rect width="1024" height="1024" rx="228" fill="url(#hbg)"/>
+      <g transform="translate(512 516) scale(1.1) translate(-512 -516)">
+        <path d="M254 556 C 292 458, 384 442, 444 516 C 504 590, 596 574, 634 476" fill="none" stroke="url(#hmint)" stroke-width="100" stroke-linecap="round"/>
+        <rect x="710" y="400" width="108" height="232" rx="18" fill="#2DD4BF"/>
+      </g>
+    </svg>
+    <div>
+      <h1>Tilde for Mac: <span>three redesign directions</span></h1>
+      <p>A review page for the owner. The iPhone app stays exactly as it is. This page proposes a new Mac design in three directions, each shown as macOS&nbsp;26 windows at 1280×800 with the same demo data as the App Store screenshots. Nothing gets built until one direction (or a mix) is approved.</p>
+      <div class="meta"><span class="hot">design only · no code changed</span><span>macOS 26 · SwiftUI</span><span>dark primary · light shown for the recommendation</span><span>2026-11-26</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap intro">
+  <div class="card problems">
+    <h2>What's wrong with the Mac app today</h2>
+    <ol>
+      <li><b>It's the iPad layout at Mac size.</b> Sidebar rows are two lines of 15&nbsp;pt bold SF Mono, about 62&nbsp;pt tall, so only 14 servers fit in an 800&nbsp;pt window. Mac-density 26&nbsp;pt rows fit about 28. DESIGN.md §4 already targets 28&nbsp;pt rows on the Mac.</li>
+      <li><b>The same server appears up to three times.</b> In the screenshot, prod-api-01 is listed under Live, Favorites and Production at once, with two different latencies (23&nbsp;ms and 72&nbsp;ms). The list looks like data you can't trust.</li>
+      <li><b>The toolbar is shaped like iOS.</b> Three separate round glass buttons (+, ⋯, sidebar) sit over the sidebar. A second + at the far right does something different (New Tab, not New Server). Latency, Snippets and + float as unrelated circles.</li>
+      <li><b>Red appears everywhere at once.</b> A PROD session draws a full-height red rule down the edge of the terminal, on top of the red tab and three PROD badges in the sidebar. When everything is loud, the warning stops working.</li>
+      <li><b>Utility windows open as modal sheets.</b> Keys and Snippets open as sheets over the terminal, from icon-only buttons in the sidebar footer. On the Mac they belong in their own windows (⌥⌘K / ⌥⌘S, DESIGN.md §3.4) and in the menu bar.</li>
+      <li><b>Monospace is used for chrome.</b> Tag chips (with "All" as a fake tag), tab hints and the editor's labels are all SF Mono. Labels and controls should be SF Pro, so the machine data stands out.</li>
+      <li><b>The server editor is an iOS form.</b> It has inset-grouped cards, a full-width five-way segmented control, "New group…" as a list row and oversized mint capsule buttons. Favorite and every Advanced field are below the fold, and there is no Test Connection.</li>
+      <li><b>The tabs don't act like Mac tabs, and there's no status area.</b> Tabs are rounded cards with colored tops and always-visible ⌘ hints, and the session title is repeated in the toolbar. Cipher, key, terminal size and reconnect state have nowhere to live.</li>
+    </ol>
+  </div>
+  <div class="card principles">
+    <h2>Principles for the new Mac design</h2>
+    <ol>
+      <li><b>Mac density, Mac controls.</b> 13&nbsp;pt SF Pro chrome, 24–28&nbsp;pt rows, and pop-up buttons, checkboxes and radio groups instead of touch controls.</li>
+      <li><b>One place for each thing.</b> A server appears once. Latency, environment and sync each have exactly one home on screen.</li>
+      <li><b>The terminal is the document.</b> Opening a session hides the sidebar. Closing the last tab brings the server list back.</li>
+      <li><b>Danger is a signal, not a theme.</b> PROD always gets the same small set of markers: the tab stripe, a badge by the title and a status segment. Nothing louder, except the full-screen takeover when a host key changes, which stays.</li>
+      <li><b>Keyboard first, complete menus.</b> Every action is in the menu bar with its shortcut. ⌘K reaches all of them, and shortcut hints appear where your eyes already are.</li>
+      <li><b>Native first.</b> Use custom views only where SwiftUI has no answer: the tab strip, the status line and the palette.</li>
+      <li><b>The brand is the accent and the type.</b> Mint marks focus, live sessions and the primary action. SF Mono is for machine data only (names, hosts, ports, fingerprints).</li>
+    </ol>
+  </div>
+</div>
+
+<nav class="switch" id="switch">
+  <div class="wrap">
+    <div class="brand"><svg class="ic" width="20" height="20" style="color:var(--p-accent)"><use href="#i-tilde"/></svg>Directions</div>
+    <button data-p="A"><span class="L">A</span>Source List <span class="rec-tag">Recommended</span></button>
+    <button data-p="B"><span class="L">B</span>Statusline</button>
+    <button data-p="C"><span class="L">C</span>Fleet</button>
+    <span class="sp"></span>
+    <button data-p="R"><span class="L">✓</span>Compare &amp; recommend</button>
+    <button data-p="ALL" title="Show every direction on one long page">Show all</button>
+  </div>
+</nav>
+
+<!-- ============================== A ============================== -->
+<section class="panel wrap" id="A">
+  <div class="dhead">
+    <div class="dletter">A</div>
+    <h2>Source List<small>A native Mac utility: a real sidebar, flat Mac tabs and a status bar, the way the rest of macOS does it.</small></h2>
+  </div>
+  <div class="why">
+    <div class="card">
+      <p>The sidebar becomes a proper <b>source list</b>. It has one compact row per server (status, name, environment, latency), groups as collapsible sections, tags as filters, and Quick Connect in the sidebar's own search field (<code>⌘L</code>). Favorites get a star and float to the top of their group, so <b>nothing is listed twice</b>.</p>
+      <p>Sessions open as <b>flat, full-width Mac tabs</b> under a unified toolbar. A <b>status bar</b> finally gives latency, cipher, key and terminal size a single home. Opening a session hides the sidebar. When the last shell exits, the sidebar comes back next to a start page with recent connections and the health of each environment.</p>
+    </div>
+    <div class="card tradeoffs">
+      <div class="pro">Lowest risk: almost everything is stock SwiftUI (List(.sidebar), .searchable, Form, Settings), and every Mac user already knows how it works.</div>
+      <div class="pro">Keeps the brand: mint accent and SF Mono for data, with Mac controls everywhere else.</div>
+      <div class="pro">Its pieces (de-duplicated sidebar, status bar) could move to iPad later at no extra cost.</div>
+      <div class="con">The least distinctive of the three. It looks like a very good Mac app, not a new idea.</div>
+      <div class="con">With the sidebar open you lose ~260&nbsp;pt of terminal width (126 instead of 160 columns at 13&nbsp;pt).</div>
+      <div class="con">The start page is a second "home" next to the sidebar, and it has to earn its place.</div>
+    </div>
+  </div>
+  <div class="subnav"><a href="#A-main">Main window</a><a href="#A-focus">Session focus</a><a href="#A-home">Home</a><a href="#A-new">New Server</a><a href="#A-settings">Settings</a><a href="#A-panels">Palette &amp; host key</a><a href="#A-light">Light mode</a><a href="#A-map">Native mapping</a></div>
+
+  <div class="shot" id="A-main">
+    <h3><span class="k">A·a</span>Main window: five sessions, sidebar visible</h3>
+    <p class="lede">prod-api-01 is selected. Every server appears exactly once. Live sessions show a mint dot, and PROD is marked by the tab stripe, the badge next to the title and the status-bar segment, with nothing else.</p>
+    <div class="stage"><div class="scaled" data-mock="A1"></div></div>
+    <div class="notes">
+      <div><b>Floating Liquid Glass sidebar</b> (macOS 26), 248&nbsp;pt wide with 26&nbsp;pt rows. Names in SF Mono 12, everything else in SF Pro.</div>
+      <div><b>Search is Quick Connect.</b> Typing <code>deploy@10.0.4.12:2222</code> puts "Connect to…" as the first row. <code>#k8s</code> and <code>env:prod</code> become search tokens.</div>
+      <div><b>One row per server.</b> The star marks a favorite and sorts it first in its group. The mint dot means a session is open, and the latency is from the last probe.</div>
+      <div><b>Toolbar</b>: title in SF Mono with a PROD badge and the address as the subtitle. Snippets and New Tab share one glass group, the native Tahoe look.</div>
+      <div><b>Flat Mac tabs</b>: full width, a 2&nbsp;pt environment stripe on top, a faint red wash on PROD tabs, ⌘-number at the right, and close (×) on hover at the left.</div>
+      <div><b>Status bar</b> (24&nbsp;pt): environment, address, jump host and key on the left; latency, cipher, size and encoding on the right. Latency lives only here.</div>
+      <div><b>Sidebar footer is status, not buttons</b>: iCloud sync state. Keys, Snippets and Settings move to the menu bar and their own windows.</div>
+    </div>
+  </div>
+
+  <div class="shot" id="A-focus">
+    <h3><span class="k">A·b</span>Session focus: sidebar hidden</h3>
+    <p class="lede">Opening a session from the sidebar collapses it (<code>columnVisibility = .detailOnly</code>). <code>⌃⌘S</code> or the toolbar button brings it back. If you re-open it by hand, Tilde won't hide it again in that window until every tab is closed.</p>
+    <div class="stage"><div class="scaled" data-mock="A2"></div></div>
+    <div class="notes">
+      <div>The traffic lights and the sidebar toggle move into the toolbar, and the tabs span the full width. You get 160 × 43 at 13&nbsp;pt.</div>
+      <div>A one-time HUD explains what happened. It never appears again after the first two times.</div>
+      <div>db-primary (PROD, via bastion) is in <code>psql</code>. Its tab, title badge and status segment are red, and the other tabs keep their own colors.</div>
+    </div>
+  </div>
+
+  <div class="shot" id="A-home">
+    <h3><span class="k">A·c</span>Home: no sessions open</h3>
+    <p class="lede">After <code>exit</code> in the last tab, the tab closes, the sidebar slides back and the detail shows a start page: a large Quick Connect field, recent connections and environment health. The sidebar is the server list. The start page answers "where was I, and is anything wrong?".</p>
+    <div class="stage"><div class="scaled" data-mock="A3"></div></div>
+    <div class="notes">
+      <div>A banner records what just happened ("prod-api-01: shell exited (0)"), with <code>⇧⌘T</code> to reopen it.</div>
+      <div><b>Recent</b> is a native <code>Table</code>: double-click or ↵ connects. Columns are name, address, environment, last used and latency.</div>
+      <div><b>Environments</b>: one card per environment with reachability. Staging is amber because staging-web is slow (183&nbsp;ms).</div>
+    </div>
+  </div>
+
+  <div class="shot" id="A-new">
+    <h3><span class="k">A·d</span>New Server sheet</h3>
+    <p class="lede">A Mac form, not an iOS one: a grouped Form with pop-up buttons, a horizontal radio group, checkboxes, a token field for tags and a small table for environment variables. All fields fit without scrolling. Return triggers Save &amp; Connect.</p>
+    <div class="stage"><div class="scaled" data-mock="A4"></div></div>
+    <div class="notes">
+      <div>Host and Port share a row. Pasting <code>ssh -p 2222 -J bastion deploy@10.0.4.12</code> into Host fills every field it can.</div>
+      <div>Environment is a pop-up with colored dots, not a five-way segmented control. Picking Production also sets "Confirm multi-line paste".</div>
+      <div><b>Advanced</b> is a disclosure group and remembers whether it was open. Startup command, tmux and TERM are visible at a glance.</div>
+      <div><b>Test Connection</b> does the handshake, host key and auth, then reports the result inline.</div>
+    </div>
+  </div>
+
+  <div class="shot" id="A-settings">
+    <h3><span class="k">A·e</span>Settings window (⌘,)</h3>
+    <p class="lede">The standard Settings scene with toolbar tabs: <b>General · Terminal · Security · Sync · Known Hosts</b>. Each pane is a grouped Form that reuses the existing section views. The new sidebar behavior is a setting under Terminal › Window, so it can be turned off.</p>
+    <div class="stage desk"><div class="scaled" data-mock="A5"></div></div>
+    <div class="notes">
+      <div><b>General</b>: appearance, default user and key, connect timeout, auto-reconnect, reachability probe, import of ~/.ssh/config and known_hosts.</div>
+      <div><b>Terminal</b> (shown): theme with a live preview, font, cursor, bell, scrollback, paste confirmation, Option as Meta, copy on select, and the sidebar behavior.</div>
+      <div><b>Security</b>: app lock, hide content when inactive, strict host checking, legacy ssh-rsa, clipboard clearing. <b>Sync</b> and <b>Known Hosts</b> are shown in B and C.</div>
+    </div>
+  </div>
+
+  <div class="shot" id="A-panels">
+    <h3><span class="k">A·p</span>Command palette (⌘K / ⌘P) and unknown host key</h3>
+    <p class="lede">The palette is a floating glass panel over the window. The host-key prompt is a sheet attached to the window. It never dismisses itself and holds the handshake open for up to 120&nbsp;s.</p>
+    <div class="pair">
+      <div class="stage"><div class="scaled" data-mock="A6"></div></div>
+      <div class="stage"><div class="scaled" data-mock="A7"></div></div>
+    </div>
+    <div class="notes">
+      <div>The query parses as an address, so <b>Connect</b> comes first. Matching servers (user <code>deploy</code>) and actions follow. Shortcut hints appear on the right of each row.</div>
+      <div>The host-key sheet shows the fingerprint in mono, randomart in a disclosure, and the <code>ssh-keygen</code> command to check it on the server. Trust &amp; Connect is the default button.</div>
+    </div>
+  </div>
+
+  <div class="shot" id="A-light">
+    <h3><span class="k">A·L</span>Light mode (Settings › General › Appearance: Light)</h3>
+    <p class="lede">The same window as A·a, using the light tokens from DESIGN.md §2.2 and the "Tilde Day" terminal theme. Environment colors move to their darker light-mode values, so PROD stays clear on white.</p>
+    <div class="stage paper"><div class="scaled" data-mock="A8"></div></div>
+  </div>
+
+  <div class="shot" id="A-map">
+    <h3><span class="k">A·n</span>How A maps to SwiftUI on macOS 26</h3>
+    <table class="map">
+      <tr><th>Piece</th><th>Native API</th><th>Custom work</th></tr>
+      <tr><td>Window</td><td><code>WindowGroup</code> › <code>NavigationSplitView</code> (2 columns); set <code>columnVisibility = .detailOnly</code> when a session opens and <code>.all</code> when the last tab closes</td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Sidebar</td><td><code>List(selection:)</code> + <code>.listStyle(.sidebar)</code>, <code>Section(isExpanded:)</code> per group, a Tags section whose rows set a search token</td><td><span class="tag-c x">row view</span></td></tr>
+      <tr><td>Quick Connect</td><td><code>.searchable(text:tokens:placement: .sidebar)</code>; <code>.searchSuggestions</code> for "Connect to …"; <code>.searchFocused</code> on ⌘L</td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Toolbar</td><td><code>.navigationTitle</code> / <code>.navigationSubtitle</code>; <code>ToolbarItem(placement: .navigation)</code> for the env badge; <code>ToolbarItemGroup(placement: .primaryAction)</code> {Snippets, New Tab}</td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Tabs</td><td>In-window strip in <code>.safeAreaInset(edge: .top)</code>. Native <code>NSWindow</code> tabbing was rejected again: it gives one sidebar per tab, has no env colors or ⌘ hints, and moves tabs above the toolbar</td><td><span class="tag-c c">custom (restyle TabStrip)</span></td></tr>
+      <tr><td>Status bar</td><td><code>.safeAreaInset(edge: .bottom)</code> HStack of segments; tooltips via <code>.help</code></td><td><span class="tag-c c">custom, small</span></td></tr>
+      <tr><td>Home</td><td>Detail view when no tabs are open: <code>TextField</code>, <code>Table</code> (recent), <code>Grid</code> of environment cards</td><td><span class="tag-c x">light custom</span></td></tr>
+      <tr><td>New Server</td><td><code>.sheet</code> + <code>Form.formStyle(.grouped)</code>, <code>Picker(.menu)</code>, <code>Picker(.radioGroup)</code> + <code>.horizontalRadioGroupLayout()</code>, <code>Toggle(.checkbox)</code>, <code>DisclosureGroup</code>, <code>Table</code> for env vars</td><td><span class="tag-c c">tag token field (NSTokenField)</span></td></tr>
+      <tr><td>Settings</td><td><code>Settings { TabView { Tab("General", systemImage:) … } }</code>, a grouped Form per pane, a <code>Table</code> for Known Hosts</td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Palette</td><td>Existing <code>CommandPalette</code> as an overlay with <code>.glassEffect(.regular, in: .rect(cornerRadius: 18))</code></td><td><span class="tag-c x">exists, restyle</span></td></tr>
+      <tr><td>Host key</td><td><code>.sheet</code> (window-modal), existing <code>HostKeyViews</code>; the full-screen "key changed" takeover is unchanged</td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Keys, Snippets</td><td><code>Window("Keys", id:)</code> / <code>Window("Snippets", id:)</code> scenes on ⌥⌘K / ⌥⌘S instead of sheets</td><td><span class="tag-c n">native</span></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================== B ============================== -->
+<section class="panel wrap" id="B">
+  <div class="dhead">
+    <div class="dletter">B</div>
+    <h2>Statusline<small>Terminal first: a thin title bar, sessions on a bottom line, everything else summoned from the keyboard.</small></h2>
+  </div>
+  <div class="why">
+    <div class="card">
+      <p>The window is <b>a terminal and two thin lines</b>. At the top is a 38&nbsp;pt compact title bar. At the bottom is a 28&nbsp;pt <b>session line</b> holding the tabs as numbered segments, where 1–9 match ⌘1–⌘9, plus latency and sync. The ordering is borrowed from how people already read tmux.</p>
+      <p><b>⌘K is the main way to navigate</b> (servers, sessions, <code>#tags</code>, <code>&gt;actions</code>, <code>!snippets</code>), and <code>⌘0</code> slides in a narrow server drawer. Home is a keyboard launcher. The New Server sheet shows the matching <code>ssh</code> command and <code>ssh_config</code> block live as you type. The host-key prompt appears <b>inside the tab</b>, so other sessions keep working.</p>
+    </div>
+    <div class="card tradeoffs">
+      <div class="pro">The most terminal space: 160 × 45 at 13&nbsp;pt with the drawer closed.</div>
+      <div class="pro">The strongest identity for the devops audience, and every action is reachable without the mouse.</div>
+      <div class="pro">Prompts scoped to a tab (host key, paste confirmation) never block the other sessions.</div>
+      <div class="con">Tabs at the bottom are unusual on the Mac, and they sit right under tmux's own status line when tmux is running.</div>
+      <div class="con">Mouse-first users discover less. The drawer and palette have to be learned.</div>
+      <div class="con">Needs the most custom views: the session line, the launcher and the in-tab prompt.</div>
+    </div>
+  </div>
+  <div class="subnav"><a href="#B-main">Main window</a><a href="#B-focus">Session focus</a><a href="#B-home">Home</a><a href="#B-new">New Server</a><a href="#B-settings">Settings</a><a href="#B-panels">Palette &amp; host key</a><a href="#B-map">Native mapping</a></div>
+
+  <div class="shot" id="B-main">
+    <h3><span class="k">B·a</span>Main window: drawer open (⌘0)</h3>
+    <p class="lede">The drawer is a narrow, keyboard-driven list. Each row shows the session numbers that server is open in, so <code>[5]</code> means "⌘5 takes you there". The env rail on the left edge of each row replaces badges.</p>
+    <div class="stage"><div class="scaled" data-mock="B1"></div></div>
+    <div class="notes">
+      <div><b>Compact title bar</b> (<code>.unifiedCompact</code>): the title is centered with its PROD badge. "Go to… ⌘K" opens the palette.</div>
+      <div>A 2&nbsp;pt env line runs under the title bar for the active session. This is the only wide band of color, and it's the color of the session you're typing into.</div>
+      <div><b>Session line</b>: numbered segments with env underlines. The selected segment is filled, and latency, size and iCloud state sit on the right.</div>
+      <div><b>Drawer rows</b> are 24&nbsp;pt and all mono, with a 3&nbsp;pt env rail and tab numbers. Group headers keep the DESIGN.md caps style.</div>
+    </div>
+  </div>
+
+  <div class="shot" id="B-focus">
+    <h3><span class="k">B·b</span>Session focus: drawer closed</h3>
+    <p class="lede">This is B's default state. The only chrome is 38&nbsp;pt at the top and 28&nbsp;pt at the bottom.</p>
+    <div class="stage"><div class="scaled" data-mock="B2"></div></div>
+  </div>
+
+  <div class="shot" id="B-home">
+    <h3><span class="k">B·c</span>Home: the launcher</h3>
+    <p class="lede">With no sessions open, the window becomes the server list: a prompt-styled field over every server, grouped and navigable with the arrow keys. ↵ connects, ⌘↵ opens in a new window and ⌘E edits. Exiting the last shell lands here.</p>
+    <div class="stage"><div class="scaled" data-mock="B3"></div></div>
+  </div>
+
+  <div class="shot" id="B-new">
+    <h3><span class="k">B·d</span>New Server sheet with a live ssh preview</h3>
+    <p class="lede">A wide sheet. The form is on the left. On the right is what the form means: the one-line <code>ssh</code> command and an <code>ssh_config</code> block, both copyable. It teaches newcomers and reassures experts.</p>
+    <div class="stage"><div class="scaled" data-mock="B4"></div></div>
+  </div>
+
+  <div class="shot" id="B-settings">
+    <h3><span class="k">B·e</span>Settings: Known Hosts pane</h3>
+    <p class="lede">Settings is the same native scene in every direction. Here the Known Hosts pane is a real Table with search, sorting, multi-select and an import from <code>~/.ssh/known_hosts</code>.</p>
+    <div class="stage desk"><div class="scaled" data-mock="B5"></div></div>
+  </div>
+
+  <div class="shot" id="B-panels">
+    <h3><span class="k">B·p</span>Command palette and the in-tab host-key prompt</h3>
+    <p class="lede">The palette drops from the title bar and has typed scopes. The host-key prompt is an overlay inside the new tab, not a window sheet, so the other four sessions stay usable while you check the fingerprint.</p>
+    <div class="pair">
+      <div class="stage"><div class="scaled" data-mock="B6"></div></div>
+      <div class="stage"><div class="scaled" data-mock="B7"></div></div>
+    </div>
+  </div>
+
+  <div class="shot" id="B-map">
+    <h3><span class="k">B·n</span>How B maps to SwiftUI on macOS 26</h3>
+    <table class="map">
+      <tr><th>Piece</th><th>Native API</th><th>Custom work</th></tr>
+      <tr><td>Window</td><td><code>NavigationSplitView</code>, starting at <code>.detailOnly</code>; <code>.windowToolbarStyle(.unifiedCompact)</code></td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Title</td><td><code>ToolbarItem(placement: .principal)</code> holding the title and env badge; <code>.toolbar(removing: .title)</code></td><td><span class="tag-c x">small</span></td></tr>
+      <tr><td>Session line</td><td><code>.safeAreaInset(edge: .bottom)</code>; ⌘1–9 from the existing <code>MacCommands</code></td><td><span class="tag-c c">custom (~250 lines)</span></td></tr>
+      <tr><td>Drawer</td><td>The split view's sidebar column, <code>List(.sidebar)</code>, 220&nbsp;pt, toggled with ⌘0</td><td><span class="tag-c x">row view</span></td></tr>
+      <tr><td>Palette</td><td>Existing <code>CommandPalette</code> model with prefix scopes, drawn as an overlay under the title bar</td><td><span class="tag-c c">custom (exists)</span></td></tr>
+      <tr><td>Home launcher</td><td><code>TextField</code> + <code>List(selection:)</code> (arrow keys and type-select come free), <code>.onKeyPress</code> for ⌘↵ / ⌘E</td><td><span class="tag-c c">custom</span></td></tr>
+      <tr><td>New Server</td><td><code>.sheet</code> with <code>HStack { Form(.grouped); preview }</code>; <code>Picker(.segmented).controlSize(.small)</code> for env</td><td><span class="tag-c x">preview text</span></td></tr>
+      <tr><td>Host key</td><td>An overlay in the session view, like the reconnect banner, instead of a sheet; reuses <code>HostKeyViews</code> content</td><td><span class="tag-c c">custom</span></td></tr>
+      <tr><td>Settings</td><td>Same <code>Settings</code> scene as A</td><td><span class="tag-c n">native</span></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================== C ============================== -->
+<section class="panel wrap" id="C">
+  <div class="dhead">
+    <div class="dletter">C</div>
+    <h2>Fleet<small>Sessions in the sidebar, servers in a table, details in an inspector.</small></h2>
+  </div>
+  <div class="why">
+    <div class="card">
+      <p>C separates <b>what's open</b> from <b>what exists</b>. The sidebar holds scopes (All Servers, Favorites, Recent, groups and tags) and the <b>open sessions as vertical tabs</b>. The server list is a full, sortable <b>Table</b> with an <b>Inspector</b>, like Finder or Activity Monitor. Double-click a row to connect.</p>
+      <p>When the sidebar hides for focus, the sessions move into the toolbar as compact tab pills. New Server and Edit happen in the inspector, next to the table, so you can see the rest of your servers while you fill it in.</p>
+    </div>
+    <div class="card tradeoffs">
+      <div class="pro">Scales best: 50+ servers sort and filter in a table, and 10+ sessions read well as a vertical list.</div>
+      <div class="pro">The inspector shows the host key, the key in use and the jump host without opening a form.</div>
+      <div class="pro">Table, inspector and sidebar are all native, and the terminal gets the most rows because there's no tab strip.</div>
+      <div class="con">Two places for tabs (sidebar, or toolbar when the sidebar is hidden) is more to learn.</div>
+      <div class="con">Editing in a 300&nbsp;pt inspector is cramped for environment variables and long startup commands.</div>
+      <div class="con">Needs a wide window for Home with the inspector open (≥ 1180&nbsp;pt). On a 13" laptop the inspector covers part of the table.</div>
+    </div>
+  </div>
+  <div class="subnav"><a href="#C-main">Main window</a><a href="#C-focus">Session focus</a><a href="#C-home">Home</a><a href="#C-new">New Server</a><a href="#C-settings">Settings</a><a href="#C-panels">Palette &amp; host key</a><a href="#C-map">Native mapping</a></div>
+
+  <div class="shot" id="C-main">
+    <h3><span class="k">C·a</span>Main window: sessions in the sidebar</h3>
+    <p class="lede">The Sessions section is the tab bar. Each row carries an env-colored terminal glyph, latency and its ⌘-number. With no horizontal strip, the terminal starts right under the toolbar.</p>
+    <div class="stage"><div class="scaled" data-mock="C1"></div></div>
+  </div>
+
+  <div class="shot" id="C-focus">
+    <h3><span class="k">C·b</span>Session focus: tabs move into the toolbar</h3>
+    <p class="lede">With the sidebar hidden, the sessions become glass pills in the toolbar, and the selected pill acts as the window title.</p>
+    <div class="stage"><div class="scaled" data-mock="C2"></div></div>
+  </div>
+
+  <div class="shot" id="C-home">
+    <h3><span class="k">C·c</span>Home: the server table with an inspector</h3>
+    <p class="lede">"All Servers" is a sortable Table with columns for status, name, address, environment, group, tags, latency and last used. The inspector shows the selected server, including its pinned host key, with a big Connect button.</p>
+    <div class="stage"><div class="scaled" data-mock="C3"></div></div>
+  </div>
+
+  <div class="shot" id="C-new">
+    <h3><span class="k">C·d</span>New Server: editing in the inspector</h3>
+    <p class="lede">⇧⌘N adds a placeholder row to the table and switches the inspector to edit mode. The fields are the same as in A and B, stacked with labels above them, and Advanced is collapsible.</p>
+    <div class="stage"><div class="scaled" data-mock="C4"></div></div>
+  </div>
+
+  <div class="shot" id="C-settings">
+    <h3><span class="k">C·e</span>Settings: Sync pane</h3>
+    <p class="lede">iCloud status in full: account, last sync, counts, secrets still waiting for iCloud Keychain, and reset.</p>
+    <div class="stage desk"><div class="scaled" data-mock="C5"></div></div>
+  </div>
+
+  <div class="shot" id="C-panels">
+    <h3><span class="k">C·p</span>Command palette with preview, and the host-key sheet</h3>
+    <div class="pair">
+      <div class="stage"><div class="scaled" data-mock="C6"></div></div>
+      <div class="stage"><div class="scaled" data-mock="C7"></div></div>
+    </div>
+  </div>
+
+  <div class="shot" id="C-map">
+    <h3><span class="k">C·n</span>How C maps to SwiftUI on macOS 26</h3>
+    <table class="map">
+      <tr><th>Piece</th><th>Native API</th><th>Custom work</th></tr>
+      <tr><td>Window</td><td><code>NavigationSplitView</code> + <code>.inspector(isPresented:)</code> with <code>.inspectorColumnWidth(min: 280, ideal: 308)</code></td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Sidebar</td><td><code>List(.sidebar)</code> with a mixed selection enum (scope or session); <code>.badge()</code> for counts; <code>.onMove</code> to reorder sessions</td><td><span class="tag-c x">row views</span></td></tr>
+      <tr><td>Toolbar tabs</td><td>Shown when the sidebar is hidden: <code>ToolbarItem(placement: .principal)</code> holding an HStack of pills</td><td><span class="tag-c c">custom</span></td></tr>
+      <tr><td>Home</td><td><code>Table(selection:sortOrder:)</code> + <code>.contextMenu(forSelectionType:primaryAction:)</code> (double-click connects); <code>.searchable</code> in the toolbar</td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Inspector / editor</td><td><code>Form.formStyle(.grouped)</code> in the inspector, in read and edit modes; the same <code>ServerEditorModel</code></td><td><span class="tag-c x">layout</span></td></tr>
+      <tr><td>Palette</td><td>Overlay with results and a preview column</td><td><span class="tag-c c">custom (exists)</span></td></tr>
+      <tr><td>Host key</td><td><code>.sheet</code></td><td><span class="tag-c n">native</span></td></tr>
+      <tr><td>Settings</td><td>Same <code>Settings</code> scene as A</td><td><span class="tag-c n">native</span></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================== Recommendation ============================== -->
+<section class="panel wrap" id="R">
+  <div class="dhead">
+    <div class="dletter">✓</div>
+    <h2>Recommendation: A, with two pieces borrowed from B<small>Build the native Source List, then add B's in-tab host-key prompt and the ssh preview line in the editor.</small></h2>
+  </div>
+
+  <div class="card" style="margin-bottom:24px">
+    <h2>Side by side</h2>
+    <table class="map cmp">
+      <tr><th></th><th>A · Source List</th><th>B · Statusline</th><th>C · Fleet</th></tr>
+      <tr><td>Terminal at 1280×800, 13&nbsp;pt (sidebar open → hidden)</td><td>126×43 → 160×43</td><td>129×45 → <span class="best">160×45</span></td><td>128×46 → <span class="best">160×46</span></td></tr>
+      <tr><td>Feels like a Mac app on day one</td><td class="best">●●●</td><td>●○○</td><td>●●○</td></tr>
+      <tr><td>Keyboard-first</td><td>●●○</td><td class="best">●●●</td><td>●●○</td></tr>
+      <tr><td>Scales to 50+ servers</td><td>●●○</td><td>●●○</td><td class="best">●●●</td></tr>
+      <tr><td>Scales to 10+ sessions</td><td>●●○ (tabs shrink, then scroll)</td><td>●○○ (line overflows)</td><td class="best">●●● (vertical list)</td></tr>
+      <tr><td>Distinctive / brand</td><td>●●○</td><td class="best">●●●</td><td>●●○</td></tr>
+      <tr><td>Custom views needed</td><td class="best">tab strip, status bar, palette (2 of 3 already exist)</td><td>session line, launcher, in-tab prompt, palette</td><td>toolbar tabs, sidebar rows, palette</td></tr>
+      <tr><td>Effort (rough)</td><td class="best">≈ 2,000 lines, 5 PRs</td><td>≈ 2,600 lines, 6 PRs</td><td>≈ 2,800 lines, 6 PRs</td></tr>
+      <tr><td>Main risk</td><td>Looks "too plain"</td><td>Unusual tab placement, clash with tmux</td><td>Two navigation models; inspector editing</td></tr>
+    </table>
+  </div>
+
+  <div class="cols2">
+    <div class="card rec">
+      <h2>Why A</h2>
+      <ul>
+        <li><b>It fixes every problem on the list</b> with the fewest new ideas: density, duplicates, the iOS toolbar, too much red, sheets for utilities, iOS controls and the missing status area.</li>
+        <li><b>It is mostly stock SwiftUI.</b> On macOS 26 that means Liquid Glass, accessibility, full keyboard access and future OS changes come with it. The only custom views are the tab strip and palette (both exist) and a small status bar.</li>
+        <li><b>It keeps the brand that people like on the iPhone</b>: dark ink, mint, SF Mono for data and the same environment badges. Only the density and the controls change.</li>
+        <li><b>Auto-hiding the sidebar</b> gives A the focus of B whenever you're in a session, so the main argument for B is mostly covered.</li>
+        <li><b>Borrow from B:</b> (1) put the unknown-host prompt inside the tab (B·p) instead of a window-modal sheet, so a slow fingerprint check never blocks the other sessions; (2) add the one-line <code>ssh</code> preview to the editor footer (B·d), copyable.</li>
+        <li><b>Keep from C for later:</b> if users report 30+ servers, the A start page can grow a "Show all" button that opens C's Table view.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>iPhone and iPad</h2>
+      <ul>
+        <li><b>iPhone: unchanged.</b> PhoneRoot, ServerList, SessionDeck and the key bar are untouched. Every Mac change is behind <code>#if os(macOS)</code> or lives in new Mac-only files.</li>
+        <li><b>iPad: unchanged by default.</b> iPad shares <code>SplitRoot</code>, <code>ServerList</code> and <code>TabStrip</code> with the Mac today, so the Mac sidebar is a new view and does not modify ServerList.</li>
+        <li><b>Worth offering iPad later</b> (separate decision): the de-duplicated sidebar (one row per server, a star instead of a Favorites section), which is clearly better on any screen, and the status bar when a hardware keyboard is attached.</li>
+      </ul>
+      <h2 style="margin-top:22px">Open questions for the owner</h2>
+      <ul>
+        <li>Should Favorites be a star plus filter (proposed), or keep its own section at the cost of listing servers twice?</li>
+        <li>A uses macOS sentence-case sidebar headers ("Production") instead of DESIGN.md's caps. Is that OK on the Mac only?</li>
+        <li>Is a start page wanted, or should Home be just the sidebar plus an empty state?</li>
+        <li>Should the Mac stay dark by default, or follow the system appearance? DESIGN.md says dark everywhere.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <h2>Implementation outline for A (after approval)</h2>
+    <table class="map files">
+      <tr><th>File (Packages/TildeKit/Sources/…)</th><th>Change</th><th>Size</th></tr>
+      <tr><td>TildeDesign/Tokens/TildeFont.swift, TildeSpacing.swift</td><td>Mac row font (SF Mono 12 medium), 26&nbsp;pt sidebar row, 30&nbsp;pt tab bar, 24&nbsp;pt status bar</td><td>+30</td></tr>
+      <tr><td>TildeDesign/Components/EnvBadge.swift</td><td>Compact badge size for the sidebar and tabs</td><td>+20</td></tr>
+      <tr><td>TildeDesign/Components/StatusBar.swift <i>(new)</i></td><td>Status bar container, segments and env segment</td><td>+90</td></tr>
+      <tr><td>TildeDesign/Components/TokenField.swift <i>(new, macOS)</i></td><td>NSTokenField bridge for tags (falls back to chips + TextField)</td><td>+120</td></tr>
+      <tr><td>TildeFeatures/Mac/MacSidebar.swift <i>(new)</i></td><td>List(.sidebar) with group sections, Tags section, sync footer, searchable tokens and the Connect suggestion</td><td>+300</td></tr>
+      <tr><td>TildeFeatures/Servers/ServerList.swift</td><td>Extract the shared filtering/sorting (<code>ServerQuery</code>) so the iOS list and the Mac sidebar share it; iOS UI untouched</td><td>~80 moved</td></tr>
+      <tr><td>TildeFeatures/Servers/ServerRow.swift</td><td><code>MacServerRow</code>: one line, status dot, star, badge, latency</td><td>+90</td></tr>
+      <tr><td>TildeFeatures/Servers/RootView.swift</td><td>Mac branch of SplitRoot: no SidebarFooter, MacSidebar, sidebar auto-hide policy</td><td>~60</td></tr>
+      <tr><td>TildeFeatures/Environment/AppNavigator.swift</td><td><code>sidebarAutoHidden</code> and "user re-showed sidebar" state per window</td><td>+40</td></tr>
+      <tr><td>TildeFeatures/Sessions/TabStrip.swift</td><td>Mac style: flat, full-width, stripe on top, close on hover at the left, hint at the right</td><td>~120</td></tr>
+      <tr><td>TildeFeatures/Sessions/SessionContainer.swift</td><td>Mac toolbar (env badge, grouped Snippets/New Tab), readout moves to the status bar</td><td>~50</td></tr>
+      <tr><td>TildeFeatures/Sessions/SessionStatusBar.swift <i>(new)</i></td><td>Binds SessionTab state (latency, cipher, size, key, jump) to the status bar</td><td>+120</td></tr>
+      <tr><td>TildeFeatures/Mac/MacHomeView.swift <i>(new)</i></td><td>Start page: address field, Recent Table, environment cards, "session ended" banner</td><td>+250</td></tr>
+      <tr><td>TildeFeatures/Mac/MacServerEditor.swift <i>(new)</i></td><td>Mac form on the existing <code>ServerEditorModel</code>, with Test Connection and ssh preview</td><td>+380</td></tr>
+      <tr><td>TildeFeatures/Settings/SettingsRoot.swift, KnownHostsListView.swift</td><td>macOS <code>TabView</code> with 5 panes reusing the sections; Known Hosts as a Table</td><td>~220</td></tr>
+      <tr><td>TildeFeatures/Sessions/HostKeyViews.swift</td><td>In-tab overlay presentation on Mac (borrowed from B)</td><td>~80</td></tr>
+      <tr><td>TildeFeatures/Servers/CommandPalette.swift</td><td>Glass panel, shortcut column, footer hints</td><td>~60</td></tr>
+      <tr><td>TildeFeatures/Mac/MacCommands.swift + App/Shared/TildeApp.swift</td><td>Keys and Snippets as <code>Window</code> scenes (⌥⌘K/⌥⌘S), ⌃⌘S, Settings window size</td><td>~70</td></tr>
+    </table>
+    <p style="margin-top:14px;color:#C6D0DA">About <b>2,000 lines</b> added or changed, in <b>5 PRs</b>: (1) tokens and sidebar, (2) toolbar, tabs and status bar, (3) Home, (4) editor, (5) Settings, windows, palette and host-key polish. Then re-shoot the fastlane Mac screenshots. About 40 new strings go into <code>Localizable.xcstrings</code>.</p>
+    <h4 class="sec" style="margin-top:18px">Risks</h4>
+    <ul style="padding-left:20px;display:grid;gap:8px;color:#C6D0DA">
+      <li><b>Sidebar search on macOS 26:</b> <code>.searchable(placement: .sidebar)</code> with tokens and suggestions needs a spike to confirm the ⌘L focus behavior and that the "Connect to…" suggestion row can be the default.</li>
+      <li><b>Colored dots in pop-up menus:</b> NSMenu renders SF Symbols as templates, so the env pop-up needs non-template images. Small, but easy to miss.</li>
+      <li><b>Forced dark appearance on Liquid Glass:</b> the floating sidebar and glass groups have to be checked for text3 contrast over the terminal ink background.</li>
+      <li><b>Auto-hide rules</b> must never fight the user. Hide only when a session is opened from the sidebar or Home, never re-hide after a manual show, and show again when the last tab closes.</li>
+      <li><b>Shared code with iPad</b> (SplitRoot, ServerList, TabStrip): keep it behind <code>#if os(macOS)</code> and compare iPad screenshots before and after.</li>
+      <li><b>Tag token field</b> needs an AppKit bridge. If NSTokenField fights SwiftUI focus, the fallback is the existing chips plus a TextField.</li>
+    </ul>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <h2>What I was unsure about</h2>
+    <ul>
+      <li>The macOS 26 metrics (floating sidebar inset, corner radii, glass opacity) are close approximations drawn by hand, not traced from Apple's templates.</li>
+      <li>I kept server names in SF Mono everywhere (DESIGN.md's "data is mono" rule). If the Mac should look plainer, SF Pro names in the sidebar are a one-line change.</li>
+      <li>I couldn't trace the source of the red vertical rule beside the terminal in the current screenshots (it isn't the tab <code>EnvStripe</code>). The redesign doesn't use it either way.</li>
+    </ul>
+  </div>
+</section>
+
+<style>
+/* ---------- shared pieces used by several directions ---------- */
+.tl.z i:nth-child(3){background:#3A424D}
+.light .tl.z i:nth-child(3){background:#D3D8DE}
+.panelg{position:absolute;background:var(--panel);border:1px solid var(--panel-line);border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.32),inset 0 1px 0 var(--glass-hi);display:flex;flex-direction:column;overflow:hidden;z-index:3}
+.light .panelg{box-shadow:0 10px 30px rgba(0,0,0,.10),inset 0 1px 0 rgba(255,255,255,.85)}
+.srch{white-space:nowrap;overflow:hidden;font-size:12px!important;margin:0 10px 4px;height:28px;border-radius:14px;background:var(--hover);border:1px solid var(--line);display:flex;align-items:center;gap:7px;padding:0 6px 0 10px;color:var(--text3);font-size:12.5px;flex:none}
+.sfoot{height:36px;flex:none;border-top:1px solid var(--line);display:flex;align-items:center;gap:7px;padding:0 14px;font-size:11.5px;color:var(--text3)}
+.sfoot .ic{color:var(--ok)}
+.hud{position:absolute;display:flex;align-items:center;gap:9px;padding:8px 13px;border-radius:12px;background:var(--sheet);border:1px solid var(--glass-line);font:12px var(--ui);color:var(--text);box-shadow:0 12px 30px rgba(0,0,0,.35),inset 0 1px 0 var(--glass-hi);z-index:6}
+.banner{position:absolute;display:flex;align-items:center;gap:10px;height:34px;padding:0 6px 0 12px;border-radius:10px;background:var(--grp);border:1px solid var(--line);font-size:12.5px;color:var(--text2)}
+.tbl{font-size:12px}
+.tbl .tr{display:flex;align-items:center;height:28px;border-bottom:1px solid var(--line2)}
+.tbl .th{height:26px;font:600 11px var(--ui);color:var(--text3);border-bottom:1px solid var(--line)}
+.tbl .tr>span{flex:none;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.tbl .tr.alt{background:var(--grp)}
+.tbl .tr.sel{background:color-mix(in srgb,var(--accent) 24%,transparent)}
+.tbl .tr.hov{background:var(--hover)}
+.pal{position:absolute;background:var(--sheet);border:1px solid var(--glass-line);border-radius:18px;box-shadow:0 30px 70px rgba(0,0,0,.55),inset 0 1px 0 var(--glass-hi);overflow:hidden;z-index:8}
+.light .pal{box-shadow:0 30px 70px rgba(0,0,0,.22)}
+.pal .q{height:50px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);font:15px var(--mono);color:var(--text)}
+.caret{display:inline-block;width:1.5px;height:17px;background:var(--accent);vertical-align:middle;margin:0 1px}
+.pal .ps{font:600 11px var(--ui);color:var(--text3);padding:10px 16px 4px}
+.pal .pr{height:34px;display:flex;align-items:center;gap:10px;margin:0 6px;padding:0 10px;border-radius:9px;font-size:13px;white-space:nowrap}
+.pal .pr.sel{background:var(--sel)}
+.pal .pi{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:var(--hover);color:var(--text2);flex:none}
+.pal .pr.sel .pi{background:var(--accent);color:var(--on-accent)}
+.pal .sub{font:11.5px var(--mono);color:var(--text3);overflow:hidden;text-overflow:ellipsis}
+.pal .pf{height:34px;display:flex;align-items:center;gap:14px;padding:0 16px;border-top:1px solid var(--line);font:11px var(--ui);color:var(--text3)}
+.pal .pf b{color:var(--text2);font-weight:600}
+.connecting{position:absolute;display:flex;flex-direction:column;align-items:center;gap:8px;font:12.5px var(--mono);color:var(--text2)}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent)}
+.kv{display:grid;grid-template-columns:92px 1fr;gap:7px 10px;font-size:12px;align-items:baseline}
+.kv .k{color:var(--text3)}
+.kv .v{font:12px var(--mono);color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ish{font:600 11px var(--ui);color:var(--text3);margin:16px 0 8px;display:flex;align-items:center;gap:6px}
+.stk{display:flex;flex-direction:column;gap:4px;min-width:0}
+.stk>.l{font:500 11px var(--ui);color:var(--text2)}
+
+/* ---------- Settings window ---------- */
+.set-title{position:absolute;top:0;left:0;right:0;height:32px;display:flex;align-items:center;justify-content:center;font:600 13px var(--ui)}
+.set-tabs{position:absolute;top:32px;left:0;right:0;height:58px;display:flex;justify-content:center;gap:4px}
+.set-tab{width:80px;height:54px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font:500 11px var(--ui);color:var(--text2)}
+.set-tab.on{background:var(--hover);color:var(--accent);box-shadow:inset 0 0 0 1px var(--line)}
+.set-tab.on span{color:var(--text)}
+.set-body{position:absolute;top:94px;left:0;right:0;bottom:0;padding:16px 24px 20px;overflow:hidden;border-top:1px solid var(--line)}
+
+/* ---------- A: Source List ---------- */
+.a-sbtop{height:44px;flex:none;position:relative}
+.a-list{flex:1;overflow:hidden;padding:0 8px}
+.a-sh{display:flex;align-items:center;gap:6px;font:600 11px var(--ui);color:var(--text3);padding:12px 8px 4px}
+.a-sh .n{margin-left:auto;font-weight:500}
+.a-row{height:26px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:8px;font:500 12px var(--mono);color:var(--text);white-space:nowrap}
+.a-row.sel{background:var(--sel)}
+.a-row .fav{color:var(--warn);margin-left:-3px}
+.a-row .lat{width:38px}
+.a-row.tag{font:500 12.5px var(--ui);color:var(--text)}
+.a-row.tag .ic{color:var(--text3)}
+.a-row.tag .n{margin-left:auto;font:500 11px var(--ui);color:var(--text3)}
+.a-tb{position:absolute;top:0;height:52px;display:flex;align-items:center;gap:10px;padding:0 12px 0 16px;z-index:2}
+.a-ttl{display:flex;flex-direction:column;justify-content:center;line-height:1.25;min-width:0}
+.a-ttl .t1{display:flex;align-items:center;gap:8px;font:600 13px var(--mono);color:var(--text)}
+.a-ttl .t1.ui{font-family:var(--ui)}
+.a-ttl .t2{font:11px var(--mono);color:var(--text2)}
+.a-ttl .t2.ui{font-family:var(--ui)}
+.a-tabs{position:absolute;top:52px;height:30px;display:flex;background:var(--tabbar);border-top:1px solid var(--line);border-bottom:1px solid var(--line);z-index:1}
+.a-tab{flex:1;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;gap:7px;font:500 11.5px var(--mono);color:var(--text2);border-left:1px solid var(--line);white-space:nowrap}
+.a-tab:first-child{border-left:0}
+.a-tab::before{content:"";position:absolute;left:0;right:0;top:-1px;height:2px;background:var(--e);opacity:.45}
+.a-tab.on{background:var(--bg);color:var(--text);height:30px;margin-bottom:-1px}
+.a-tab.on::before{opacity:1}
+.a-tab.e-prod{background-image:linear-gradient(color-mix(in srgb,var(--danger) 9%,transparent),color-mix(in srgb,var(--danger) 3%,transparent))}
+.a-tab .k{position:absolute;right:9px;font:500 10.5px var(--ui);color:var(--text3)}
+.a-tab .x{position:absolute;left:7px;width:16px;height:16px;border-radius:4px;display:grid;place-items:center;color:var(--text2);background:var(--hover)}
+.a-tabs .plus{width:34px;flex:none;display:grid;place-items:center;color:var(--text2);border-left:1px solid var(--line)}
+.a-st{position:absolute;bottom:0;height:24px;display:flex;align-items:center;padding:0 6px;font:11px var(--ui);color:var(--text3);background:var(--tabbar);border-top:1px solid var(--line);white-space:nowrap;z-index:1}
+.a-st>span{display:flex;align-items:center;gap:5px;padding:0 9px;border-left:1px solid var(--line);height:12px}
+.a-st>span:first-child,.a-st>.sp,.a-st>.sp+span{border-left:0}
+.a-st>.sp{padding:0}
+.a-st .env{color:var(--e);font-weight:600;background:color-mix(in srgb,var(--e) 14%,transparent);border-radius:4px;height:17px;margin-right:4px}
+.a-st .m{font:11px var(--mono);color:var(--text2)}
+.a-home .bigq{height:46px;border-radius:13px;background:var(--field);border:1px solid var(--ctrl-line);display:flex;align-items:center;gap:10px;padding:0 10px 0 14px;font:14px var(--ui);color:var(--text3);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent);border-color:color-mix(in srgb,var(--accent) 70%,transparent)}
+.a-home h5{font:600 12px var(--ui);color:var(--text2);margin:26px 0 8px;display:flex;align-items:center;gap:8px}
+.a-env{flex:1;border-radius:12px;background:var(--grp);border:1px solid var(--line);padding:11px 12px;display:flex;flex-direction:column;gap:6px}
+.a-env .h{display:flex;align-items:center;gap:7px;font:600 12.5px var(--ui)}
+.a-env .s{white-space:nowrap;font-size:11.5px;color:var(--text3);display:flex;align-items:center;gap:6px}
+
+/* ---------- B: Statusline ---------- */
+.b-tb{position:absolute;top:0;height:38px;display:flex;align-items:center;gap:8px;padding:0 8px;z-index:2}
+.b-title{position:absolute;top:0;height:38px;display:flex;align-items:center;justify-content:center;gap:8px;font:600 12.5px var(--mono);pointer-events:none;white-space:nowrap}
+.b-title .a{font:400 11.5px var(--mono);color:var(--text3)}
+.b-envline{position:absolute;top:38px;height:2px;background:var(--e);z-index:2}
+.b-line{position:absolute;bottom:0;height:28px;display:flex;align-items:stretch;background:var(--tabbar);border-top:1px solid var(--line);font:500 11.5px var(--mono);color:var(--text2);z-index:2;white-space:nowrap}
+.b-seg{display:flex;align-items:center;gap:7px;padding:0 13px 0 7px;position:relative;border-right:1px solid var(--line)}
+.b-seg .n{min-width:16px;height:16px;border-radius:4px;display:grid;place-items:center;font:700 10px var(--ui);background:var(--hover);color:var(--text2);padding:0 3px}
+.b-seg::after{content:"";position:absolute;left:7px;right:13px;bottom:0;height:2px;background:var(--e);opacity:.5}
+.b-seg.on{background:var(--bg);color:var(--text);margin-top:-1px}
+.b-seg.on .n{background:var(--e);color:#fff}
+.b-seg.on.e-none .n{background:var(--accent);color:var(--on-accent)}
+.b-seg.on::after{opacity:1;left:0;right:0}
+.b-seg .lat{font-size:10.5px}
+.b-seg.q .n{background:var(--warn);color:#211600}
+.b-line .r{margin-left:auto;display:flex;align-items:center;gap:14px;padding:0 12px;font:11px var(--ui);color:var(--text3)}
+.b-line .r .m{color:var(--text2)}
+.b-sh{font:700 10px var(--ui);letter-spacing:.09em;text-transform:uppercase;color:var(--text3);padding:12px 8px 4px 11px;display:flex}
+.b-sh .n{margin-left:auto;letter-spacing:0}
+.b-row{height:24px;display:flex;align-items:center;gap:8px;padding:0 8px 0 3px;border-radius:6px;font:12px var(--mono);color:var(--text);white-space:nowrap}
+.b-row.sel{background:var(--sel)}
+.b-row .rail{width:3px;height:15px;border-radius:2px;background:var(--e);flex:none}
+.b-row.e-none .rail{background:var(--line)}
+.b-row .tn{font:700 9.5px/1 var(--ui);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 50%,transparent);border-radius:4px;padding:2px 4px;flex:none}
+.b-launch .row{height:34px;display:flex;align-items:center;gap:12px;padding:0 12px 0 6px;border-radius:9px;white-space:nowrap}
+.b-launch .row.sel{background:var(--sel)}
+.b-launch .row .rail{width:3px;height:18px;border-radius:2px;background:var(--e);flex:none}
+.b-launch .row.e-none .rail{background:var(--line)}
+.b-launch .nm{font:600 13px var(--mono);width:150px;flex:none}
+.b-launch .ad{flex:none;font:12px var(--mono);color:var(--text2);width:250px;overflow:hidden;text-overflow:ellipsis}
+.b-launch .tg{font:11.5px var(--mono);color:var(--text3)}
+.b-launch .gh{font:700 10px var(--ui);letter-spacing:.09em;text-transform:uppercase;color:var(--text3);padding:16px 12px 6px;display:flex;gap:8px}
+.code{font:12px/1.6 var(--mono);white-space:pre;color:var(--t-fg);background:var(--t-bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow:hidden}
+.code .c1{color:var(--t-c)}.code .d1{color:var(--t-dim)}.code .y1{color:var(--t-y)}.code .g1{color:var(--t-g)}
+.b-form{display:grid;grid-template-columns:112px 1fr;gap:8px 12px;align-items:center;font-size:12.5px}
+.b-form .l{text-align:right;color:var(--text2)}
+.b-form .hr{grid-column:1/-1;height:1px;background:var(--line);margin:4px 0}
+.b-card{position:absolute;background:var(--sheet);border:1px solid color-mix(in srgb,var(--warn) 45%,var(--glass-line));border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.5);padding:18px 20px;z-index:5}
+.b-scope{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--line)}
+.b-scope span{font:500 11.5px var(--ui);color:var(--text2);padding:3px 8px;border-radius:7px;border:1px solid var(--line)}
+.b-scope span.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 50%,transparent);background:var(--accent-soft)}
+.b-scope span b{font-family:var(--mono);margin-right:4px;color:inherit}
+
+/* ---------- C: Fleet ---------- */
+.c-row{height:26px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:8px;font:500 12.5px var(--ui);color:var(--text);white-space:nowrap}
+.c-row.sel{background:var(--sel)}
+.c-row>.ic{color:var(--text2)}
+.c-row.sel>.ic{color:var(--accent)}
+.c-row .cnt{margin-left:auto;font:500 11px var(--ui);color:var(--text3)}
+.c-row.ses{font:500 12px var(--mono)}
+.c-row .tg{width:20px;height:17px;border-radius:5px;display:grid;place-items:center;background:color-mix(in srgb,var(--e) 20%,transparent);color:var(--e);flex:none}
+.c-row.e-none .tg{background:var(--hover);color:var(--text2)}
+.c-row .lat{margin-left:auto}
+.c-pills{display:flex;align-items:center;gap:2px;padding:2px;height:34px;border-radius:17px;background:var(--glass);border:1px solid var(--glass-line);box-shadow:inset 0 1px 0 var(--glass-hi),0 3px 10px rgba(0,0,0,.18)}
+.c-pill{height:28px;border-radius:14px;padding:0 11px 0 9px;display:flex;align-items:center;gap:7px;font:500 11.5px var(--mono);color:var(--text2);white-space:nowrap;position:relative}
+.c-pill.on{background:var(--hover);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.c-pill.on::after{content:"";position:absolute;left:12px;right:12px;bottom:1px;height:2px;border-radius:2px;background:var(--e)}
+.c-pill .kh{font-size:10px}
+.c-envtop{position:absolute;height:2px;background:var(--e);z-index:2}
+.c-insp{padding:16px 16px 14px;overflow:hidden;flex:1;display:flex;flex-direction:column}
+.c-hdr{display:flex;gap:11px;align-items:center}
+.c-hdr .big{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--e) 18%,transparent);color:var(--e);flex:none}
+.c-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.c-two.pp{grid-template-columns:1fr 64px}
+</style>
+
+<script>
+/* ===================================================================
+   Mock generators. Every window is built from the same demo data so
+   the three directions can be compared like for like.
+   =================================================================== */
+const ic=(n,s=14,c='')=>`<svg class="ic ${c}" width="${s}" height="${s}"><use href="#i-${n}"/></svg>`;
+const ENV={prod:'PROD',staging:'STG',dev:'DEV',lab:'LAB',none:''};
+const ENVN={prod:'Production',staging:'Staging',dev:'Development',lab:'Lab',none:'No environment'};
+const badge=(e,c='')=>e==='none'?'':`<span class="badge e-${e} ${c}">${ENV[e]}</span>`;
+const SV=[
+  {n:'prod-api-01',u:'deploy',h:'10.0.1.12',p:22,env:'prod',g:'Production',tags:['k8s'],fav:true,lat:23,live:true,key:'macbook-ed25519',jump:'bastion',last:'just now'},
+  {n:'db-primary',u:'postgres',h:'10.0.2.5',p:22,env:'prod',g:'Production',tags:['db'],lat:31,live:true,key:'macbook-ed25519',jump:'bastion',last:'2 min ago'},
+  {n:'homelab-pi',u:'pi',h:'pi.local',p:22,env:'lab',g:'Homelab',tags:[],lat:47,live:true,key:'macbook-ed25519',last:'1 hr ago'},
+  {n:'staging-web',u:'deploy',h:'staging.example.com',p:2222,env:'staging',g:null,tags:['edge'],lat:183,live:true,key:'deploy-rsa-4096',last:'12 min ago'},
+  {n:'dev-sandbox',u:'dev',h:'dev.example.com',p:22,env:'dev',g:null,tags:['k8s'],lat:71,live:true,key:null,last:'25 min ago'},
+  {n:'bastion',u:'ops',h:'bastion.example.com',p:22,env:'none',g:null,tags:['edge'],lat:116,live:false,key:'macbook-ed25519',last:'yesterday'},
+];
+const S=n=>SV.find(s=>s.n===n);
+const addr=s=>`${s.u}@${s.h}${s.p!==22?':'+s.p:''}`;
+const qd=s=>s.lat>=150?'d-warn':'d-ok';
+const TABS=['dev-sandbox','staging-web','db-primary','homelab-pi','prod-api-01'];
+const tl=(x,y,c='')=>`<div class="tl ${c}" style="left:${x}px;top:${y}px"><i></i><i></i><i></i></div>`;
+const lat=s=>`<span class="lat ${s.lat>=150?'slow':''}">${s.lat}ms</span>`;
+const pd=(s,n,c)=>(c?`<span class="${c}">${s}</span>`:s)+' '.repeat(Math.max(1,n-s.length));
+
+/* ---------- terminal contents ---------- */
+const P=(u,h)=>`<span class="g1">${u}@${h}</span>:<span class="b1">~</span>$ `;
+function termProd(){
+  const p=P('deploy','prod-api-01'), j='<span class="d1">Nov 26 09:40:';
+  const pods=[['api-7d9c8b6f5-4xk2p','1/1','Running','0','2d'],['api-7d9c8b6f5-m8wzt','1/1','Running','0','2d'],['api-7d9c8b6f5-qv5hn','1/1','Running','0','2d'],['worker-5c7b9d4f8-bd6lr','1/1','Running','1','6h'],['worker-5c7b9d4f8-t2c9x','0/1','Pending','0','4m'],['redis-0','1/1','Running','0','14d']];
+  return [
+    p+'kubectl -n api get pods',
+    '<span class="w1">'+pd('NAME',26)+pd('READY',8)+pd('STATUS',10)+pd('RESTARTS',11)+'AGE</span>',
+    ...pods.map(r=>pd(r[0],26)+pd(r[1],8)+pd(r[2],10,r[2]==='Running'?'g1':'y1')+pd(r[3],11)+r[4]),
+    p+'kubectl -n api rollout status deploy/api',
+    'deployment "api" successfully rolled out',
+    p+"docker ps --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'",
+    '<span class="w1">'+pd('NAMES',10)+pd('STATUS',24)+'PORTS</span>',
+    pd('api',10)+pd('Up 2 days',24,'g1')+'0.0.0.0:8080-&gt;8080/tcp',
+    pd('worker',10)+'<span class="g1">Up 6 hours</span>',
+    pd('redis',10)+pd('Up 2 weeks (healthy)',24,'g1')+'6379/tcp',
+    pd('nginx',10)+pd('Up 2 days',24,'g1')+'0.0.0.0:443-&gt;443/tcp',
+    p+'journalctl -u api -n 6 --no-pager',
+    j+'12</span> prod-api-01 api[2417]: GET /v1/orders <span class="g1">200</span> 12ms',
+    j+'14</span> prod-api-01 api[2417]: POST /v1/login <span class="g1">200</span> 48ms',
+    j+'23</span> prod-api-01 api[2417]: cache refresh complete (412 keys)',
+    j+'44</span> prod-api-01 api[2417]: POST /v1/webhooks/payments <span class="g1">202</span> 31ms',
+    j+'52</span> prod-api-01 api[2417]: <span class="y1">WARN</span> db pool saturated (20/20), queued=3 wait=180ms',
+    '<span class="d1">Nov 26 09:41:03</span> prod-api-01 api[2417]: GET /healthz <span class="g1">200</span> 1ms',
+    p+'df -h / /var/lib/docker',
+    '<span class="w1">Filesystem      Size  Used Avail Use% Mounted on</span>',
+    '/dev/nvme0n1p1   80G   41G   35G  <span class="y1">54%</span> /',
+    '/dev/nvme1n1    200G  171G   29G  <span class="r1">86%</span> /var/lib/docker',
+    p+'uptime',
+    ' 09:41:07 up 14 days,  3:22,  1 user,  load average: 0.42, 0.38, 0.35',
+    p+'<span class="cur"> </span>'
+  ].join('\n');
+}
+function termDb(){
+  const w=[4,8,19,14,15];
+  const row=(c,cls)=>c.map((x,i)=>' '+(i===2&&cls?`<span class="${cls}">${x}</span>`+' '.repeat(w[i]-x.length):x.padEnd(w[i]))+' ').join('|').replace(/\s+$/,'');
+  const sep=w.map(n=>'-'.repeat(n+2)).join('+');
+  const hdr=' pid  | usename  |        state        |   wait_event   |       age';
+  return [
+    P('postgres','db-primary')+'psql -d payments',
+    'psql (16.4 (Ubuntu 16.4-1.pgdg24.04+1))',
+    'Type "help" for help.',
+    '',
+    '<span class="c1">payments=#</span> SELECT pid, usename, state, wait_event, age(now(), query_start) AS age',
+    '<span class="c1">payments-#</span>   FROM pg_stat_activity WHERE datname = \'payments\' ORDER BY age DESC LIMIT 6;',
+    '<span class="w1">'+hdr+'</span>', sep,
+    row(['2236','api','idle in transaction','ClientRead','00:04:12.184031'],'y1'),
+    row(['2214','api','active','DataFileRead','00:00:01.932770'],'g1'),
+    row(['2251','worker','active','','00:00:00.418002'],'g1'),
+    row(['2240','api','idle','ClientRead','00:00:00.120554']),
+    row(['2290','postgres','active','AutoVacuumMain','00:00:00.004121'],'g1'),
+    row(['1904','replica','active','WalSenderMain','00:00:00.000913'],'g1'),
+    '(6 rows)','',
+    '<span class="c1">payments=#</span> SELECT pg_terminate_backend(2236);',
+    '<span class="w1"> pg_terminate_backend</span>','----------------------',' t','(1 row)','',
+    '<span class="c1">payments=#</span> SELECT client_addr, state, replay_lag FROM pg_stat_replication;',
+    '<span class="w1"> client_addr |   state   |   replay_lag</span>',
+    '-------------+-----------+-----------------',
+    ' 10.0.2.6    | <span class="g1">streaming</span> | 00:00:00.000412',
+    ' 10.0.2.7    | <span class="g1">streaming</span> | 00:00:00.081133',
+    '(2 rows)','',
+    '<span class="c1">payments=#</span> <span class="cur"> </span>'
+  ].join('\n');
+}
+const ART=`+--[ED25519 256]--+
+|      .o+=*=o.   |
+|     . o.=+B=.   |
+|      + =.O.+o   |
+|     . = B.=o.   |
+|      o S *..    |
+|       . = o     |
+|      E o .      |
+|       o .       |
+|        .        |
++----[SHA256]-----+`;
+const FP='SHA256:p3Kc9yFQ2nL0e1x7XvR8bq0M4aZ+u5Jd2YH6sTgVwE0';
+
+/* ==================================================================
+   A · Source List
+   ================================================================== */
+function aSidebar(o={}){
+  const live=o.live!==false;
+  const row=s=>`<div class="a-row ${o.sel===s.n?'sel':''}"><i class="dot ${live&&s.live?'live':qd(s)}"></i><span>${s.n}</span>${s.fav?ic('star',10,'fav fill'):''}<span class="sp"></span>${badge(s.env)}${lat(s)}</div>`;
+  const grp=(name,list)=>`<div class="a-sh">${name}<span class="n">${list.length}</span></div>`+list.map(row).join('');
+  const tag=(t,n)=>`<div class="a-row tag">${ic('tag',13)}<span>${t}</span><span class="n">${n}</span></div>`;
+  return `<div class="panelg" style="left:8px;top:8px;bottom:8px;width:248px">
+    <div class="a-sbtop">${tl(12,12)}<div class="g sm" style="position:absolute;right:8px;top:6px">${ic('sidebar',15)}</div></div>
+    <div class="srch">${ic('search',13)}<span>Search or user@host:port</span><span class="sp"></span><span class="kbd">⌘L</span></div>
+    <div class="a-list">
+      ${grp('Production',[S('prod-api-01'),S('db-primary')])}
+      ${grp('Homelab',[S('homelab-pi')])}
+      ${grp('Ungrouped',[S('staging-web'),S('dev-sandbox'),S('bastion')])}
+      <div class="a-sh">Tags</div>${tag('db',1)}${tag('edge',2)}${tag('k8s',2)}
+    </div>
+    <div class="sfoot">${ic('cloud',15)}<span>iCloud · synced 2 min ago</span></div>
+  </div>`;
+}
+function aToolbar(L,o){
+  return `<div class="a-tb" style="left:${L}px;right:0;${o.focus?'padding-left:86px':''}">
+    ${o.focus?`<div class="g">${ic('sidebar',16)}</div><span style="width:4px"></span>`:''}
+    <div class="a-ttl">${o.title}</div><span class="sp"></span>
+    ${o.right||`<div class="g grp"><span>${ic('bolt',16)}</span><span>${ic('plus',16)}</span></div>`}
+  </div>`;
+}
+function aTabs(L,sel,mini){
+  let h=`<div class="a-tabs" style="left:${L}px;right:0">`;
+  TABS.forEach((n,i)=>{const s=S(n),on=n===sel;
+    h+=`<div class="a-tab e-${s.env} ${on?'on':''}">${on?`<span class="x">${ic('x',9)}</span>`:''}<i class="dot ${n==='homelab-pi'?'d-warn':'d-ok'}" style="width:6px;height:6px"></i><span>${n}</span>${mini?'':`<span class="k">⌘${i+1}</span>`}</div>`;});
+  return h+`<div class="plus">${ic('plus',14)}</div></div>`;
+}
+function aStatus(L,s,size){
+  return `<div class="a-st" style="left:${L}px;right:0">
+    ${s.env!=='none'?`<span class="env e-${s.env}"><i class="edot" style="width:6px;height:6px"></i>${ENVN[s.env]}</span>`:''}
+    <span class="m">${addr(s)}</span>
+    ${s.jump?`<span>${ic('jump',11)}via ${s.jump}</span>`:''}
+    <span>${ic('key',11)}${s.key||'password'}</span>
+    <span class="sp"></span>
+    <span><i class="dot d-ok" style="width:6px;height:6px"></i><span class="m">${s.lat} ms</span></span>
+    <span>chacha20-poly1305</span><span class="m">${size}</span><span>UTF-8</span>
+  </div>`;
+}
+const aTitle=s=>`<div class="t1">${s.n}${badge(s.env)}</div><div class="t2">${addr(s)}${s.jump?' · via '+s.jump:''}</div>`;
+function A_main(o={}){
+  const L=o.focus?0:264, s=S(o.sel||'prod-api-01');
+  return (o.focus?tl(20,20):aSidebar({sel:s.n}))
+    + aToolbar(L,{focus:o.focus,title:aTitle(s)})
+    + aTabs(L,s.n,o.mini)
+    + `<div class="tm" style="left:${L}px;right:0;top:82px;bottom:24px">${o.term||termProd()}</div>`
+    + aStatus(L,s,o.focus?'160×43':'126×43')
+    + (o.extra||'');
+}
+function A_home(o={}){
+  const L=264, cx=L+(1280-L-660)/2;
+  const rec=['prod-api-01','db-primary','staging-web','homelab-pi','bastion'];
+  const cols=[150,244,60,110,56];
+  const tr=(s,i)=>`<div class="tr ${i===1?'hov':''}"><span style="width:${cols[0]}px" class="m"><i class="dot ${qd(s)}"></i>${s.n}</span><span style="width:${cols[1]}px;color:var(--text2)" class="m">${addr(s)}</span><span style="width:${cols[2]}px">${badge(s.env)}</span><span style="width:${cols[3]}px;color:var(--text2)">${s.last==='just now'?'1 min ago':s.last}</span><span style="width:${cols[4]}px;justify-content:flex-end">${i===1?'<span class="btn sm def">Connect</span>':lat(s)}</span></div>`;
+  const env=(e,n,txt,cls)=>`<div class="a-env e-${e}"><div class="h"><i class="edot"></i>${ENVN[e]}</div><div class="s"><i class="dot ${cls}" style="width:6px;height:6px"></i>${n} · ${txt}</div></div>`;
+  return aSidebar({live:false})
+    + aToolbar(L,{title:`<div class="t1 ui">Tilde</div><div class="t2 ui">6 servers · 2 groups · 3 tags</div>`,right:`<div class="g">${ic('plus',15)}<span>New Server</span></div>`})
+    + `<div class="banner" style="left:${L+16}px;right:16px;top:60px">${ic('info',15)}<span><b class="m" style="color:var(--text);font-weight:600">prod-api-01</b>: shell exited (status 0), tab closed.</span><span class="sp"></span><span class="btn sm">Reopen <span class="t3">⇧⌘T</span></span><span style="padding:0 6px;color:var(--text3)">${ic('x',12)}</span></div>`
+    + `<div class="a-home abs" style="left:${cx}px;width:660px;top:150px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;font:600 20px var(--ui);letter-spacing:-.01em">${ic('tilde',26,'acc')}Connect</div>
+        <div class="bigq">${ic('search',16)}<span>Server name, <span class="m">user@host:port</span> or an <span class="m">ssh</span> command</span><span class="sp"></span><span class="kbd">↵</span></div>
+        <div style="font-size:11.5px;color:var(--text3);margin-top:9px;display:flex;gap:16px"><span>↵ Connect</span><span>⌘↵ Open in new window</span><span>⌥↵ Connect and save as server</span></div>
+        <h5>Recent<span class="sp"></span><span class="t3" style="font-weight:500">Clear</span></h5>
+        <div class="tbl"><div class="tr th"><span style="width:${cols[0]}px">Name</span><span style="width:${cols[1]}px">Address</span><span style="width:${cols[2]}px">Env</span><span style="width:${cols[3]}px">Last used ⌄</span><span style="width:${cols[4]}px;justify-content:flex-end">Latency</span></div>${rec.map((n,i)=>tr(S(n),i)).join('')}</div>
+        <h5>Environments</h5>
+        <div style="display:flex;gap:10px">${env('prod','2','all reachable','d-ok')}${env('staging','1','slow, 183 ms','d-warn')}${env('dev','1','reachable','d-ok')}${env('lab','1','reachable','d-ok')}</div>
+        <div style="display:flex;gap:18px;margin-top:30px;font-size:11.5px;color:var(--text3);justify-content:center"><span><span class="kbd">⌘T</span> New tab</span><span><span class="kbd">⌘K</span> Command palette</span><span><span class="kbd">⇧⌘N</span> New server</span><span><span class="kbd">⌥⌘K</span> Keys</span><span><span class="kbd">⌥⌘S</span> Snippets</span></div>
+      </div>`;
+}
+function A_new(){
+  const row=(l,c)=>`<div class="frow"><span class="lb">${l}</span><span class="ct">${c}</span></div>`;
+  const pop=(inner,w)=>`<span class="pop" style="${w?'width:'+w+'px':''}">${inner}<span class="chev">${ic('updown',11)}</span></span>`;
+  return A_home().replace(/<div class="banner"[\s\S]*?<\/div>/,'')
+  + `<div class="dimmer"></div>
+  <div class="sheet" style="left:340px;top:48px;width:600px;height:704px;display:flex;flex-direction:column">
+    <div style="padding:16px 20px 8px;display:flex;align-items:center;gap:11px">
+      <div style="width:34px;height:34px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center">${ic('server',18)}</div>
+      <div><div style="font:600 15px var(--ui)">New Server</div><div class="t3" style="font-size:11.5px">Synced with iCloud. Passwords and keys stay in iCloud Keychain.</div></div>
+    </div>
+    <div style="padding:4px 20px 10px;flex:1;overflow:hidden">
+      <div class="fh">Connection</div>
+      <div class="fsec">
+        ${row('Name',`<span class="fld m" style="width:330px">edge-proxy-02</span>`)}
+        ${row('Host',`<span class="fld m focus" style="width:218px">10.0.3.21</span><span class="t2">Port</span><span class="fld m" style="width:62px">22</span>`)}
+        ${row('Username',`<span class="fld m" style="width:330px">deploy</span>`)}
+      </div>
+      <div class="fh">Authentication</div>
+      <div class="fsec">
+        ${row('Method',`<span class="opt"><i class="rad on"></i>Key</span><span class="opt" style="margin-left:10px"><i class="rad"></i>Password</span><span class="opt" style="margin-left:10px"><i class="rad"></i>Ask every time</span>`)}
+        ${row('Key',pop(`${ic('key',12)}<span class="m" style="font-size:12px">macbook-ed25519</span><span class="t3" style="font-size:11px">ED25519</span>`,248)+`<span class="btn sm">Generate…</span>`)}
+        ${row('Jump host',pop(`${ic('jump',12)}<span class="m" style="font-size:12px">bastion</span><span class="t3 m" style="font-size:11px">ops@bastion.example.com</span>`,330))}
+      </div>
+      <div class="fh">Organize</div>
+      <div class="fsec">
+        ${row('Environment',pop(`<i class="edot e-prod"></i>Production`,160))}
+        ${row('Group',pop(`${ic('folder',12)}Production`,160))}
+        ${row('Tags',`<span class="fld" style="width:330px;gap:5px;padding-left:4px"><span class="tok">edge ${ic('x',8)}</span><span class="tok">k8s ${ic('x',8)}</span><span class="t3" style="font-size:12px">Add tag</span></span>`)}
+        ${row('Favorite',`<span class="opt"><i class="chk"></i>Show first in its group</span>`)}
+      </div>
+      <div class="fh" style="display:flex;align-items:center;gap:5px">${ic('chevd',12)}Advanced</div>
+      <div class="fsec">
+        ${row('Startup command',`<span class="fld m" style="width:330px;color:var(--text2)">tmux new -A -s tilde</span>`)}
+        ${row('tmux',`<span class="opt"><i class="chk on">${ic('check',10)}</i>Attach to session</span><span class="fld m" style="width:110px">tilde</span>`)}
+        ${row('Terminal type',pop(`<span class="m" style="font-size:12px">xterm-256color</span>`,160))}
+        <div class="frow" style="align-items:flex-start;padding-top:6px;padding-bottom:6px"><span class="lb" style="padding-top:3px">Environment variables</span><span class="ct" style="align-items:flex-end;gap:6px"><span class="seg" style="height:20px"><span style="padding:0 6px">${ic('plus',11)}</span><span style="padding:0 6px">${ic('minus',11)}</span></span>
+          <span class="tbl" style="width:330px;border:1px solid var(--ctrl-line);border-radius:7px;overflow:hidden;background:var(--field)">
+            <span class="tr" style="height:22px"><span style="width:120px" class="m">LANG</span><span class="m" style="color:var(--text2)">en_US.UTF-8</span></span>
+            <span class="tr" style="height:22px;border-bottom:0"><span style="width:120px" class="m">TZ</span><span class="m" style="color:var(--text2)">UTC</span></span>
+          </span>
+          </span></div>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--line);padding:12px 20px;display:flex;align-items:center;gap:8px">
+      <span class="btn">Test Connection</span><span style="font-size:11.5px;color:var(--ok);display:flex;gap:4px;align-items:center;white-space:nowrap">${ic('check',12)}Authenticated, 182 ms</span>
+      <span class="sp"></span><span class="btn">Cancel</span><span class="btn">Save</span><span class="btn def">Save &amp; Connect</span>
+    </div>
+  </div>`;
+}
+function settingsWin(o){
+  const tabs=[['gear','General'],['term','Terminal'],['lock','Security'],['cloud','Sync'],['shieldok','Known Hosts']];
+  const W=o.w||700,H=o.h||640;
+  return `<div class="win" style="position:absolute;left:${(1280-W)/2}px;top:${(800-H)/2}px;width:${W}px;height:${H}px">
+    ${tl(14,10,'z')}<div class="set-title">${o.tab}</div>
+    <div class="set-tabs">${tabs.map(t=>`<div class="set-tab ${t[1]===o.tab?'on':''}">${ic(t[0],20)}<span>${t[1]}</span></div>`).join('')}</div>
+    <div class="set-body">${o.body}</div></div>`;
+}
+function A_settings(){
+  const row=(l,c)=>`<div class="frow"><span class="lb">${l}</span><span class="ct">${c}</span></div>`;
+  const pop=(t,w)=>`<span class="pop" style="width:${w||180}px">${t}<span class="chev">${ic('updown',11)}</span></span>`;
+  const ck=(on,t)=>`<span class="opt"><i class="chk ${on?'on':''}">${on?ic('check',10):''}</i>${t}</span>`;
+  return settingsWin({tab:'Terminal',h:624,body:`
+    <div class="fh">Appearance</div>
+    <div class="fsec">
+      ${row('Theme',pop('Tilde Night'))}
+      <div class="frow" style="padding:8px 12px"><div class="code" style="flex:1;font-size:11.5px;line-height:1.5;padding:7px 10px"><span class="g1">deploy@db-primary</span>:<span style="color:var(--t-b)">~</span>$ ls\n<span style="color:var(--t-b)">backups</span>  <span class="g1">deploy.sh</span>  <span style="color:var(--t-r)">archive.tar.gz</span>\n<span class="y1">warning:</span> disk 91% full</div></div>
+      ${row('Font',pop('SF Mono',140)+`<span class="fld m" style="width:52px;justify-content:center">13</span><span class="t3" style="font-size:12px">pt</span>`)}
+      ${row('Cursor',`<span class="opt"><i class="rad on"></i>Block</span><span class="opt"><i class="rad"></i>Bar</span><span class="opt"><i class="rad"></i>Underline</span><span style="width:8px"></span>${ck(false,'Blink')}`)}
+      ${row('Bell',pop('Visual',140))}
+    </div>
+    <div class="fh">Behavior</div>
+    <div class="fsec">
+      ${row('Scrollback',pop('10,000 lines',140))}
+      ${row('Confirm multi-line paste',pop('Production servers only',200))}
+      ${row('Option key',ck(true,'Use left Option as Meta'))}
+      ${row('Selection',ck(false,'Copy on select'))}
+    </div>
+    <div class="fh">Window</div>
+    <div class="fsec">
+      ${row('Sidebar',ck(true,'Hide the sidebar when a session opens'))}
+      ${row('Last tab closed',ck(true,'Show Home and the sidebar'))}
+    </div>`});
+}
+function A_palette(){
+  const pr=(sel,icn,t,sub,right)=>`<div class="pr ${sel?'sel':''}"><span class="pi">${ic(icn,13)}</span><span>${t}</span>${sub?`<span class="sub">${sub}</span>`:''}<span class="sp"></span>${right||''}</div>`;
+  return A_main({focus:true,mini:true}) + `<div class="dimmer" style="background:rgba(0,0,0,.25)"></div>
+  <div class="pal" style="left:70px;top:70px;width:500px">
+    <div class="q">${ic('search',16,'t3')}<span>deploy@10.0.4.12:2222<span class="caret"></span></span><span class="sp"></span><span class="kbd">esc</span></div>
+    <div class="ps">Connect</div>
+    ${pr(1,'ret','Connect to <span class="m">deploy@10.0.4.12:2222</span>','','<span class="kbd">↵</span>')}
+    ${pr(0,'plus','Save as Server…','','<span class="kh">⌥↵</span>')}
+    <div class="ps">Servers</div>
+    ${pr(0,'term','<span class="m">prod-api-01</span>','deploy@10.0.1.12',badge('prod')+'<span class="kh">⌘5</span>')}
+    ${pr(0,'term','<span class="m">staging-web</span>','deploy@staging.example.com:2222',badge('staging')+'<span class="kh">⌘2</span>')}
+    <div class="ps">Actions</div>
+    ${pr(0,'server','New Server…','','<span class="kh">⇧⌘N</span>')}
+    <div class="pf" style="margin-top:8px"><span><b>↑↓</b> Move</span><span><b>↵</b> Connect</span><span><b>⌘↵</b> New window</span><span class="sp"></span><span>Servers · Sessions · Snippets · Actions</span></div>
+  </div>`;
+}
+function A_hostkey(){
+  return A_main({focus:true,mini:true,sel:'db-primary',term:' '})
+  + `<div class="connecting" style="left:0;right:0;top:250px">connecting to postgres@10.0.2.5:22 via bastion…</div>
+  <div class="dimmer"></div>
+  <div class="sheet" style="left:80px;top:46px;width:480px;padding:20px 22px 18px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="width:36px;height:36px;border-radius:10px;background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn);display:grid;place-items:center;flex:none">${ic('shieldq',20)}</div>
+      <div><div style="font:600 14px var(--ui)">First connection to <span class="m">db-primary</span></div>
+      <div class="t2" style="font-size:12px;margin-top:2px"><span class="m">10.0.2.5:22</span> (via bastion) presented an ED25519 host key. Check it before you trust it.</div></div>
+    </div>
+    <div class="t3" style="font-size:11px;margin:14px 0 5px">SHA256 fingerprint</div>
+    <div class="fp" style="display:flex;gap:8px;align-items:center"><span style="flex:1">${FP}</span>${ic('copy',13,'t3')}</div>
+    <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);margin:10px 0 4px">${ic('chevr',11)}Randomart</div>
+    <div class="t3" style="font-size:11.5px">Compare on the server: <span class="m" style="color:var(--text2)">ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub</span></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:18px"><span class="t3" style="font-size:11px">Waiting · 1:48</span><span class="sp"></span><span class="btn">Cancel</span><span class="btn">Connect Once</span><span class="btn def">Trust &amp; Connect</span></div>
+  </div>`;
+}
+
+/* ==================================================================
+   B · Statusline
+   ================================================================== */
+function bLine(L,sel,o={}){
+  const segs=TABS.map((n,i)=>{const s=S(n);return `<div class="b-seg e-${s.env} ${n===sel?'on':''}"><span class="n">${i+1}</span>${n}${n===sel?'':` <span class="lat ${s.lat>=150?'slow':''}">${s.lat}</span>`}</div>`;}).join('');
+  const extra=o.extra||'';
+  return `<div class="b-line" style="left:${L}px;right:0">${o.empty?`<div class="b-seg" style="color:var(--text3);font-family:var(--ui)">No sessions · <span class="kbd" style="margin-left:4px">⌘K</span> to connect</div>`:segs+extra+`<div class="b-seg" style="padding:0 10px;color:var(--text3)">${ic('plus',13)}</div>`}
+    <div class="r">${o.empty?'':`<span><i class="dot d-ok" style="width:6px;height:6px"></i> <span class="m">${S(sel).lat} ms</span></span><span class="m">${o.size||'160×45'}</span>`}<span style="display:flex;gap:5px;align-items:center">${ic('cloud',13)}Synced</span></div></div>`;
+}
+function bTop(L,s,o={}){
+  const title=s?`<span>${s.n}</span>${badge(s.env)}${o.mini?'':`<span class="a">${addr(s)}</span>`}`:`<span style="font-family:var(--ui)">Tilde</span>`;
+  return `${o.drawer?'':tl(14,13)}
+    <div class="b-tb" style="left:${o.drawer?L:76}px;right:0">${o.drawer?'':`<div class="g sm">${ic('sidebar',14)}</div>`}<span class="sp"></span>
+      <div class="g sm field" style="width:${o.mini?120:190}px">${ic('search',12)}<span style="font-size:12px">Go to…</span><span class="sp"></span><span class="kbd" style="font-size:10px">⌘K</span></div>
+      <div class="g sm">${ic('bolt',14)}</div></div>
+    <div class="b-title" style="left:${L}px;right:0">${title}</div>
+    ${s&&s.env!=='none'?`<div class="b-envline e-${s.env}" style="left:${L}px;right:0"></div>`:''}`;
+}
+function bDrawer(sel){
+  const row=s=>{const i=TABS.indexOf(s.n);return `<div class="b-row e-${s.env} ${s.n===sel?'sel':''}"><span class="rail"></span><span>${s.n}</span>${s.fav?ic('star',9,'fill" style="color:var(--warn)'):''}<span class="sp"></span>${i>=0?`<span class="tn">${i+1}</span>`:''}${lat(s)}</div>`;};
+  const grp=(n,l)=>`<div class="b-sh">${n}<span class="n">${l.length}</span></div>`+l.map(row).join('');
+  return `<div class="panelg" style="left:8px;top:8px;bottom:8px;width:230px">
+    <div style="height:38px;position:relative;flex:none">${tl(12,6)}<div class="g sm" style="position:absolute;right:6px;top:3px">${ic('sidebar',14)}</div></div>
+    <div class="srch" style="height:26px;margin-top:2px">${ic('filter',13)}<span>Filter</span><span class="sp"></span><span class="kbd">⌘0</span></div>
+    <div style="flex:1;padding:0 6px;overflow:hidden">
+      ${grp('Production',[S('prod-api-01'),S('db-primary')])}${grp('Homelab',[S('homelab-pi')])}${grp('Ungrouped',[S('staging-web'),S('dev-sandbox'),S('bastion')])}
+      <div class="b-sh">Tags</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;padding:2px 10px"><span class="tok" style="padding-right:7px">#db</span><span class="tok" style="padding-right:7px">#edge</span><span class="tok" style="padding-right:7px">#k8s</span></div>
+    </div>
+    <div class="sfoot">${ic('cloud',15)}<span>iCloud · synced 2 min ago</span></div>
+  </div>`;
+}
+function B_main(o={}){
+  const L=o.drawer?246:0, s=S(o.sel||'prod-api-01');
+  return (o.drawer?bDrawer(s.n):'') + bTop(L,s,{drawer:o.drawer,mini:o.mini})
+    + `<div class="tm" style="left:${L}px;right:0;top:40px;bottom:28px">${o.term||termProd()}</div>`
+    + bLine(L,s.n,{size:o.drawer?'129×45':'160×45',extra:o.lineExtra}) + (o.extra||'');
+}
+function B_home(){
+  const row=(s,sel)=>`<div class="row e-${s.env} ${sel?'sel':''}"><span class="rail"></span><span class="nm">${s.n}${s.fav?' '+ic('star',10,'fill" style="color:var(--warn)'):''}</span><span class="ad">${addr(s)}</span><span class="tg">${s.tags.map(t=>'#'+t).join(' ')}</span><span class="sp"></span>${sel?'<span class="kh"><span class="kbd">↵</span> connect &nbsp;<span class="kbd">⌘↵</span> window &nbsp;<span class="kbd">⌘E</span> edit</span>':''}${badge(s.env)}<span class="lat ${s.lat>=150?'slow':''}" style="width:44px">${s.lat}ms</span></div>`;
+  const grp=(n,l)=>`<div class="gh">${n}<span style="letter-spacing:0">${l.length}</span></div>`+l.map(s=>row(s,s.n==='prod-api-01')).join('');
+  return bTop(0,null) + `<div class="abs" style="left:0;right:0;top:38px;bottom:28px;background:var(--bg)"></div>
+  <div class="b-launch abs" style="left:250px;width:780px;top:92px">
+    <div style="display:flex;align-items:center;gap:10px;margin:0 4px 14px">${ic('tilde',24,'acc')}<span style="font:650 16px var(--ui)">Connect</span><span class="t3" style="font-size:12px">6 servers · 2 groups · synced 2 min ago</span></div>
+    <div style="height:50px;border-radius:13px;background:var(--field);border:1px solid color-mix(in srgb,var(--accent) 70%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent);display:flex;align-items:center;gap:10px;padding:0 14px;font:15px var(--mono)"><span class="acc" style="font-weight:600">~ $</span><span class="caret"></span><span class="t3">name, user@host:port or an ssh command</span><span class="sp"></span><span class="kbd">↵</span></div>
+    ${grp('Production',[S('prod-api-01'),S('db-primary')])}${grp('Homelab',[S('homelab-pi')])}${grp('Ungrouped',[S('staging-web'),S('dev-sandbox'),S('bastion')])}
+    <div style="margin-top:22px;font-size:11.5px;color:var(--text3);display:flex;gap:16px;padding-left:6px"><span><span class="kbd">↑↓</span> move</span><span><span class="kbd">#</span> filter by tag</span><span><span class="kbd">env:</span> filter by environment</span><span><span class="kbd">⇧⌘N</span> new server</span><span><span class="kbd">⌘0</span> drawer</span></div>
+  </div>` + bLine(0,null,{empty:true});
+}
+function B_new(){
+  const pop=(t,w)=>`<span class="pop" style="width:${w}px">${t}<span class="chev">${ic('updown',11)}</span></span>`;
+  return B_main() + `<div class="dimmer"></div>
+  <div class="sheet" style="left:170px;top:70px;width:940px;height:640px;display:flex;flex-direction:column">
+    <div style="padding:16px 22px 10px;display:flex;align-items:baseline;gap:10px"><span style="font:600 15px var(--ui)">New Server</span><span class="t3" style="font-size:11.5px">Paste an <span class="m">ssh</span> command into Host to fill everything.</span></div>
+    <div style="flex:1;display:flex;gap:0;min-height:0">
+      <div style="width:540px;padding:8px 24px 10px 10px">
+        <div class="b-form">
+          <span class="l">Name</span><span class="fld m">edge-proxy-02</span>
+          <span class="l">Host</span><span style="display:flex;gap:8px;align-items:center"><span class="fld m focus" style="flex:1">10.0.3.21</span><span class="t2">Port</span><span class="fld m" style="width:60px">22</span></span>
+          <span class="l">Username</span><span class="fld m">deploy</span>
+          <span class="hr"></span>
+          <span class="l">Authentication</span><span><span class="seg"><span class="on">Key</span><span>Password</span><span>Ask every time</span></span></span>
+          <span class="l">Key</span><span>${pop(`<span class="m" style="font-size:12px">macbook-ed25519</span><span class="t3" style="font-size:11px">ED25519 · …wXc</span>`,300)}</span>
+          <span class="l">Jump host</span><span>${pop(`<span class="m" style="font-size:12px">bastion</span><span class="t3 m" style="font-size:11px">ops@bastion.example.com</span>`,300)}</span>
+          <span class="hr"></span>
+          <span class="l">Environment</span><span><span class="seg"><span>None</span><span><i class="edot e-dev" style="width:6px;height:6px"></i>Dev</span><span><i class="edot e-staging" style="width:6px;height:6px"></i>Staging</span><span class="on" style="color:var(--danger)"><i class="edot e-prod" style="width:6px;height:6px"></i>Prod</span><span><i class="edot e-lab" style="width:6px;height:6px"></i>Lab</span></span></span>
+          <span class="l">Group</span><span>${pop('Production',170)}</span>
+          <span class="l">Tags</span><span class="fld" style="gap:5px;padding-left:4px"><span class="tok">edge ${ic('x',8)}</span><span class="tok">k8s ${ic('x',8)}</span></span>
+          <span class="l"></span><span class="opt"><i class="chk"></i>Favorite</span>
+          <span class="hr"></span>
+          <span class="l">Startup command</span><span class="fld m" style="color:var(--text2)">tmux new -A -s tilde</span>
+          <span class="l">tmux</span><span class="opt"><i class="chk on">${ic('check',10)}</i>Attach to session <span class="m t2">tilde</span></span>
+          <span class="l">TERM</span><span>${pop('<span class="m" style="font-size:12px">xterm-256color</span>',170)}</span>
+          <span class="l">Environment</span><span class="fld m" style="gap:6px"><span class="tok" style="padding-right:7px">LANG=en_US.UTF-8</span><span class="tok" style="padding-right:7px">TZ=UTC</span></span>
+        </div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--line);padding:6px 22px 10px;background:var(--grp)">
+        <div class="ish" style="margin-top:4px">Equivalent command<span class="sp"></span>${ic('copy',13)}</div>
+        <div class="code">ssh <span class="c1">-J</span> ops@bastion.example.com \\
+    <span class="c1">-i</span> ~/.ssh/macbook-ed25519 <span class="c1">-t</span> \\
+    deploy@10.0.3.21 <span class="y1">'tmux new -A -s tilde'</span></div>
+        <div class="ish">As ssh_config<span class="sp"></span>${ic('copy',13)}</div>
+        <div class="code"><span class="c1">Host</span> edge-proxy-02
+  <span class="c1">HostName</span> 10.0.3.21
+  <span class="c1">User</span> deploy
+  <span class="c1">IdentityFile</span> macbook-ed25519 <span class="d1"># Keychain</span>
+  <span class="c1">ProxyJump</span> bastion
+  <span class="c1">RequestTTY</span> yes
+  <span class="c1">RemoteCommand</span> tmux new -A -s tilde
+  <span class="c1">SetEnv</span> LANG=en_US.UTF-8 TZ=UTC</div>
+        <div class="t3" style="font-size:11px;margin-top:10px;line-height:1.45">Read-only preview. Tilde never writes ~/.ssh/config unless you export.</div>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--line);padding:12px 22px;display:flex;align-items:center;gap:8px">
+      <span class="btn">Test Connection</span><span style="font-size:11.5px;color:var(--ok);display:flex;gap:4px;align-items:center">${ic('check',12)}Authenticated as <span class="m">deploy</span> (ed25519) in 182 ms</span>
+      <span class="sp"></span><span class="btn">Cancel</span><span class="btn">Save</span><span class="btn def">Save &amp; Connect</span>
+    </div>
+  </div>`;
+}
+function B_settings(){
+  const cols=[226,54,92,200,92];
+  const rows=[['10.0.1.12','prod-api-01',22,'ED25519','SHA256:4f+HqTn1dQ…Vw0','Mar 14, 2026'],['10.0.2.5','db-primary',22,'ED25519','SHA256:p3Kc9yFQ2n…wE0','Mar 14, 2026'],['staging.example.com','staging-web',2222,'ECDSA-256','SHA256:Hn2xQ0vL7k…a9Q','Apr 2, 2026'],['dev.example.com','dev-sandbox',22,'ED25519','SHA256:Wm4rT8zPq1…Lk3','May 20, 2026'],['pi.local','homelab-pi',22,'ED25519','SHA256:Qe7Yb2nC5d…Rt8','Jun 1, 2026'],['bastion.example.com','bastion',22,'ED25519','SHA256:Zt5Kd1Hs9m…Pq2','Mar 14, 2026'],['10.0.4.12',null,2222,'RSA-3072','SHA256:Lr0aP2Zk81…mQ9','Nov 20, 2026']];
+  const tr=(r,i)=>`<div class="tr ${i===1?'sel':i%2?'alt':''}"><span style="width:${cols[0]}px" class="m">${r[0]}${r[1]?` <span class="t3" style="font-family:var(--ui);font-size:11px">${r[1]}</span>`:''}</span><span style="width:${cols[1]}px" class="m">${r[2]}</span><span style="width:${cols[2]}px"><span class="badge e-none" style="color:var(--text2);border-color:var(--line)">${r[3]}</span></span><span style="width:${cols[3]}px;color:var(--text2)" class="m">${r[4]}</span><span style="width:${cols[4]}px;color:var(--text2)">${r[5]}</span></div>`;
+  return settingsWin({tab:'Known Hosts',w:720,h:520,body:`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <span class="opt"><i class="chk"></i>Strict host checking</span><span class="t3" style="font-size:11px">Refuse hosts that aren't listed here</span><span class="sp"></span>
+      <span class="fld ph" style="width:180px;border-radius:12px">${ic('search',12)}Search</span></div>
+    <div class="tbl" style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
+      <div class="tr th"><span style="width:${cols[0]}px">Host ⌃</span><span style="width:${cols[1]}px">Port</span><span style="width:${cols[2]}px">Type</span><span style="width:${cols[3]}px">Fingerprint</span><span style="width:${cols[4]}px">Trusted</span></div>
+      ${rows.map(tr).join('')}
+      
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+      <span class="seg" style="height:22px"><span style="padding:0 7px">${ic('minus',11)}</span></span>
+      <span class="btn sm">Copy Fingerprint</span><span class="btn sm">Import known_hosts…</span><span class="sp"></span>
+      <span class="t3" style="font-size:11px;display:flex;gap:5px;align-items:center">${ic('cloud',13)}7 hosts · pins sync to all your devices</span></div>`});
+}
+function B_palette(){
+  const pr=(sel,icn,t,sub,right)=>`<div class="pr ${sel?'sel':''}"><span class="pi">${ic(icn,13)}</span><span>${t}</span>${sub?`<span class="sub">${sub}</span>`:''}<span class="sp"></span>${right||''}</div>`;
+  return B_main({mini:true}) + `<div class="dimmer" style="background:rgba(0,0,0,.22)"></div>
+  <div class="pal" style="left:40px;top:46px;width:560px;border-radius:14px">
+    <div class="q"><span class="tok" style="font-size:13px;height:22px;padding:0 8px">#k8s</span><span>logs<span class="caret"></span></span><span class="sp"></span><span class="kbd">esc</span></div>
+    <div class="b-scope"><span>All</span><span><b>@</b>Sessions</span><span class="on"><b>#</b>Tags</span><span><b>&gt;</b>Actions</span><span><b>!</b>Snippets</span><span class="sp" style="border:0"></span><span style="border:0;color:var(--text3)">⇥ next scope</span></div>
+    <div class="ps">Snippets matching “logs”</div>
+    ${pr(1,'snip','<span class="m">kubectl logs -f deploy/&lt;name&gt; -n &lt;ns&gt;</span>','','<span class="kh">↵ insert · ⌥↵ run</span>')}
+    ${pr(0,'snip','<span class="m">kubectl logs --since=10m -l app=&lt;app&gt;</span>','','')}
+    <div class="ps">Servers tagged k8s</div>
+    ${pr(0,'term','<span class="m">prod-api-01</span>','deploy@10.0.1.12',badge('prod')+'<span class="b-row" style="height:auto;padding:0"><span class="tn">5</span></span>')}
+    ${pr(0,'term','<span class="m">dev-sandbox</span>','dev@dev.example.com',badge('dev')+'<span class="b-row" style="height:auto;padding:0"><span class="tn">1</span></span>')}
+    <div class="pf" style="margin-top:8px"><span><b>↵</b> Insert into prod-api-01</span><span><b>⌘↵</b> New window</span><span class="sp"></span><span>Snippets run in the current tab</span></div>
+  </div>`;
+}
+function B_hostkey(){
+  const seg=`<div class="b-seg q on" style="--e:var(--warn)"><span class="n">4</span>db-primary <span style="color:var(--warn)">verify</span></div>`;
+  return bTop(0,S('db-primary'),{mini:true}) + `<div class="tm" style="left:0;right:0;top:40px;bottom:28px;opacity:.55"><span class="d1">Connecting to postgres@10.0.2.5:22 via bastion…
+Host key received (ED25519). Waiting for you to verify it.</span></div>`
+  + `<div class="b-line" style="left:0;right:0">${['staging-web','homelab-pi','prod-api-01'].map((n,i)=>{const s=S(n);return `<div class="b-seg e-${s.env}"><span class="n">${i+1}</span>${n}</div>`;}).join('')}${seg}<div class="r"><span style="display:flex;gap:5px;align-items:center">${ic('cloud',13)}Synced</span></div></div>`
+  + `<div class="b-card" style="left:60px;right:60px;top:84px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn);display:grid;place-items:center;flex:none">${ic('shieldq',19)}</div>
+        <div><div style="font:600 14px var(--ui)">Verify db-primary's host key</div><div class="t2" style="font-size:12px;margin-top:2px">First connection. Only this tab is waiting, and the others keep running.</div></div></div>
+      <div style="display:flex;gap:14px;margin-top:14px">
+        <div style="flex:1;min-width:0"><div class="t3" style="font-size:11px;margin-bottom:5px">ED25519 · SHA256</div><div class="fp" style="font-size:11.5px">${FP}</div>
+        <div class="t3" style="font-size:11px;margin-top:10px">Compare: <span class="m" style="color:var(--text2)">ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub</span></div></div>
+        <div class="art" style="font-size:9.5px;line-height:10.5px;padding:6px 8px">${ART}</div></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:16px"><span class="t3" style="font-size:11px">⌘W cancels · 1:48 left</span><span class="sp"></span><span class="btn">Connect Once</span><span class="btn def">Trust &amp; Connect</span></div>
+    </div>`;
+}
+
+/* ==================================================================
+   C · Fleet
+   ================================================================== */
+function cSidebar(o={}){
+  const scope=(icn,t,n,sel)=>`<div class="c-row ${sel?'sel':''}">${ic(icn,14)}<span>${t}</span>${n!=null?`<span class="cnt">${n}</span>`:''}</div>`;
+  const ses=(n,i)=>{const s=S(n);return `<div class="c-row ses e-${s.env} ${o.sel===n?'sel':''}"><span class="tg">${ic('term',12)}</span><span>${n}</span><span class="lat ${s.lat>=150?'slow':''}">${s.lat}ms</span><span class="kh" style="width:20px;text-align:right">⌘${i+1}</span></div>`;};
+  return `<div class="panelg" style="left:8px;top:8px;bottom:8px;width:232px">
+    <div class="a-sbtop">${tl(12,12)}<div class="g sm" style="position:absolute;right:8px;top:6px">${ic('sidebar',15)}</div></div>
+    <div style="flex:1;overflow:hidden;padding:0 8px">
+      ${scope('grid','All Servers',6,o.scope==='all')}${scope('star','Favorites',1)}${scope('clock','Recent')}
+      <div class="a-sh">Sessions<span class="n">${o.empty?'':ic('plus',12)}</span></div>
+      ${o.empty?`<div class="c-row" style="color:var(--text3);font-size:12px">No open sessions <span class="kbd" style="margin-left:auto">⌘T</span></div>`:TABS.map(ses).join('')}
+      <div class="a-sh">Groups</div>${scope('folder','Production',2)}${scope('folder','Homelab',1)}
+      <div class="a-sh">Tags</div>${scope('tag','db',1)}${scope('tag','edge',2)}${scope('tag','k8s',2)}
+    </div>
+    <div class="sfoot">${ic('cloud',15)}<span>iCloud · synced 2 min ago</span></div>
+  </div>`;
+}
+function cRight(o={}){
+  return `${o.readout?`<span style="display:flex;align-items:center;gap:6px;font:11.5px var(--mono);color:var(--text2);margin-right:4px"><i class="dot d-ok" style="width:6px;height:6px"></i>${o.readout}</span>`:''}
+    ${o.search?`<div class="g field" style="width:230px">${ic('search',13)}<span style="font-size:12px">Filter or user@host:port</span></div>`:''}
+    <div class="g grp"><span>${ic(o.search?'plus':'bolt',16)}</span><span>${ic(o.search?'dots':'plus',16)}</span></div>
+    <div class="g ${o.insp?'on':''}">${ic('inspector',16)}</div>`;
+}
+function C_main(o={}){
+  const s=S(o.sel||'prod-api-01');
+  if(o.focus){
+    const pills=TABS.map((n,i)=>{const t=S(n);return `<div class="c-pill e-${t.env} ${n===s.n?'on':''}"><i class="edot" style="width:6px;height:6px"></i>${n}<span class="kh">⌘${i+1}</span></div>`;}).join('');
+    return tl(20,20) + `<div class="a-tb" style="left:0;right:0;padding-left:86px"><div class="g">${ic('sidebar',16)}</div><div class="c-pills" style="margin-left:6px">${pills}</div><span class="sp"></span>${cRight({readout:s.lat+' ms'})}</div>
+      <div class="c-envtop e-${s.env}" style="left:0;right:0;top:52px"></div>
+      <div class="tm" style="left:0;right:0;top:54px;bottom:0">${o.term||termProd()}</div>` + (o.extra||'');
+  }
+  return cSidebar({sel:s.n}) + `<div class="a-tb" style="left:248px;right:0"><div class="a-ttl">${aTitle(s)}</div><span class="sp"></span>${cRight({readout:s.lat+' ms'})}</div>
+    <div class="c-envtop e-${s.env}" style="left:248px;right:0;top:52px"></div>
+    <div class="tm" style="left:248px;right:0;top:54px;bottom:0">${o.term||termProd()}</div>`;
+}
+const cCols=[24,120,200,52,82,66,60,104];
+function cTable(sel,extraRow){
+  const hd=['','Name ⌃','Address','Env','Group','Tags','Latency','Last used'];
+  const order=['prod-api-01','db-primary','homelab-pi','staging-web','dev-sandbox','bastion'];
+  const tr=(s,i)=>`<div class="tr ${s.n===sel?'sel':i%2?'alt':''}"><span style="width:${cCols[0]}px;padding-right:0"><i class="dot ${qd(s)}"></i></span><span style="width:${cCols[1]}px" class="m">${s.n}${s.fav?ic('star',9,'fill" style="color:var(--warn)'):''}</span><span style="width:${cCols[2]}px;color:var(--text2)" class="m">${addr(s)}</span><span style="width:${cCols[3]}px">${badge(s.env)}</span><span style="width:${cCols[4]}px;color:var(--text2)">${s.g||'—'}</span><span style="width:${cCols[5]}px;color:var(--text3)" class="m">${s.tags.map(t=>'#'+t).join(' ')}</span><span style="width:${cCols[6]}px;justify-content:flex-end">${lat(s)}</span><span style="width:${cCols[7]}px;color:var(--text2)">${s.last==='just now'?'1 min ago':s.last}</span></div>`;
+  return `<div class="tbl"><div class="tr th">${hd.map((h,i)=>`<span style="width:${cCols[i]}px;${i===6?'justify-content:flex-end':''}">${h}</span>`).join('')}</div>${order.map((n,i)=>tr(S(n),i)).join('')}${extraRow||''}</div>`;
+}
+function C_home(){
+  const s=S('db-primary');
+  return cSidebar({scope:'all',empty:true})
+  + `<div class="a-tb" style="left:248px;right:0"><div class="a-ttl"><div class="t1 ui">All Servers</div><div class="t2 ui">6 servers · 5 reachable · 1 slow</div></div><span class="sp"></span>${cRight({search:true,insp:true})}</div>
+  <div class="banner" style="left:256px;right:324px;top:60px">${ic('info',15)}<span><b class="m" style="color:var(--text);font-weight:600">prod-api-01</b>: shell exited (0)</span><span class="sp"></span><span class="btn sm">Reopen <span class="t3">⇧⌘T</span></span></div>
+  <div class="abs" style="left:256px;width:708px;top:104px">${cTable('db-primary')}</div>
+  <div class="panelg" style="right:8px;top:60px;bottom:8px;width:300px"><div class="c-insp">
+    <div class="c-hdr e-prod"><div class="big">${ic('term',20)}</div><div style="min-width:0"><div style="display:flex;gap:7px;align-items:center;font:600 15px var(--mono)">db-primary${badge('prod')}</div><div class="m t2" style="font-size:11.5px;margin-top:2px">postgres@10.0.2.5</div></div></div>
+    <div style="display:flex;gap:8px;margin-top:14px"><span class="btn def" style="flex:1;justify-content:center;height:30px;border-radius:15px">${ic('play',14)}Connect</span><span class="btn" style="height:30px;border-radius:15px">${ic('dots',14)}</span></div>
+    <div class="ish">Connection</div>
+    <div class="kv"><span class="k">Host</span><span class="v">10.0.2.5</span><span class="k">Port</span><span class="v">22</span><span class="k">User</span><span class="v">postgres</span><span class="k">Key</span><span class="v">macbook-ed25519</span><span class="k">Jump host</span><span class="v">bastion</span><span class="k">Latency</span><span class="v" style="color:var(--ok)">31 ms</span></div>
+    <div class="ish">Host key</div>
+    <div style="display:flex;gap:8px;align-items:flex-start;font-size:12px"><span style="color:var(--ok)">${ic('shieldok',16)}</span><div><div>Trusted Mar 14, 2026</div><div class="t3" style="font-size:11px">on MacBook Pro · ED25519</div><div class="m t2" style="font-size:11px;margin-top:4px">SHA256:p3Kc9yFQ2n…sTgVwE0</div></div></div>
+    <div class="ish">Organize</div>
+    <div class="kv"><span class="k">Group</span><span class="v" style="font-family:var(--ui)">Production</span><span class="k">Tags</span><span class="v"><span class="tok" style="padding-right:7px">db</span></span><span class="k">Startup</span><span class="v">—</span><span class="k">Last used</span><span class="v" style="font-family:var(--ui)">2 min ago</span></div>
+    <span class="sp"></span>
+    <div style="display:flex;gap:8px;border-top:1px solid var(--line);padding-top:12px;font-size:12px;color:var(--text2)"><span>${ic('copy',12)} Copy SSH Command</span><span class="sp"></span><span>Edit <span class="kbd">⌘E</span></span></div>
+  </div></div>`;
+}
+function C_new(){
+  const pop=(t)=>`<span class="pop" style="width:100%">${t}<span class="chev">${ic('updown',11)}</span></span>`;
+  const extra=`<div class="tr sel"><span style="width:${cCols[0]}px;padding-right:0"><i class="dot d-off"></i></span><span style="width:${cCols[1]}px" class="m">edge-proxy-02</span><span style="width:${cCols[2]}px;color:var(--text2)" class="m">deploy@10.0.3.21</span><span style="width:${cCols[3]}px">${badge('prod')}</span><span style="width:${cCols[4]}px;color:var(--text2)">Production</span><span style="width:${cCols[5]}px;color:var(--text3)" class="m">#edge #k8s</span><span style="width:${cCols[6]}px;justify-content:flex-end" class="t3">—</span><span style="width:${cCols[7]}px;color:var(--accent);font-style:italic">New</span></div>`;
+  return cSidebar({scope:'all',empty:true})
+  + `<div class="a-tb" style="left:248px;right:0"><div class="a-ttl"><div class="t1 ui">All Servers</div><div class="t2 ui">7 servers · 1 unsaved</div></div><span class="sp"></span>${cRight({search:true,insp:true})}</div>
+  <div class="abs" style="left:256px;width:708px;top:60px">${cTable(null,extra)}</div>
+  <div class="panelg" style="right:8px;top:60px;bottom:8px;width:300px"><div class="c-insp" style="gap:9px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><span style="font:600 14px var(--ui)">New Server</span><span class="sp"></span><span class="t3" style="font-size:11px">⇧⌘N</span></div>
+    <div class="stk"><span class="l">Name</span><span class="fld m">edge-proxy-02</span></div>
+    <div class="c-two pp"><div class="stk"><span class="l">Host</span><span class="fld m focus">10.0.3.21</span></div><div class="stk"><span class="l">Port</span><span class="fld m">22</span></div></div>
+    <div class="stk"><span class="l">Username</span><span class="fld m">deploy</span></div>
+    <div class="stk"><span class="l">Authentication</span><span class="seg" style="width:100%"><span class="on" style="flex:1;justify-content:center">Key</span><span style="flex:1;justify-content:center">Password</span><span style="flex:1;justify-content:center">Ask</span></span></div>
+    <div class="c-two"><div class="stk"><span class="l">Key</span>${pop('<span class="m" style="font-size:11.5px">macbook-ed…</span>')}</div><div class="stk"><span class="l">Jump host</span>${pop('<span class="m" style="font-size:11.5px">bastion</span>')}</div></div>
+    <div class="c-two"><div class="stk"><span class="l">Environment</span>${pop('<i class="edot e-prod"></i>Production')}</div><div class="stk"><span class="l">Group</span>${pop('Production')}</div></div>
+    <div class="stk"><span class="l">Tags</span><span class="fld" style="gap:5px;padding-left:4px"><span class="tok">edge ${ic('x',8)}</span><span class="tok">k8s ${ic('x',8)}</span></span></div>
+    <span class="opt"><i class="chk"></i>Favorite</span>
+    <div style="display:flex;align-items:center;gap:5px;font:600 11px var(--ui);color:var(--text3);margin-top:4px">${ic('chevd',11)}Advanced</div>
+    <div class="stk"><span class="l">Startup command</span><span class="fld m" style="color:var(--text2)">tmux new -A -s tilde</span></div>
+    <span class="opt"><i class="chk on">${ic('check',10)}</i>Attach to tmux session “tilde”</span>
+    <div class="c-two"><div class="stk"><span class="l">TERM</span>${pop('<span class="m" style="font-size:11.5px">xterm-256c…</span>')}</div><div class="stk"><span class="l">Env vars</span><span class="fld m" style="font-size:11px">LANG, TZ</span></div></div>
+    <span class="sp"></span>
+    <div style="display:flex;gap:6px;border-top:1px solid var(--line);padding-top:12px"><span class="btn sm">Test</span><span class="sp"></span><span class="btn sm">Cancel</span><span class="btn sm">Save</span><span class="btn sm def">Connect</span></div>
+  </div></div>`;
+}
+function C_settings(){
+  const row=(l,c)=>`<div class="frow"><span class="lb">${l}</span><span class="ct">${c}</span></div>`;
+  const n=v=>`<span class="m t2">${v}</span>`;
+  return settingsWin({tab:'Sync',h:600,body:`
+    <div class="fsec" style="padding:14px 14px;display:flex;align-items:center;gap:14px;flex-direction:row">
+      <div style="width:44px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok);display:grid;place-items:center">${ic('cloud',24)}</div>
+      <div><div style="font:600 13.5px var(--ui)">iCloud sync is on</div><div class="t3" style="font-size:12px">Last synced 2 minutes ago · private database</div></div><span class="sp"></span><span class="btn">Sync Now</span></div>
+    <div class="fh" style="padding-top:16px">What syncs</div>
+    <div class="fsec">
+      ${row('Servers',n(6))}${row('Groups and tags',n('2 · 3'))}${row('Snippets',n(8))}${row('Known hosts',n(7))}${row('Keys (public part and name only)',n(5))}
+    </div>
+    <div class="fh">iCloud Keychain</div>
+    <div class="fsec">
+      ${row('Secrets waiting to arrive',`<span style="color:var(--ok);display:flex;gap:5px;align-items:center">${ic('check',12)}None</span>`)}
+      ${row('Keys on this Mac only',`<span class="m t2">ci-rsa-3072</span>`)}
+    </div>
+    <div class="fsec" style="margin-top:14px">
+      ${row('Sync with iCloud','<span class="sw on"></span>')}
+      ${row('Local data',`<span class="btn sm dng">Reset Local Data…</span>`)}
+    </div>
+    <div class="t3" style="font-size:11.5px;margin-top:10px;padding:0 4px">Passwords and private keys never go into the iCloud database. They travel only through iCloud Keychain, which is end-to-end encrypted.</div>`});
+}
+function C_palette(){
+  const pr=(sel,icn,t,sub,right)=>`<div class="pr ${sel?'sel':''}"><span class="pi">${ic(icn,13)}</span><span>${t}</span>${sub?`<span class="sub">${sub}</span>`:''}<span class="sp"></span>${right||''}</div>`;
+  return C_main({focus:true}) + `<div class="dimmer" style="background:rgba(0,0,0,.25)"></div>
+  <div class="pal" style="left:30px;right:30px;top:66px">
+    <div class="q">${ic('search',16,'t3')}<span>db<span class="caret"></span></span><span class="sp"></span><span class="kbd">esc</span></div>
+    <div style="display:flex">
+      <div style="width:320px;padding-bottom:8px;border-right:1px solid var(--line)">
+        <div class="ps">Sessions</div>${pr(1,'term','<span class="m">db-primary</span>','tab 3',badge('prod'))}
+        <div class="ps">Servers</div>${pr(0,'plus','New session on <span class="m">db-primary</span>','','')}
+        <div class="ps">Tags</div>${pr(0,'tag','Show servers tagged <span class="m">#db</span>','','<span class="kh">1</span>')}
+      </div>
+      <div style="flex:1;padding:14px 16px" class="e-prod">
+        <div class="c-hdr"><div class="big" style="width:30px;height:30px">${ic('term',16)}</div><div><div class="m" style="font-weight:600">db-primary</div><div class="m t3" style="font-size:11px">postgres@10.0.2.5</div></div></div>
+        <div class="kv" style="margin-top:12px;grid-template-columns:70px 1fr;font-size:11.5px"><span class="k">Env</span><span class="v">${badge('prod')}</span><span class="k">Via</span><span class="v">bastion</span><span class="k">Latency</span><span class="v" style="color:var(--ok)">31 ms</span><span class="k">Host key</span><span class="v" style="font-family:var(--ui);color:var(--ok)">Trusted</span><span class="k">Session</span><span class="v" style="font-family:var(--ui)">psql · 14 min</span></div>
+      </div>
+    </div>
+    <div class="pf"><span><b>↵</b> Switch to tab 3</span><span><b>⌘↵</b> New session</span><span><b>⌘I</b> Inspect</span></div>
+  </div>`;
+}
+function C_hostkey(){
+  return C_main({focus:true,sel:'db-primary',term:' '}) + `<div class="connecting" style="left:0;right:0;top:300px"><span class="spin"></span>Connecting to postgres@10.0.2.5:22 via bastion…</div>
+  <div class="dimmer"></div>
+  <div class="sheet" style="left:50px;right:50px;top:46px;padding:20px 22px 18px">
+    <div style="display:flex;gap:18px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;gap:10px;align-items:center"><span style="color:var(--warn)">${ic('shieldq',22)}</span><span style="font:600 14px var(--ui)">Trust db-primary's host key?</span></div>
+        <div class="t2" style="font-size:12px;margin:6px 0 12px">First connection to <span class="m">10.0.2.5:22</span> through bastion. The handshake is held open until you decide.</div>
+        <div class="kv" style="grid-template-columns:70px 1fr;font-size:11.5px"><span class="k">Server</span><span class="v">db-primary ${badge('prod')}</span><span class="k">Type</span><span class="v">ED25519</span></div>
+        <div class="fp" style="font-size:11px;margin-top:10px">${FP}</div>
+      </div>
+      <div class="art" style="font-size:9.5px;line-height:10.5px;align-self:flex-start">${ART}</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:16px"><span class="t3" style="font-size:11px">${ic('copy',12)} Copy</span><span class="sp"></span><span class="btn">Cancel</span><span class="btn">Connect Once</span><span class="btn def">Trust &amp; Connect</span></div>
+  </div>`;
+}
+
+/* ---------- registry ---------- */
+const win=(html,o={})=>`<div class="win ${o.light?'light':''}" style="width:${o.w||1280}px;height:${o.h||800}px">${html}</div>`;
+const MOCKS={
+  A1:()=>win(A_main()),
+  A2:()=>win(A_main({focus:true,sel:'db-primary',term:termDb(),extra:`<div class="hud" style="left:16px;top:94px">${ic('sidebar',15,'acc')}Sidebar hidden while you work<span class="kbd">⌃⌘S</span></div>`})),
+  A3:()=>win(A_home()),
+  A4:()=>win(A_new()),
+  A5:()=>[`<div style="position:relative;width:1280px;height:800px">${A_settings()}</div>`,1280,800],
+  A6:()=>[win(A_palette(),{w:640,h:470}),640,470],
+  A7:()=>[win(A_hostkey(),{w:640,h:470}),640,470],
+  A8:()=>win(A_main(),{light:true}),
+  B1:()=>win(B_main({drawer:true})),
+  B2:()=>win(B_main({sel:'db-primary',term:termDb()})),
+  B3:()=>win(B_home()),
+  B4:()=>win(B_new()),
+  B5:()=>[`<div style="position:relative;width:1280px;height:800px">${B_settings()}</div>`,1280,800],
+  B6:()=>[win(B_palette(),{w:640,h:470}),640,470],
+  B7:()=>[win(B_hostkey(),{w:640,h:470}),640,470],
+  C1:()=>win(C_main()),
+  C2:()=>win(C_main({focus:true,sel:'db-primary',term:termDb()})),
+  C3:()=>win(C_home()),
+  C4:()=>win(C_new()),
+  C5:()=>[`<div style="position:relative;width:1280px;height:800px">${C_settings()}</div>`,1280,800],
+  C6:()=>[win(C_palette(),{w:640,h:470}),640,470],
+  C7:()=>[win(C_hostkey(),{w:640,h:470}),640,470],
+};
+document.querySelectorAll('[data-mock]').forEach(el=>{
+  let r=MOCKS[el.dataset.mock](); if(typeof r==='string') r=[r,1280,800];
+  el.dataset.w=r[1]; el.dataset.h=r[2];
+  el.innerHTML=`<div class="scaler" style="width:${r[1]}px;height:${r[2]}px">${r[0]}</div>`;
+});
+function fit(){
+  document.querySelectorAll('.scaled').forEach(el=>{
+    const host=el.parentElement; if(!host.offsetParent) return;
+    const w=+el.dataset.w,h=+el.dataset.h, avail=host.clientWidth-(w>700?64:40);
+    const s=Math.min(1,avail/w);
+    el.style.width=w*s+'px'; el.style.height=h*s+'px';
+    el.firstElementChild.style.transform=`scale(${s})`;
+  });
+}
+/* ---------- direction switcher ---------- */
+const buttons=[...document.querySelectorAll('.switch button')];
+function show(p,scroll){
+  document.body.classList.toggle('all',p==='ALL');
+  document.querySelectorAll('.panel').forEach(s=>s.classList.toggle('on',s.id===p));
+  buttons.forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  fit();
+  if(scroll){const t=document.getElementById('switch');window.scrollTo({top:t.offsetTop+1,behavior:'smooth'});}
+}
+buttons.forEach(b=>b.addEventListener('click',()=>{history.replaceState(null,'','#'+b.dataset.p);show(b.dataset.p,true);}));
+function fromHash(){const h=location.hash.slice(1);const p=h==='ALL'?'ALL':(h.split('-')[0]||'A');show(['A','B','C','R','ALL'].includes(p)?p:'A',false);if(h.includes('-')){const t=document.getElementById(h);if(t)setTimeout(()=>t.scrollIntoView(),30);}}
+window.addEventListener('hashchange',fromHash);
+window.addEventListener('resize',fit);
+fromHash();
+</script>
+</body>
+</html>
