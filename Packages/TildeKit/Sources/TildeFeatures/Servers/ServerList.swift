@@ -325,9 +325,12 @@ public struct ServerList: View {
             } label: {
                 Image(systemName: "plus")
             }
+            .menuIndicator(.hidden)
             .accessibilityLabel("Add")
+            .help("Add a server, import, or generate a key")
         }
-        ToolbarItem(placement: .secondaryAction) {
+        ToolbarSpacer(.fixed, placement: .primaryAction)
+        ToolbarItem(placement: .primaryAction) {
             Menu {
                 Picker("Sort", selection: $sortRaw) {
                     ForEach(ServerSortMode.allCases) { Label($0.title, systemImage: $0.systemImage).tag($0.rawValue) }
@@ -338,7 +341,9 @@ public struct ServerList: View {
             } label: {
                 Image(systemName: "ellipsis")
             }
+            .menuIndicator(.hidden)
             .accessibilityLabel("More")
+            .help("Sort, filter and group servers")
         }
     }
 
