@@ -25,10 +25,13 @@ public struct SessionContainer: View {
             ZStack {
                 SessionStack(tabs: tabs, selectedID: selected?.id)
                 if tabs.isEmpty {
-                    // Mac home page goes here: integration swaps this for `#if os(macOS) MacHomeView() #else …EmptyState… #endif`.
+                    #if os(macOS)
+                    MacHomeView()
+                    #else
                     EmptyState("No open sessions", message: "Pick a server on the left, or press ⌘T to connect.") {
                         Button("Quick Connect") { navigator.present(.palette(.newTab)) }.buttonStyle(.tildePrimary)
                     }
+                    #endif
                 }
             }
             #if os(macOS)
@@ -82,7 +85,9 @@ public struct SessionContainer: View {
             }
             .sharedBackgroundVisibility(.hidden)
         }
-        ToolbarItemGroup(placement: .primaryAction) {
+        // On macOS `.primaryAction` sits at the leading edge; the flexible spacer pushes the group to the trailing edge.
+        ToolbarSpacer(.flexible)
+        ToolbarItemGroup(placement: .automatic) {
             Button { navigator.present(.palette(.snippets)) } label: { Image(systemName: "bolt") }
                 .accessibilityLabel("Snippets")
                 .help("Snippets (⇧⌘S)")

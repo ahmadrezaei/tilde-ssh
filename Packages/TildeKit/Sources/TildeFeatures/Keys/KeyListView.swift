@@ -26,6 +26,7 @@ public struct KeyListView: View {
     public init() {}
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.tildeIsUtilityWindow) private var isUtilityWindow
 
     public var body: some View {
         #if os(macOS)
@@ -59,7 +60,7 @@ public struct KeyListView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) { addMenu }
         }
-        .sheet(item: $sheet) { sheet in sheetContent(sheet) }
+        .sheet(item: $sheet) { sheet in sheetContent(sheet).environment(\.tildeIsUtilityWindow, false) }
     }
 
     #if os(macOS)
@@ -88,11 +89,11 @@ public struct KeyListView: View {
         } leading: {
             addMenu.menuStyle(.button).buttonStyle(.tildeSheetSecondary).fixedSize()
         } actions: {
-            TildeDefaultButton("Done") { dismiss() }
+            if !isUtilityWindow { TildeDefaultButton("Done") { dismiss() } }
         }
         // The sheet is wrapped in a NavigationStack so a key can push its detail page; without this its empty system
         // title bar would sit above the sheet's own title row. Pushed screens bring their own bar and back button.
-        .sheet(item: $sheet) { sheet in sheetContent(sheet) }
+        .sheet(item: $sheet) { sheet in sheetContent(sheet).environment(\.tildeIsUtilityWindow, false) }
     }
     #endif
 

@@ -136,6 +136,8 @@ private struct InTabHostKeyPrompt: View {
                 .transition(.opacity)
                 .padding(.top, TildeSpacing.xl)
         }
+        // Fill the tab, never size it: the prompt must not change the window's minimum size.
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
         .transition(.opacity)
         .onAppear { tab.terminal.resignFocus() }
         .onDisappear {

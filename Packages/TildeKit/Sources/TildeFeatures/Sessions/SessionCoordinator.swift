@@ -155,6 +155,8 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
     }
 
     public func close(_ tab: SessionTab) {
+        // Already closed (an exited shell closes its own tab; a late "Close tab" click must not record it twice).
+        guard tabs.contains(where: { $0.id == tab.id }) else { return }
         tab.stateTask?.cancel()
         tab.latencyTask?.cancel()
         tab.pasteRequest?.resolve(false)

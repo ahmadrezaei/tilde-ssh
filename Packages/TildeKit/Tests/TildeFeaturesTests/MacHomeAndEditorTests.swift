@@ -132,9 +132,11 @@ private func server(_ name: String, env: ServerEnvironment = .none, used: TimeIn
         let coordinator = coordinator()
         let window = UUID()
         let tab = coordinator.open(PreviewServers.prodAPI, in: window)
-        coordinator.apply(.disconnected(.exited(status: 3)), to: tab)
-        coordinator.close(tab)
+        coordinator.apply(.disconnected(.exited(status: 3)), to: tab)   // an exited shell closes its own tab
+        #expect(coordinator.tab(id: tab.id) == nil)
         #expect(coordinator.lastClosure?.reason == .exited(status: 3))
+        coordinator.close(tab)   // closing again is a no-op
+        #expect(coordinator.recentlyClosed.count == 1)
     }
 }
 

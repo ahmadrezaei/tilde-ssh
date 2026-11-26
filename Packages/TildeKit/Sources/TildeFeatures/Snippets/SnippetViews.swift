@@ -18,6 +18,7 @@ public struct SnippetList: View {
     public init() {}
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.tildeIsUtilityWindow) private var isUtilityWindow
 
     public var body: some View {
         #if os(macOS)
@@ -72,7 +73,7 @@ public struct SnippetList: View {
             Button { navigator.present(.newSnippet) } label: { Label("New Snippet", systemImage: "plus") }
                 .buttonStyle(.tildeSheetSecondary)
         } actions: {
-            TildeDefaultButton("Done") { dismiss() }
+            if !isUtilityWindow { TildeDefaultButton("Done") { dismiss() } }
         }
         // The host wraps this sheet in a NavigationStack; hide its empty system title bar so only the sheet's own
         // title row shows.
@@ -81,6 +82,7 @@ public struct SnippetList: View {
                 coordinator.insert(snippet, values: values, in: navigator.windowID)
                 pendingFill = nil
             }
+            .environment(\.tildeIsUtilityWindow, false)
         }
         .confirmationDialog("Delete \"\(pendingDelete?.name ?? "")\"?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), titleVisibility: .visible) {
             Button("Delete Snippet", role: .destructive) {
@@ -143,6 +145,7 @@ public struct SnippetList: View {
                 coordinator.insert(snippet, values: values, in: navigator.windowID)
                 pendingFill = nil
             }
+            .environment(\.tildeIsUtilityWindow, false)
         }
         .confirmationDialog("Delete \"\(pendingDelete?.name ?? "")\"?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }), titleVisibility: .visible) {
             Button("Delete Snippet", role: .destructive) {

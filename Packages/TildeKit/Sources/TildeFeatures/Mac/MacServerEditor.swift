@@ -76,7 +76,7 @@ public struct MacServerEditor: View {
     private func sheet(_ model: ServerEditorModel) -> some View {
         @Bindable var model = model
         let editingFreeText = tagsFocused || notesFocused
-        TildeSheet(model.isNew ? "New Server" : "Edit Server", scrolls: false, idealHeight: 740) {
+        TildeSheet(model.isNew ? "New Server" : "Edit Server", scrolls: false, idealHeight: 660) {
             VStack(spacing: 0) {
                 form($model)
                 footer(model)
@@ -125,20 +125,20 @@ public struct MacServerEditor: View {
         let m = model.wrappedValue
         return Form {
             Section("Connection") {
-                TextField("Name", text: model.name, prompt: Text(m.namePlaceholder))
+                TextField("Name", text: model.name, prompt: Text(m.namePlaceholder).foregroundStyle(TildeColor.text3))
                 LabeledContent("Host") {
                     HStack(spacing: 6) {
-                        TextField("Host", text: model.host, prompt: Text("hostname or IP"))
+                        TextField("Host", text: model.host, prompt: Text("hostname or IP").foregroundStyle(TildeColor.text3))
                             .labelsHidden()
                         Text(":").foregroundStyle(TildeColor.text3)
-                        TextField("Port", text: model.portText, prompt: Text("22"))
+                        TextField("Port", text: model.portText, prompt: Text("22").foregroundStyle(TildeColor.text3))
                             .labelsHidden()
                             .frame(width: 60)
                     }
                     .tildeMono(13)
                 }
                 issueText(m.showsValidation ? m.issue(for: .host) ?? m.issue(for: .port) : nil)
-                TextField("Username", text: model.username, prompt: Text(TildeSettings.currentDefaultUser))
+                TextField("Username", text: model.username, prompt: Text(TildeSettings.currentDefaultUser).foregroundStyle(TildeColor.text3))
                     .textContentType(.username)
             }
 
@@ -180,9 +180,9 @@ public struct MacServerEditor: View {
             Section {
                 Toggle("Auto-attach tmux", isOn: model.autoTmux).toggleStyle(.checkbox)
                 if m.autoTmux {
-                    TextField("tmux session", text: model.tmuxSessionName, prompt: Text("tilde")).tildeMono(13)
+                    TextField("tmux session", text: model.tmuxSessionName, prompt: Text("tilde").foregroundStyle(TildeColor.text3)).tildeMono(13)
                 }
-                TextField("Startup command", text: model.startupCommand, prompt: Text("tmux new -A -s tilde")).tildeMono(13)
+                TextField("Startup command", text: model.startupCommand, prompt: Text("tmux new -A -s tilde").foregroundStyle(TildeColor.text3)).tildeMono(13)
                 Picker("TERM", selection: model.termType) {
                     ForEach(m.termChoices, id: \.self) { Text($0).tag($0) }
                 }
@@ -218,7 +218,7 @@ public struct MacServerEditor: View {
             }
             issueText(m.showsValidation ? m.issue(for: .key) : nil)
         case .password:
-            SecureField("Password", text: model.password, prompt: Text(m.hasSavedPassword ? "Saved. Type to replace." : ""))
+            SecureField("Password", text: model.password, prompt: Text(m.hasSavedPassword ? "Saved. Type to replace." : "").foregroundStyle(TildeColor.text3))
                 .textContentType(.password)
             issueText(m.issue(for: .password))
             note("Stored in iCloud Keychain, never in the synced database.")
@@ -287,10 +287,10 @@ public struct MacServerEditor: View {
                     }
                     ForEach($envRows) { $row in
                         GridRow {
-                            TextField("Name", text: $row.key, prompt: Text("LANG"))
+                            TextField("Name", text: $row.key, prompt: Text("LANG").foregroundStyle(TildeColor.text3))
                                 .textFieldStyle(.roundedBorder)
                                 .frame(width: 150)
-                            TextField("Value", text: $row.value, prompt: Text("en_US.UTF-8"))
+                            TextField("Value", text: $row.value, prompt: Text("en_US.UTF-8").foregroundStyle(TildeColor.text3))
                                 .textFieldStyle(.roundedBorder)
                             Button { envRows.removeAll { $0.id == row.id } } label: { Image(systemName: "minus.circle") }
                                 .buttonStyle(.borderless)

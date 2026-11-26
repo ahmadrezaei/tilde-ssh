@@ -68,6 +68,7 @@ public enum TildeSheetSize: Sendable {
 /// }
 /// ```
 public struct TildeSheet<Content: View, Leading: View, Actions: View>: View {
+    @Environment(\.tildeIsUtilityWindow) private var isInUtilityWindow
     private let title: String
     private let subtitle: String?
     private let subtitleIsMono: Bool
@@ -111,8 +112,11 @@ public struct TildeSheet<Content: View, Leading: View, Actions: View>: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-            Divider().overlay(TildeColor.border)
+            // In a window of its own (Mac Keys / Snippets) the title bar already names it.
+            if !isInUtilityWindow {
+                header
+                Divider().overlay(TildeColor.border)
+            }
             if scrolls {
                 ScrollView {
                     content
@@ -800,4 +804,10 @@ public struct TildeNotice: View {
         TildeDefaultButton("Save") {}
     }
     .frame(width: 560, height: 560)
+}
+
+
+public extension EnvironmentValues {
+    /// `true` inside a Mac utility window (Keys, Snippets) that shows a sheet's content: no sheet header, no Done.
+    @Entry var tildeIsUtilityWindow = false
 }

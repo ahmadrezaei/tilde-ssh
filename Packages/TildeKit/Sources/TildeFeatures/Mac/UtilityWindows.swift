@@ -116,6 +116,7 @@ public struct KeysWindowContent: View {
         UtilityWindowHost {
             // The stack lets a key push its detail page.
             NavigationStack { KeyListView() }
+                .environment(\.tildeIsUtilityWindow, true)
         }
     }
 }
@@ -128,6 +129,7 @@ public struct SnippetsWindowContent: View {
     public var body: some View {
         UtilityWindowHost {
             NavigationStack { SnippetList() }
+                .environment(\.tildeIsUtilityWindow, true)
         }
     }
 }

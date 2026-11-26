@@ -171,7 +171,9 @@ struct InTabHostKeyCard: View {
             isArmed = true
         }
         .padding(TildeSpacing.l)
-        .frame(maxWidth: 560)
+        // A definite width: the wrapping texts above are vertically fixed, so an open-ended width lets them wrap per
+        // character while the window measures its content, and the window grows to fit.
+        .frame(width: 520)
         .background(TildeColor.surface2, in: RoundedRectangle(cornerRadius: TildeRadius.sheet, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: TildeRadius.sheet, style: .continuous).stroke(TildeColor.border, lineWidth: 1))
         .shadow(color: .black.opacity(0.45), radius: 24, y: 8)

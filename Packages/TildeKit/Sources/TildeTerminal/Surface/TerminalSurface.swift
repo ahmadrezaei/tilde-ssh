@@ -27,6 +27,12 @@ public struct TerminalSurface: View {
     public let io: any TerminalIO
     public let theme: TerminalTheme
     public let environment: ServerEnvironment
+
+    #if os(macOS)
+    static let isMac = true
+    #else
+    static let isMac = false
+    #endif
     public let keyBar: KeyBarConfiguration
     public let snippets: any SnippetProviding
     public let onFontSizeChange: (Double) -> Void
@@ -105,7 +111,8 @@ public struct TerminalSurface: View {
             TerminalRepresentable(io: io, inputs: inputs(controller))
                 .padding(.horizontal, horizontalInset)
                 .padding(.vertical, verticalInset)
-            if EnvTone(environment) != .none {
+            // The Mac marks the environment on the tab, title and status bar instead of the terminal's edge.
+            if !Self.isMac, EnvTone(environment) != .none {
                 EnvironmentEdge(color: EnvTone(environment).color)
             }
             TerminalOverlays(controller: controller, theme: theme)
