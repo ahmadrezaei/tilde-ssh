@@ -393,6 +393,7 @@ final class TildeTerminalView: TerminalView, TerminalViewActions, KeyBarViewDele
     }
 
     func focusTerminal() { _ = becomeFirstResponder() }
+    func resignTerminalFocus() { _ = resignFirstResponder() }
     func scrollToEnd() { scroll(toPosition: 1) }
 }
 

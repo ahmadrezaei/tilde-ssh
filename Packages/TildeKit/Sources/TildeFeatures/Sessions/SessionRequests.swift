@@ -11,6 +11,8 @@ public final class HostKeyRequest: Identifiable {
     /// The window whose tab triggered the request; `nil` shows it in whichever window is frontmost.
     public let windowID: UUID?
     public let askedAt: Date
+    /// When the coordinator gives up and rejects the question (`nil` until it is queued). The in-tab card counts down to it.
+    public internal(set) var deadline: Date?
 
     private var continuation: CheckedContinuation<HostKeyDecision, Never>?
     var timeoutTask: Task<Void, Never>?

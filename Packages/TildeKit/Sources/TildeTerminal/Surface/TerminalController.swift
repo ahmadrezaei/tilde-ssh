@@ -74,6 +74,7 @@ protocol TerminalViewActions: AnyObject {
     func sendInput(_ bytes: [UInt8])
     func sendKey(_ key: NamedKey, modifiers: KeyModifiers)
     func focusTerminal()
+    func resignTerminalFocus()
     func scrollToEnd()
 }
 
@@ -212,6 +213,8 @@ public final class TerminalController {
     public func scrollToBottom() { actions?.scrollToEnd() }
     /// Gives the terminal keyboard focus.
     public func focus() { actions?.focusTerminal() }
+    /// Takes keyboard focus away from this terminal, only if it has it (a prompt over the terminal asks for this).
+    public func resignFocus() { actions?.resignTerminalFocus() }
 
     // MARK: Sending
 
