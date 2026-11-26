@@ -171,7 +171,10 @@ public struct MacSidebar: View {
         .contextMenu(forSelectionType: UUID.self) { ids in
             if let server = server(for: ids) { contextMenu(for: server) }
         } primaryAction: { ids in
-            if let server = server(for: ids) { launcher.open(server) }
+            guard let server = server(for: ids) else { return }
+            // Not from inside the table's own update: opening a session changes these rows (live dot) and collapses
+            // the sidebar, and doing that while the outline view is mid-update aborts in SwiftUI.
+            DispatchQueue.main.async { launcher.open(server) }
         }
     }
 

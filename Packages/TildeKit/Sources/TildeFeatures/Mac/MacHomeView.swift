@@ -193,7 +193,8 @@ public struct MacHomeView: View {
                         Button("Edit…") { if let id = ids.first { navigator.present(.editServer(id)) } }
                     }
                 } primaryAction: { ids in
-                    open(ids)
+                    // Outside the table's update (see MacSidebar): opening a session rebuilds this page.
+                    DispatchQueue.main.async { open(ids) }
                 }
             }
         }
