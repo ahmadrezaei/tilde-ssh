@@ -70,7 +70,16 @@ public final class AppNavigator {
     /// Whether the full-screen session deck is up in this window. Only ever `true` in the compact layout.
     public var isDeckPresented = false
     /// Which columns the iPad / Mac split view shows. "Toggle Sidebar" flips it between all and detail only.
-    public var columnVisibility: NavigationSplitViewVisibility = .all
+    public var columnVisibility: NavigationSplitViewVisibility = .all {
+        didSet { columnVisibilityChanged(from: oldValue) }
+    }
+
+    /// Sidebar auto-hide policy. Opening a session hides the sidebar; once the user brings it back by hand while
+    /// sessions are open, it is not hidden again in this window until every tab has closed. On by default on the Mac
+    /// only; iPad keeps hiding the sidebar every time a session opens.
+    var remembersManualSidebarShow = Platform.isMac
+    /// The user showed the sidebar by hand while at least one tab was open.
+    @ObservationIgnored private(set) var sidebarShownByHand = false
 
     init(coordinator: SessionCoordinator, windowID: UUID) {
         self.coordinator = coordinator
@@ -88,13 +97,24 @@ public final class AppNavigator {
 
     public func focusSearch() {
         phoneTab = .servers
+        #if os(macOS)
+        // Quick Connect lives in the sidebar's search field, so ⌘L has to bring the sidebar up. That is not the user
+        // re-showing it for good: the next session still hides it.
+        if !isCompact, columnVisibility == .detailOnly {
+            let shownByHand = sidebarShownByHand
+            columnVisibility = .all
+            sidebarShownByHand = shownByHand
+        }
+        #endif
         focusSearchToken += 1
     }
 
     /// Opens (or focuses) a session. In the compact layout this also brings up the session deck.
     @discardableResult
     public func open(_ server: ServerSnapshot, newSession: Bool = false, adHoc: Bool = false) -> SessionTab {
+        let wasEmpty = tabs.isEmpty
         let tab = coordinator.open(server, in: windowID, newSession: newSession, adHoc: adHoc)
+        if wasEmpty { sidebarShownByHand = false }
         showSession()
         return tab
     }
@@ -105,9 +125,25 @@ public final class AppNavigator {
     }
 
     /// Makes room for a session that just opened: the deck on iPhone, the terminal alone (sidebar hidden) on iPad and
-    /// Mac. The sidebar comes back when the window's last tab closes (`SessionContainer`).
+    /// Mac, unless the user re-showed the sidebar by hand (`remembersManualSidebarShow`). The sidebar comes back when
+    /// the window's last tab closes (`SessionContainer`).
     public func showSession() {
-        if isCompact { isDeckPresented = true } else { columnVisibility = .detailOnly }
+        if isCompact {
+            isDeckPresented = true
+        } else if !(remembersManualSidebarShow && sidebarShownByHand) {
+            columnVisibility = .detailOnly
+        }
+    }
+
+    /// Tracks the manual re-show. Only a change from hidden to visible while tabs are open counts, so layout echoes
+    /// (`.all` written over `.all`) and the app's own writes do not. With no tabs left the memory is cleared.
+    private func columnVisibilityChanged(from old: NavigationSplitViewVisibility) {
+        guard remembersManualSidebarShow else { return }
+        if tabs.isEmpty {
+            sidebarShownByHand = false
+        } else if old == .detailOnly, columnVisibility != .detailOnly {
+            sidebarShownByHand = true
+        }
     }
 
     /// "Save as server…" for a Quick Connect tab.
@@ -116,7 +152,10 @@ public final class AppNavigator {
     }
 
     public func reopenLastClosed() {
-        if coordinator.reopenLastClosed(in: windowID) != nil { showSession() }
+        let wasEmpty = tabs.isEmpty
+        guard coordinator.reopenLastClosed(in: windowID) != nil else { return }
+        if wasEmpty { sidebarShownByHand = false }
+        showSession()
     }
 
     /// Handles an incoming `ssh://` or `tilde://` link. **A link never connects by itself**: a connect link raises a
