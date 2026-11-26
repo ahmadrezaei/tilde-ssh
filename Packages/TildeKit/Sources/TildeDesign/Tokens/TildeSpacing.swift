@@ -13,6 +13,12 @@ public enum TildeSpacing {
     /// List rows: 44 pt on iOS, 28 pt on Mac (docs/DESIGN.md section 4).
     public static let rowHeightTouch: CGFloat = 44
     public static let rowHeightMac: CGFloat = 28
+    /// Mac sidebar row (source list): 26 pt, so about 28 servers fit in an 800 pt window.
+    public static let sidebarRowHeight: CGFloat = 26
+    /// Mac session tab bar height.
+    public static let tabBarHeight: CGFloat = 30
+    /// Mac session status bar height.
+    public static let statusBarHeight: CGFloat = 24
     /// Terminal inset on iPad and Mac, where there is room to breathe. The theme background fills it and the
     /// emulator grid is sized to what is left.
     public static let terminalInsetHorizontal: CGFloat = 12
