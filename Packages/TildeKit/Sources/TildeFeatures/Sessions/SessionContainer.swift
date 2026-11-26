@@ -32,7 +32,7 @@ public struct SessionContainer: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(TildeColor.bg.ignoresSafeArea())
         .navigationTitle(selected?.title ?? "Tilde")
-        .navigationSubtitle(selected.map(Self.subtitle) ?? "")
+        .navigationSubtitle(selected.map { Self.subtitle(for: $0.server.target) } ?? "")
         #if !os(macOS)
         .navigationBarTitleDisplayMode(.inline)
         // The container paints the same background under the bar, so the bar reads as one surface with the strip below.
@@ -42,8 +42,7 @@ public struct SessionContainer: View {
     }
 
     /// `deploy@10.0.1.12`, with `:port` only when it is not 22.
-    static func subtitle(for tab: SessionTab) -> String {
-        let target = tab.server.target
+    static func subtitle(for target: ConnectionTarget) -> String {
         let port = target.port == 22 ? "" : ":\(target.port)"
         return "\(target.username)@\(target.host)\(port)"
     }

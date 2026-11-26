@@ -6,10 +6,26 @@ import TildeDesign
 /// mono, a close button (on hover on the Mac, always on iPad), an accent edge under the selected tab, and a `+` after
 /// the last one. Tabs share the width equally between a minimum and a maximum; past the minimum the strip scrolls and
 /// keeps the selected tab in view.
+/// Which `⌘` digit reaches a tab, matching `TabShortcut`: ⌘1 to ⌘8 address tabs 1 to 8, and ⌘9 always jumps to the
+/// last tab, so with nine or more tabs only the last one carries the 9.
+enum TabStripHint {
+    static func digit(forTab index: Int, of count: Int) -> Int? {
+        guard index >= 1, index <= count else { return nil }
+        if index <= 8 { return index }
+        return index == count ? 9 : nil
+    }
+}
+
 struct TabStrip: View {
     let tabs: [SessionTab]
     let selectedID: UUID?
     @Environment(AppNavigator.self) private var navigator
+    @State private var scrollEdges = ScrollEdges()
+
+    private struct ScrollEdges: Equatable {
+        var leading = false
+        var trailing = false
+    }
 
     private enum Metrics {
         #if os(macOS)
@@ -25,6 +41,7 @@ struct TabStrip: View {
         static let gap: CGFloat = 4
         static let edge: CGFloat = 8
         static let newTabSize: CGFloat = tabHeight
+        static let fadeWidth: CGFloat = 22
     }
 
     var body: some View {
@@ -39,7 +56,7 @@ struct TabStrip: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: Metrics.gap) {
                             ForEach(Array(tabs.enumerated()), id: \.element.id) { index, tab in
-                                TabStripItem(tab: tab, index: index + 1, isSelected: tab.id == selectedID, showsHint: tabWidth >= 168)
+                                TabStripItem(tab: tab, index: index + 1, tabCount: tabs.count, isSelected: tab.id == selectedID, showsHint: tabWidth >= 168)
                                     .frame(width: tabWidth)
                                     .id(tab.id)
                             }
@@ -48,8 +65,18 @@ struct TabStrip: View {
                     .scrollBounceBehavior(.basedOnSize)
                     // The strip is not content under the toolbar: no blur plate over the title bar.
                     .scrollEdgeEffectHidden(true, for: .all)
+                    .onScrollGeometryChange(for: ScrollEdges.self) { geometry in
+                        let offset = geometry.contentOffset.x + geometry.contentInsets.leading
+                        let maxOffset = geometry.contentSize.width - geometry.containerSize.width
+                        return ScrollEdges(leading: offset > 1, trailing: offset < maxOffset - 1)
+                    } action: { _, edges in
+                        scrollEdges = edges
+                    }
+                    // Fade the cut-off tab at whichever end has more to scroll to.
+                    .mask { fadeMask }
+                    .animation(.easeOut(duration: 0.15), value: scrollEdges)
                     .frame(width: min(contentWidth, area))
-                    .onChange(of: selectedID) { _, id in
+                    .onChange(of: selectedID, initial: true) { _, id in
                         guard let id else { return }
                         withAnimation(.easeOut(duration: 0.2)) { reader.scrollTo(id, anchor: .center) }
                     }
@@ -64,6 +91,16 @@ struct TabStrip: View {
         // Not under the toolbar: a plain `background` would also paint into the top safe area.
         .background(TildeColor.surface, ignoresSafeAreaEdges: [])
         .overlay(alignment: .bottom) { Rectangle().fill(TildeColor.border).frame(height: TildeSpacing.hairline) }
+    }
+
+    private var fadeMask: some View {
+        HStack(spacing: 0) {
+            LinearGradient(colors: [scrollEdges.leading ? .clear : .black, .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: Metrics.fadeWidth)
+            Rectangle().fill(.black)
+            LinearGradient(colors: [.black, scrollEdges.trailing ? .clear : .black], startPoint: .leading, endPoint: .trailing)
+                .frame(width: Metrics.fadeWidth)
+        }
     }
 }
 
@@ -90,6 +127,7 @@ private struct NewTabButton: View {
 private struct TabStripItem: View {
     let tab: SessionTab
     let index: Int
+    let tabCount: Int
     let isSelected: Bool
     /// Room for the `⌘1` hint on the Mac (it goes first when tabs get narrow).
     let showsHint: Bool
@@ -126,6 +164,15 @@ private struct TabStripItem: View {
         .foregroundStyle(isSelected || isHovered ? TildeColor.text : TildeColor.text2)
         .background { shape.fill(fill) }
         .overlay { shape.strokeBorder(stroke, lineWidth: 1) }
+        // The environment stripe (design 3.3): on every tab, so PROD stays visible whatever the dot is showing.
+        .overlay {
+            VStack(spacing: 0) {
+                EnvStripe(tone)
+                Spacer(minLength: 0)
+            }
+            .clipShape(shape)
+            .allowsHitTesting(false)
+        }
         .overlay(alignment: .bottom) {
             if isSelected {
                 Capsule().fill(edgeColor).frame(height: 2).padding(.horizontal, 10)
@@ -168,8 +215,8 @@ private struct TabStripItem: View {
             .accessibilityHidden(true)
             .help("Close tab (⌘W)")
             #if os(macOS)
-            if !closeIsVisible, showsHint, index <= 9 {
-                Text("⌘\(index)")
+            if !closeIsVisible, showsHint, let digit = TabStripHint.digit(forTab: index, of: tabCount) {
+                Text("⌘\(digit)")
                     .tildeMono(10, weight: .medium, relativeTo: .caption2)
                     .foregroundStyle(TildeColor.text3)
                     .allowsHitTesting(false)
