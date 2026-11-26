@@ -18,8 +18,6 @@
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -43,18 +41,18 @@
 			</array>
 		</dict>
 	</array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<true/>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.developer-tools</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Unlock Tilde and your saved servers.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Tilde connects to servers on your local network over SSH.</string>
-	<key>TildeCloudKitEnabled</key>
-	<string>$(TILDE_CLOUDKIT_ENABLED)</string>
 	<key>TildeCloudKitContainer</key>
 	<string>$(TILDE_CLOUDKIT_CONTAINER)</string>
+	<key>TildeCloudKitEnabled</key>
+	<string>$(TILDE_CLOUDKIT_ENABLED)</string>
 	<key>TildeKeychainAccessGroup</key>
 	<string>$(AppIdentifierPrefix)$(TILDE_KEYCHAIN_GROUP)</string>
 	<key>UIApplicationSceneManifest</key>
