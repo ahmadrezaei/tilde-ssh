@@ -240,6 +240,10 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         case .connected(let info):
             tab.latencyMilliseconds = info.latency.map(ReachabilityMonitor.milliseconds)
             onConnected?(tab.server)
+        case .disconnected(.exited):
+            // The remote shell ended (`exit`, `logout`, Ctrl-D): close the tab like a terminal window does. When it was
+            // the window's last tab, the window falls back to the server list. Cmd-Shift-T brings it back.
+            close(tab)
         case .disconnected, .idle, .connecting, .reconnecting:
             break
         }

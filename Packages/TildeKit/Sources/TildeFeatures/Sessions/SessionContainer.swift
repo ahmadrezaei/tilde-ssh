@@ -39,6 +39,10 @@ public struct SessionContainer: View {
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         #endif
         .toolbar { sessionToolbar(selected: selected) }
+        // The last tab closed (Disconnect, `exit`): bring the server list back.
+        .onChange(of: tabs.isEmpty) { _, isEmpty in
+            if isEmpty { navigator.columnVisibility = .all }
+        }
     }
 
     /// `deploy@10.0.1.12`, with `:port` only when it is not 22.

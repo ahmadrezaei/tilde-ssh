@@ -122,6 +122,37 @@ private func makeCoordinator(failure: SessionError? = nil, hostKeyTimeout: Durat
         await waitUntil { if case .disconnected = tab.state { true } else { false } }
         #expect(tab.state == .disconnected(.error(.refused)))
         #expect(!tab.isLive)
+        // An error keeps the tab open so its banner can explain what happened.
+        #expect(coordinator.tab(id: tab.id) != nil)
+    }
+
+    @Test func exitingTheShellClosesTheTabAndFallsBackToTheServerList() async {
+        let coordinator = makeCoordinator()
+        let navigator = coordinator.navigator(for: window)
+        navigator.isCompact = true
+        let tab = navigator.open(PreviewServers.prodAPI)
+        #expect(navigator.isDeckPresented)
+        await waitUntil { tab.isConnected }
+
+        tab.session.send(Data("exit\r".utf8))
+        await waitUntil { coordinator.tabs(in: window).isEmpty }
+
+        #expect(coordinator.tabs(in: window).isEmpty)
+        #expect(coordinator.selectedTab(in: window) == nil)
+        #expect(coordinator.recentlyClosed.first?.id == PreviewServers.prodAPI.id)
+    }
+
+    @Test func exitingOneOfSeveralTabsSelectsItsNeighbour() async {
+        let coordinator = makeCoordinator()
+        let a = coordinator.open(PreviewServers.prodAPI, in: window)
+        let b = coordinator.open(PreviewServers.prodAPI, in: window, newSession: true)
+        await waitUntil { a.isConnected && b.isConnected }
+
+        b.session.send(Data("exit\r".utf8))
+        await waitUntil { coordinator.tab(id: b.id) == nil }
+
+        #expect(coordinator.tabs(in: window).map(\.id) == [a.id])
+        #expect(coordinator.selectedTab(in: window)?.id == a.id)
     }
 
     @Test func onConnectedFiresOncePerConnect() async {
@@ -286,6 +317,28 @@ private func makeCoordinator(failure: SessionError? = nil, hostKeyTimeout: Durat
     }
 
     // MARK: iPad and Mac: no deck, so prompts stay visible
+
+    @Test func openingASessionOnTheRegularLayoutHidesTheSidebar() {
+        let coordinator = makeCoordinator()
+        let navigator = coordinator.navigator(for: window)
+        #expect(navigator.columnVisibility == .all)
+        navigator.open(PreviewServers.prodAPI)
+        #expect(navigator.columnVisibility == .detailOnly)
+
+        navigator.columnVisibility = .all
+        coordinator.closeAll()
+        navigator.reopenLastClosed()
+        #expect(navigator.columnVisibility == .detailOnly)
+    }
+
+    @Test func theCompactLayoutLeavesTheSidebarAlone() {
+        let coordinator = makeCoordinator()
+        let navigator = coordinator.navigator(for: window)
+        navigator.isCompact = true
+        navigator.open(PreviewServers.prodAPI)
+        #expect(navigator.isDeckPresented)
+        #expect(navigator.columnVisibility == .all)
+    }
 
     @Test func openingSessionsOnTheRegularLayoutNeverRaisesTheDeck() async throws {
         let coordinator = makeCoordinator()

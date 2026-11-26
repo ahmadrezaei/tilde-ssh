@@ -95,7 +95,7 @@ public final class AppNavigator {
     @discardableResult
     public func open(_ server: ServerSnapshot, newSession: Bool = false, adHoc: Bool = false) -> SessionTab {
         let tab = coordinator.open(server, in: windowID, newSession: newSession, adHoc: adHoc)
-        showDeckIfCompact()
+        showSession()
         return tab
     }
 
@@ -104,13 +104,19 @@ public final class AppNavigator {
         if isCompact { isDeckPresented = true }
     }
 
+    /// Makes room for a session that just opened: the deck on iPhone, the terminal alone (sidebar hidden) on iPad and
+    /// Mac. The sidebar comes back when the window's last tab closes (`SessionContainer`).
+    public func showSession() {
+        if isCompact { isDeckPresented = true } else { columnVisibility = .detailOnly }
+    }
+
     /// "Save as server…" for a Quick Connect tab.
     public func saveAsServer(_ tab: SessionTab) {
         coordinator.saveServerRequest = SaveServerRequest(server: tab.server, password: nil)
     }
 
     public func reopenLastClosed() {
-        if coordinator.reopenLastClosed(in: windowID) != nil { showDeckIfCompact() }
+        if coordinator.reopenLastClosed(in: windowID) != nil { showSession() }
     }
 
     /// Handles an incoming `ssh://` or `tilde://` link. **A link never connects by itself**: a connect link raises a

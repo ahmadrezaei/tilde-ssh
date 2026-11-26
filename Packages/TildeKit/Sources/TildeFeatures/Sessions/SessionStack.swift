@@ -19,6 +19,23 @@ struct SessionStack: View {
                     .zIndex(isSelected ? 1 : 0)
             }
         }
+        // Give the terminal the keyboard as soon as there is a shell to type into, and again on every tab switch, so
+        // nobody has to click into it first.
+        .onChange(of: focusTarget, initial: true) { _, target in
+            guard let target, target.isConnected, let tab = tabs.first(where: { $0.id == target.id }) else { return }
+            // Next turn of the run loop: the terminal view is in its window by then.
+            DispatchQueue.main.async { tab.terminal.focus() }
+        }
+    }
+
+    private struct FocusTarget: Equatable {
+        let id: UUID
+        let isConnected: Bool
+    }
+
+    private var focusTarget: FocusTarget? {
+        let selected = tabs.first { $0.id == selectedID } ?? tabs.last
+        return selected.map { FocusTarget(id: $0.id, isConnected: $0.isConnected) }
     }
 }
 
