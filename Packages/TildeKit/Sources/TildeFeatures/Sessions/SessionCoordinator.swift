@@ -4,6 +4,22 @@ import Security
 import TildeCore
 import TildeSecurity
 
+/// A tab that was just closed: which server, in which window, and how its session ended.
+public struct ClosedSession: Equatable, Sendable {
+    /// Distinguishes two closures that look alike (the same server closed the same way twice).
+    public let id = UUID()
+    public let server: ServerSnapshot
+    public let windowID: UUID
+    /// `.userClosed` when the tab was closed while its session was still running.
+    public let reason: SessionEndReason
+
+    public init(server: ServerSnapshot, windowID: UUID, reason: SessionEndReason) {
+        self.server = server
+        self.windowID = windowID
+        self.reason = reason
+    }
+}
+
 /// Owns every open session (tabs), creates them through `SessionEngine.makeSession`, and answers the engine's
 /// questions: it is the app's `HostKeyPrompter` and `PasswordPrompter`.
 ///
@@ -25,6 +41,9 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
     public var saveServerRequest: SaveServerRequest?
     /// Most recently closed first; "Reopen last closed session" (Cmd-Shift-T).
     public private(set) var recentlyClosed: [ServerSnapshot] = []
+    /// The tab that was closed last, with the window it belonged to and why its session ended (the Mac start page
+    /// reads it for "prod-api-01: shell exited").
+    public private(set) var lastClosure: ClosedSession?
 
     /// Called when a session reaches `connected` (the app throttles and stores `Server.lastConnectedAt`).
     public var onConnected: (@MainActor (ServerSnapshot) -> Void)?
@@ -151,6 +170,9 @@ public final class SessionCoordinator: HostKeyPrompter, PasswordPrompter {
         let index = siblings.firstIndex(where: { $0.id == tab.id })
         tabs.removeAll { $0.id == tab.id }
         recentlyClosed.insert(tab.server, at: 0)
+        let reason: SessionEndReason
+        if case .disconnected(let ended) = tab.state { reason = ended } else { reason = .userClosed }
+        lastClosure = ClosedSession(server: tab.server, windowID: window, reason: reason)
         if recentlyClosed.count > 10 { recentlyClosed.removeLast() }
 
         let remaining = tabs(in: window)
