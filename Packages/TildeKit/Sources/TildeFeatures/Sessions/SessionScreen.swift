@@ -4,9 +4,6 @@ import TildeCore
 import TildeDesign
 import TildeStore
 import TildeTerminal
-#if canImport(AppKit)
-import AppKit
-#endif
 
 /// One session: the terminal surface with state overlays on top (connecting line, reconnect / error banners).
 /// Overlays never block the terminal with a modal; the scrollback stays visible, dimmed to 60%.
@@ -64,7 +61,8 @@ struct SessionScreen: View {
     /// tab's screen stays in the tree, and a hidden tab's card must not answer Esc).
     private var inTabHostKey: HostKeyRequest? {
         #if os(macOS)
-        guard navigator.selectedTab?.id == tab.id else { return nil }
+        // While a sheet is up the card would sit behind it; the sheet's own prompt host shows the question instead.
+        guard navigator.sheet == nil, navigator.selectedTab?.id == tab.id else { return nil }
         return coordinator.pendingInTabHostKey(for: tab.id)
         #else
         return nil
@@ -131,14 +129,18 @@ private struct InTabHostKeyPrompt: View {
             Color.black.opacity(0.001)
                 .contentShape(Rectangle())
                 .onTapGesture {}
+            // Keyed by request: a jump host asks twice in a row through the same tab, and the second card must be a
+            // new view (with its own short grace period) rather than the first one with new text.
             InTabHostKeyCard(request: request) { coordinator.answerHostKey(request, $0) }
+                .id(request.id)
+                .transition(.opacity)
                 .padding(.top, TildeSpacing.xl)
         }
         .transition(.opacity)
-        .onAppear { NSApp.keyWindow?.makeFirstResponder(nil) }
+        .onAppear { tab.terminal.resignFocus() }
         .onDisappear {
             // Also fires when the user switches to another tab; only hand focus back if this one is still on screen.
-            if navigator.selectedTab?.id == tab.id { tab.terminal.focus() }
+            if navigator.sheet == nil, navigator.selectedTab?.id == tab.id { tab.terminal.focus() }
         }
     }
 }

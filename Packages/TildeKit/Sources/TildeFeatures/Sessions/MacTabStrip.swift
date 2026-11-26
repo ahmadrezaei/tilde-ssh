@@ -120,6 +120,7 @@ private struct MacTabItem: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction { coordinator.select(tab) }
         .accessibilityAction(named: "Close tab") { coordinator.close(tab) }
     }
 

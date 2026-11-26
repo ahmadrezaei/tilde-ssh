@@ -115,6 +115,9 @@ struct UnknownHostSheet: View {
 struct InTabHostKeyCard: View {
     let request: HostKeyRequest
     let onDecision: (HostKeyDecision) -> Void
+    /// The two buttons that connect stay off for a moment after the card appears, so a double-click on the previous
+    /// card (a jump host asks twice) cannot answer this one. Cancel is always live.
+    @State private var isArmed = false
 
     var body: some View {
         let challenge = request.challenge
@@ -158,9 +161,14 @@ struct InTabHostKeyCard: View {
                 Spacer(minLength: TildeSpacing.m)
                 ForEach(UnknownHostAction.allCases, id: \.self) { action in
                     TildeActionButton(action.title, role: action.role) { onDecision(action.decision) }
+                        .disabled(action != .reject && !isArmed)
                 }
             }
             .padding(.top, TildeSpacing.xs)
+        }
+        .task {
+            try? await Task.sleep(for: .milliseconds(400))
+            isArmed = true
         }
         .padding(TildeSpacing.l)
         .frame(maxWidth: 560)

@@ -182,8 +182,9 @@ struct SessionPromptHost: ViewModifier {
     }
 
     func body(content: Content) -> some View {
-        // On the Mac an unknown host asked by a tab is shown inside that tab (`SessionScreen`), not here.
-        let hostKey = suppressed ? nil : coordinator.pendingWindowHostKey(in: navigator.windowID)
+        // On the Mac an unknown host asked by a tab is shown inside that tab (`SessionScreen`), not here, unless a sheet
+        // is up: the card would sit behind it, so the sheet's own host (this modifier, inside the sheet) shows it.
+        let hostKey = suppressed ? nil : coordinator.pendingWindowHostKey(in: navigator.windowID, inTabSupported: Platform.isMac && navigator.sheet == nil)
         content
             .overlay {
                 if let hostKey, hostKey.isChangedKey {

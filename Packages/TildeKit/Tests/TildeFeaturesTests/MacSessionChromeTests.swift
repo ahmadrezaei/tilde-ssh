@@ -119,6 +119,26 @@ private func changedLookup() -> HostKeyLookup {
         _ = await task.value
     }
 
+    @Test func aJumpHostAsksTwiceThroughTheSameTab() async throws {
+        let coordinator = makeCoordinator()
+        let tab = coordinator.open(PreviewServers.prodAPI, in: window)
+        let prompter = try #require(tab.prompter)
+        let bastion = Task { await prompter.decide(challenge(host: "bastion")) }
+        await waitUntil { coordinator.hostKeyQueue.count == 1 }
+        let target = Task { await prompter.decide(challenge(host: "10.0.2.5")) }
+        await waitUntil { coordinator.hostKeyQueue.count == 2 }
+
+        // One card at a time, in the order asked; answering the first brings up the second.
+        let first = try #require(coordinator.pendingInTabHostKey(for: tab.id, inTabSupported: true))
+        #expect(first.challenge.endpoint.host == "bastion")
+        coordinator.answerHostKey(first, .connectOnce)
+        #expect(await bastion.value == .connectOnce)
+        let second = try #require(coordinator.pendingInTabHostKey(for: tab.id, inTabSupported: true))
+        #expect(second.challenge.endpoint.host == "10.0.2.5")
+        coordinator.answerHostKey(second, .reject)
+        #expect(await target.value == .reject)
+    }
+
     @Test func theDeadlineFollowsTheCoordinatorsTimeout() async throws {
         let coordinator = makeCoordinator(hostKeyTimeout: .seconds(90))
         let task = Task { await coordinator.decide(challenge()) }

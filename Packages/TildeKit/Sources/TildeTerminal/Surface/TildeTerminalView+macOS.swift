@@ -152,6 +152,9 @@ final class TildeTerminalView: TerminalView, TerminalViewActions {
     func openExternally(_ url: URL) { NSWorkspace.shared.open(url) }
 
     func focusTerminal() { window?.makeFirstResponder(self) }
+    func resignTerminalFocus() {
+        if window?.firstResponder === self { window?.makeFirstResponder(nil) }
+    }
     func scrollToEnd() { scroll(toPosition: 1) }
 }
 #endif
