@@ -31,6 +31,36 @@ enum HostKeyFormat {
 
 // MARK: - First connection (TOFU)
 
+/// The three answers on the unknown-host sheet and how each may be triggered. Trusting a key is the one decision a
+/// stray Return must never make, so it is click-only; Esc rejects.
+enum UnknownHostAction: CaseIterable {
+    case reject, connectOnce, trust
+
+    var title: String {
+        switch self {
+        case .trust: "Trust & Connect"
+        case .connectOnce: "Connect Once"
+        case .reject: "Cancel"
+        }
+    }
+
+    var decision: HostKeyDecision {
+        switch self {
+        case .trust: .trustAndSave
+        case .connectOnce: .connectOnce
+        case .reject: .reject
+        }
+    }
+
+    var role: TildeActionRole {
+        switch self {
+        case .trust: .confirmByClick
+        case .connectOnce: .secondary
+        case .reject: .cancel
+        }
+    }
+}
+
 /// "First connection to db-primary": the unknown-host sheet. Never auto-dismisses; the handshake is held open
 /// until the user answers (up to 120 s).
 struct UnknownHostSheet: View {
@@ -43,7 +73,7 @@ struct UnknownHostSheet: View {
         TildeSheet(
             "First connection to \(challenge.serverName ?? challenge.endpoint.host)",
             subtitle: "\(HostKeyFormat.endpointLabel(challenge.endpoint)) presented an \(HostKeyFormat.label(key.algorithm)) key",
-            subtitleIsMono: true, idealHeight: 400
+            subtitleIsMono: true, scrolls: false
         ) {
             VStack(alignment: .leading, spacing: TildeSpacing.l) {
                 FingerprintBlock {
@@ -66,10 +96,11 @@ struct UnknownHostSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 4)
             }
+            .padding(TildeSheetMetrics.padding)
         } actions: {
-            TildeCancelButton { onDecision(.reject) }
-            Button("Connect Once") { onDecision(.connectOnce) }.buttonStyle(.tildeSheetSecondary)
-            TildeDefaultButton("Trust & Connect") { onDecision(.trustAndSave) }
+            ForEach(UnknownHostAction.allCases, id: \.self) { action in
+                TildeActionButton(action.title, role: action.role) { onDecision(action.decision) }
+            }
         }
         .interactiveDismissDisabled()
         .accessibilityElement(children: .contain)

@@ -68,16 +68,14 @@ public struct SnippetList: View {
                     .background(TildeColor.bg)
                 }
             }
-        } actions: {
-            EmptyView()
-        }
-        .headerAccessory {
+        } leading: {
             Button { navigator.present(.newSnippet) } label: { Label("New Snippet", systemImage: "plus") }
                 .buttonStyle(.tildeSheetSecondary)
+        } actions: {
+            TildeDefaultButton("Done") { dismiss() }
         }
-        // The window's sheet host adds its own Done button in the sheet's bottom bar.
-        .actionBar(false)
-        .toolbar(.hidden, for: .windowToolbar)
+        // The host wraps this sheet in a NavigationStack; hide its empty system title bar so only the sheet's own
+        // title row shows.
         .sheet(item: $pendingFill) { snippet in
             SnippetFillSheet(snippet: snippet) { values in
                 coordinator.insert(snippet, values: values, in: navigator.windowID)

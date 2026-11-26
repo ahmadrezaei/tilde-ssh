@@ -16,32 +16,59 @@ public struct SettingsRoot: View {
     public init(showsDone: Bool = false) { self.showsDone = showsDone }
 
     public var body: some View {
+        #if os(macOS)
+        if showsDone { sheetBody } else { windowBody }
+        #else
+        windowBody
+        #endif
+    }
+
+    /// The settings form. Shared by the Mac Settings window, the Mac sheet and iPad / iPhone.
+    private var form: some View {
+        Form {
+            Section { AppearanceSettingsSection() } header: { Text("Appearance").tildeSectionHeader() }
+            Section { KeyboardSettingsSection() } header: { Text("Keyboard").tildeSectionHeader() }
+            Section {
+                TerminalBehaviorSettingsSection()
+                TerminalSettingsSection()
+            } header: { Text("Terminal").tildeSectionHeader() }
+            Section { ConnectionSettingsSection() } header: { Text("Connections").tildeSectionHeader() }
+            Section { SecuritySettingsSection(knownHosts: { KnownHostsListView() }) } header: { Text("Security").tildeSectionHeader() }
+            SyncSettingsSection()
+            DataSettingsSection()
+            AboutSettingsSection()
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .background(TildeColor.bg)
+    }
+
+    private var windowBody: some View {
         NavigationStack {
-            Form {
-                Section { AppearanceSettingsSection() } header: { Text("Appearance").tildeSectionHeader() }
-                Section { KeyboardSettingsSection() } header: { Text("Keyboard").tildeSectionHeader() }
-                Section {
-                    TerminalBehaviorSettingsSection()
-                    TerminalSettingsSection()
-                } header: { Text("Terminal").tildeSectionHeader() }
-                Section { ConnectionSettingsSection() } header: { Text("Connections").tildeSectionHeader() }
-                Section { SecuritySettingsSection(knownHosts: { KnownHostsListView() }) } header: { Text("Security").tildeSectionHeader() }
-                SyncSettingsSection()
-                DataSettingsSection()
-                AboutSettingsSection()
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-            .background(TildeColor.bg)
-            .navigationTitle("Settings")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
-            #endif
-            .toolbar {
-                if showsDone { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-            }
+            form
+                .navigationTitle("Settings")
+                #if os(iOS)
+                .navigationBarTitleDisplayMode(.large)
+                #endif
+                .toolbar {
+                    if showsDone { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+                }
         }
     }
+
+    #if os(macOS)
+    /// Settings opened as a sheet (from the command palette): the shared sheet scaffold instead of a system title bar.
+    private var sheetBody: some View {
+        NavigationStack {
+            TildeSheet("Settings", scrolls: false, idealHeight: 720) {
+                form
+            } actions: {
+                TildeDefaultButton("Done") { dismiss() }
+            }
+            // The stack is only there so Key bar can push its editor; hide its empty root title bar.
+        }
+    }
+    #endif
 }
 
 #Preview("Settings") {

@@ -131,7 +131,7 @@ public struct ImportKeySheet: View {
             footer: passphraseWasWrong ? "That passphrase is wrong." : "The passphrase is used once to decrypt the key and is not stored.",
             footerTint: passphraseWasWrong ? TildeColor.danger : TildeColor.text3
         ) {
-            TildeTextRow("Passphrase", prompt: "Key passphrase", text: $passphrase, isMono: false, isSecure: true)
+            TildeTextRow("Passphrase", text: $passphrase, isMono: false, isSecure: true)
                 .onSubmit { Task { await unlock() } }
             TildeActionRow(isWorking ? "Unlocking…" : "Unlock Key", systemImage: "lock.open") { Task { await unlock() } }
                 .disabled(passphrase.isEmpty || isWorking)
@@ -166,8 +166,8 @@ public struct ImportKeySheet: View {
             }
 
             TildeFormSection(footer: "The key is stored unencrypted inside the Keychain, which protects it.") {
-                TildeTextRow("Name", prompt: "Name", text: $name)
-                TildeTextRow("Comment", prompt: "Comment", text: $comment)
+                TildeTextRow("Name", prompt: "my-key", text: $name)
+                TildeTextRow("Comment", prompt: "optional", text: $comment)
                 TildeToggleRow("Sync via iCloud Keychain", isOn: $synchronizable)
             }
         }

@@ -50,7 +50,8 @@ public struct KnownHostsImportView: View {
                     onFinish(nil)
                     dismiss()
                 }
-                TildeDefaultButton(importTitle) {
+                // Pinning host keys is a trust decision: click only, never Return.
+                TildeDefaultButton(importTitle, requiresClick: true) {
                     Task { await model.importSelected(using: services.knownHosts) }
                 }
                 .disabled(model.selection.isEmpty || model.isWorking)

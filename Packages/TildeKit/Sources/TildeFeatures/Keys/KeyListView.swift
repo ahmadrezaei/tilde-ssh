@@ -85,13 +85,13 @@ public struct KeyListView: View {
                     }
                 }
             }
+        } leading: {
+            addMenu.menuStyle(.button).buttonStyle(.tildeSheetSecondary).fixedSize()
         } actions: {
-            EmptyView()
+            TildeDefaultButton("Done") { dismiss() }
         }
-        .headerAccessory { addMenu.menuStyle(.button).buttonStyle(.tildeSheetSecondary).fixedSize() }
-        // The window's sheet host adds its own Done button in the sheet's bottom bar.
-        .actionBar(false)
-        .toolbar(.hidden, for: .windowToolbar)
+        // The sheet is wrapped in a NavigationStack so a key can push its detail page; without this its empty system
+        // title bar would sit above the sheet's own title row. Pushed screens bring their own bar and back button.
         .sheet(item: $sheet) { sheet in sheetContent(sheet) }
     }
     #endif

@@ -63,7 +63,7 @@ struct InstallKeySheet: View {
 
                 if let selected, AuthMethod(rawValue: selected.authMethodRaw) != .key || selected.key == nil {
                     TildeFormSection(footer: "Used once for this install if the server asks for a password and none is saved. It is not stored.") {
-                        TildeTextRow("Password", prompt: "optional", text: $password, isMono: false, isSecure: true)
+                        TildeTextRow("Password", prompt: "optional", text: $password, isMono: false, isSecure: true, contentType: .password)
                     }
                 }
 
@@ -79,7 +79,8 @@ struct InstallKeySheet: View {
             if phase == .running { ProgressView().controlSize(.small).accessibilityLabel("Installing") }
         } actions: {
             TildeCancelButton(isFinished ? "Done" : "Cancel") { dismiss() }
-            TildeDefaultButton("Install") { Task { await install() } }
+            // Installing writes to a remote authorized_keys: click only, never Return.
+            TildeDefaultButton("Install", requiresClick: true) { Task { await install() } }
                 .disabled(selected == nil || isFinished || phase == .running)
         }
         .presentationDetents([.large])

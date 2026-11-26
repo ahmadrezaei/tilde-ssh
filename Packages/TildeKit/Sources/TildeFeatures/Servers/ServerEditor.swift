@@ -74,12 +74,12 @@ public struct ServerEditor: View {
             }
         } actions: {
             TildeCancelButton { model.cancelTest(); dismiss() }
-            Button("Save") { save(model, connect: false) }
-                .buttonStyle(.tildeSheetSecondary)
+            // Return in a connection field saves (`submitsSave`); connecting is a separate, deliberate click. Save has
+            // no key binding of its own, so Return in the Tags field can only add a tag.
+            TildeDefaultButton("Save", requiresClick: true) { save(model, connect: false) }
                 .disabled(!model.canSave)
             Button("Save & Connect") { save(model, connect: true) }
                 .buttonStyle(.tildeSheetPrimary)
-                .keyboardShortcut(.defaultAction)
                 .disabled(!model.canSave)
         }
         .banner(model.saveError != nil) {
@@ -123,8 +123,15 @@ public struct ServerEditor: View {
                 #if os(iOS)
                 .keyboardType(.numberPad)
                 #endif
-            TildeTextRow("Username", prompt: TildeSettings.currentDefaultUser, text: model.username)
+            TildeTextRow("Username", prompt: TildeSettings.currentDefaultUser, text: model.username, contentType: .username)
         }
+        .onSubmit { submitsSave(m) }
+    }
+
+    /// Return in a connection or password field saves, like the default button would. The Tags field has its own
+    /// submit (add a tag) and sits outside these sections, so it never saves.
+    private func submitsSave(_ model: ServerEditorModel) {
+        if model.canSave { save(model, connect: false) }
     }
 
     private func authenticationSection(_ model: Bindable<ServerEditorModel>) -> some View {
@@ -156,8 +163,9 @@ public struct ServerEditor: View {
             } else {
                 TildeToggleRow("Ask every time", isOn: model.asksEveryTime)
                 if !m.asksEveryTime {
-                    TildeTextRow("Password", prompt: m.hasSavedPassword ? "Saved. Type to replace." : "Password", text: model.password,
-                                 isSecure: true, issue: m.issue(for: .password))
+                    TildeTextRow("Password", prompt: m.hasSavedPassword ? "Saved. Type to replace." : "", text: model.password,
+                                 isSecure: true, contentType: .password, issue: m.issue(for: .password))
+                        .onSubmit { submitsSave(m) }
                 }
             }
         }

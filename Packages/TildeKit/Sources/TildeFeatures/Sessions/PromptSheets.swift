@@ -16,7 +16,7 @@ struct PasswordPromptSheet: View {
         TildeSheet(request.headline, subtitle: request.target.displayString, subtitleIsMono: true, size: .compact, scrolls: false) {
             VStack(alignment: .leading, spacing: TildeSpacing.l) {
                 TildeFormSection(footer: request.detail) {
-                    TildeTextRow("Password", prompt: "Password", text: $password, isSecure: true)
+                    TildeTextRow("Password", text: $password, isSecure: true, contentType: .password)
                         .focused($focused)
                         .submitLabel(.go)
                         .onSubmit(submit)
@@ -86,7 +86,8 @@ struct PasteConfirmationSheet: View {
             .padding(TildeSheetMetrics.padding)
         } actions: {
             TildeCancelButton { onAnswer(false) }
-            TildeDefaultButton("Paste") { onAnswer(true) }
+            // On a production server a stray Return must not run the pasted lines.
+            TildeDefaultButton("Paste", requiresClick: tone == .prod) { onAnswer(true) }
         }
         .presentationDetents([.height(380), .medium])
         .interactiveDismissDisabled()

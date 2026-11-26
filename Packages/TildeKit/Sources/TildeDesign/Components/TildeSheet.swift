@@ -1,4 +1,10 @@
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Layout constants shared by every sheet and form. Mac sheets are denser than iPad ones (20 pt vs 16 pt gutters).
 public enum TildeSheetMetrics {
@@ -25,6 +31,14 @@ public enum TildeSheetMetrics {
 
     /// Horizontal padding inside a form card.
     public static let rowInset: CGFloat = 14
+
+    #if os(macOS)
+    /// The tallest a Mac sheet may be: the usable screen height minus room for the title bar and shadow.
+    public static var macMaxHeight: CGFloat {
+        let screen = NSScreen.main?.visibleFrame.height ?? 900
+        return max(420, min(screen - 120, 900))
+    }
+    #endif
 }
 
 /// How wide a Mac sheet is. iPad sheets take the size the system gives them.
@@ -64,8 +78,6 @@ public struct TildeSheet<Content: View, Leading: View, Actions: View>: View {
     private let leading: Leading
     private let actions: Actions
     private var banner: AnyView?
-    private var headerAccessory: AnyView?
-    private var showsActionBar = true
 
     /// - Parameters:
     ///   - subtitle: a muted line under the title.
@@ -94,6 +106,7 @@ public struct TildeSheet<Content: View, Leading: View, Actions: View>: View {
         self.content = content()
         self.leading = leading()
         self.actions = actions()
+        TildeSegmentedAppearance.applyOnce()
     }
 
     public var body: some View {
@@ -118,10 +131,8 @@ public struct TildeSheet<Content: View, Leading: View, Actions: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(TildeColor.bg)
             }
-            if showsActionBar {
-                Divider().overlay(TildeColor.border)
-                actionBar
-            }
+            Divider().overlay(TildeColor.border)
+            actionBar
         }
         .background(TildeColor.bg)
         .tint(TildeColor.accent)
@@ -135,27 +146,9 @@ public struct TildeSheet<Content: View, Leading: View, Actions: View>: View {
         return copy
     }
 
-    /// A view at the trailing edge of the title row (an "Add" menu, a count).
-    public func headerAccessory<Accessory: View>(@ViewBuilder _ accessory: () -> Accessory) -> TildeSheet {
-        var copy = self
-        copy.headerAccessory = AnyView(accessory())
-        return copy
-    }
-
-    /// Hides the bottom action bar. Only for a sheet whose host already supplies one (the Mac `NavigationStack` sheets
-    /// wrapped by the window's sheet host add their own Done button there).
-    public func actionBar(_ isVisible: Bool) -> TildeSheet {
-        var copy = self
-        copy.showsActionBar = isVisible
-        return copy
-    }
-
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            titleBlock
-            if let headerAccessory { headerAccessory }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        titleBlock
+            .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, TildeSheetMetrics.padding)
         .padding(.vertical, TildeSheetMetrics.padding - 4)
         .background(TildeColor.surface)
@@ -218,15 +211,36 @@ private extension View {
     @ViewBuilder
     func tildeSheetFrame(size: TildeSheetSize, idealHeight: CGFloat?) -> some View {
         #if os(macOS)
+        // A sheet never grows past the screen it is on: the body scrolls and the action bar stays visible.
+        let cap = TildeSheetMetrics.macMaxHeight
         if let idealHeight {
-            frame(minWidth: size.minWidth, idealWidth: size.idealWidth, minHeight: min(idealHeight, 380), idealHeight: idealHeight)
+            frame(minWidth: size.minWidth, idealWidth: size.idealWidth, minHeight: min(idealHeight, 380, cap), idealHeight: min(idealHeight, cap), maxHeight: cap)
                 .presentationSizing(.fitted)
         } else {
-            frame(minWidth: size.minWidth, idealWidth: size.idealWidth)
+            frame(minWidth: size.minWidth, idealWidth: size.idealWidth, maxHeight: cap)
                 .presentationSizing(.fitted)
         }
         #else
         self
+        #endif
+    }
+}
+
+// MARK: - Segmented control
+
+/// On iPad and iPhone a segmented control picks up the system gray unless told otherwise; the Mac one already follows
+/// the app tint. This gives the selected segment the same mint fill and dark label as the Mac.
+enum TildeSegmentedAppearance {
+    @MainActor private static var applied = false
+
+    @MainActor
+    static func applyOnce() {
+        #if canImport(UIKit)
+        guard !applied else { return }
+        applied = true
+        let proxy = UISegmentedControl.appearance()
+        proxy.selectedSegmentTintColor = UIColor(TildeColor.accent)
+        proxy.setTitleTextAttributes([.foregroundColor: UIColor(red: 4 / 255, green: 32 / 255, blue: 28 / 255, alpha: 1)], for: .selected)
         #endif
     }
 }
@@ -276,6 +290,77 @@ public extension ButtonStyle where Self == TildeSheetButtonStyle {
     static var tildeSheetDestructive: TildeSheetButtonStyle { TildeSheetButtonStyle(.destructive) }
 }
 
+/// What a sheet button looks like and which keys it answers to. Kept as plain data so the rules are testable: an
+/// action that trusts, installs, pins or overwrites something must be `confirmByClick`, never bound to Return.
+public struct TildeActionRole: Equatable, Sendable {
+    public enum Look: Equatable, Sendable { case primary, secondary, destructive }
+
+    public let look: Look
+    /// Return presses this button.
+    public let bindsReturn: Bool
+    /// Esc presses this button.
+    public let bindsEscape: Bool
+
+    public init(look: Look, bindsReturn: Bool, bindsEscape: Bool) {
+        self.look = look
+        self.bindsReturn = bindsReturn
+        self.bindsEscape = bindsEscape
+    }
+
+    /// The safe, expected action: mint fill, Return.
+    public static let confirm = TildeActionRole(look: .primary, bindsReturn: true, bindsEscape: false)
+    /// A consequential action (trust a host key, pin keys, install a key): mint fill, but only a click triggers it.
+    public static let confirmByClick = TildeActionRole(look: .primary, bindsReturn: false, bindsEscape: false)
+    /// Cancel: neutral fill, Esc.
+    public static let cancel = TildeActionRole(look: .secondary, bindsReturn: false, bindsEscape: true)
+    /// Any other neutral button: no key.
+    public static let secondary = TildeActionRole(look: .secondary, bindsReturn: false, bindsEscape: false)
+    /// A destructive button: red text, never Return.
+    public static let destructive = TildeActionRole(look: .destructive, bindsReturn: false, bindsEscape: false)
+
+    var buttonRole: TildeSheetButtonStyle.Role {
+        switch look {
+        case .primary: .primary
+        case .secondary: .secondary
+        case .destructive: .destructive
+        }
+    }
+}
+
+/// A sheet action button with its look and key bindings taken from a `TildeActionRole`.
+public struct TildeActionButton: View {
+    private let title: String
+    private let role: TildeActionRole
+    private let action: () -> Void
+
+    public init(_ title: String, role: TildeActionRole, action: @escaping () -> Void) {
+        self.title = title
+        self.role = role
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(title, action: action)
+            .buttonStyle(TildeSheetButtonStyle(role.buttonRole))
+            .modifier(KeyBindings(role: role))
+    }
+}
+
+private struct KeyBindings: ViewModifier {
+    let role: TildeActionRole
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if role.bindsReturn {
+            content.keyboardShortcut(.defaultAction)
+        } else if role.bindsEscape {
+            content.keyboardShortcut(.cancelAction)
+        } else {
+            content
+        }
+    }
+}
+
 /// "Cancel": secondary look, bound to Esc.
 public struct TildeCancelButton: View {
     private let title: String
@@ -287,26 +372,25 @@ public struct TildeCancelButton: View {
     }
 
     public var body: some View {
-        Button(title, action: action)
-            .buttonStyle(.tildeSheetSecondary)
-            .keyboardShortcut(.cancelAction)
+        TildeActionButton(title, role: .cancel, action: action)
     }
 }
 
-/// The primary action: mint fill, bound to Return. Dims with `.disabled(_:)`.
+/// The primary action: mint fill, bound to Return. Pass `requiresClick: true` for anything that trusts or changes
+/// something other than the user's own draft, so a stray Return cannot trigger it. Dims with `.disabled(_:)`.
 public struct TildeDefaultButton: View {
     private let title: String
+    private let requiresClick: Bool
     private let action: () -> Void
 
-    public init(_ title: String, action: @escaping () -> Void) {
+    public init(_ title: String, requiresClick: Bool = false, action: @escaping () -> Void) {
         self.title = title
+        self.requiresClick = requiresClick
         self.action = action
     }
 
     public var body: some View {
-        Button(title, action: action)
-            .buttonStyle(.tildeSheetPrimary)
-            .keyboardShortcut(.defaultAction)
+        TildeActionButton(title, role: requiresClick ? .confirmByClick : .confirm, action: action)
     }
 }
 
@@ -366,6 +450,8 @@ public struct TildeFieldRow<Field: View>: View {
     private let label: String
     private let issue: String?
     private let field: Field
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .body) private var labelWidth = TildeSheetMetrics.labelWidth
 
     public init(_ label: String, issue: String? = nil, @ViewBuilder field: () -> Field) {
         self.label = label
@@ -374,24 +460,36 @@ public struct TildeFieldRow<Field: View>: View {
     }
 
     public var body: some View {
+        // At accessibility text sizes the label column would eat the row, so the label moves above the field.
+        let stacked = typeSize.isAccessibilitySize
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 12) {
-                Text(label)
-                    .tildeText(13, relativeTo: .body)
-                    .foregroundStyle(TildeColor.text2)
-                    .lineLimit(1)
-                    .frame(width: TildeSheetMetrics.labelWidth, alignment: .leading)
-                    .accessibilityHidden(true)
-                field
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            if stacked {
+                VStack(alignment: .leading, spacing: 2) {
+                    labelText.padding(.top, 8)
+                    field.frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    labelText.frame(width: labelWidth, alignment: .leading)
+                    field.frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             if let issue {
                 TildeIssueText(issue)
-                    .padding(.leading, TildeSheetMetrics.labelWidth + 12)
+                    .padding(.leading, stacked ? 0 : labelWidth + 12)
                     .padding(.bottom, 6)
             }
         }
         .accessibilityElement(children: .contain)
+    }
+
+    private var labelText: some View {
+        Text(label)
+            .tildeText(13, relativeTo: .body)
+            .foregroundStyle(TildeColor.text2)
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityHidden(true)
     }
 }
 
@@ -403,20 +501,41 @@ public struct TildeTextRow: View {
     private let issue: String?
     private let isMono: Bool
     private let isSecure: Bool
+    private let contentType: TildeTextContent?
     @Binding private var text: String
 
-    public init(_ label: String, prompt: String = "", text: Binding<String>, isMono: Bool = true, isSecure: Bool = false, issue: String? = nil) {
+    public init(_ label: String, prompt: String = "", text: Binding<String>, isMono: Bool = true, isSecure: Bool = false,
+                contentType: TildeTextContent? = nil, issue: String? = nil) {
         self.label = label
         self.prompt = prompt
         self.issue = issue
         self.isMono = isMono
         self.isSecure = isSecure
+        self.contentType = contentType
         self._text = text
     }
 
     public var body: some View {
         TildeFieldRow(label, issue: issue) {
-            TildeTextField(label, prompt: prompt, text: $text, isMono: isMono, isSecure: isSecure)
+            TildeTextField(label, prompt: prompt, text: $text, isMono: isMono, isSecure: isSecure, contentType: contentType)
+        }
+    }
+}
+
+/// The autofill hint for a field (iOS offers saved logins for `.username` and `.password`).
+public enum TildeTextContent: Sendable {
+    case username, password
+}
+
+private struct ContentTypeHint: ViewModifier {
+    let hint: TildeTextContent?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        switch hint {
+        case .username: content.textContentType(.username)
+        case .password: content.textContentType(.password)
+        case nil: content
         }
     }
 }
@@ -428,13 +547,16 @@ public struct TildeTextField: View {
     private let prompt: String
     private let isMono: Bool
     private let isSecure: Bool
+    private let contentType: TildeTextContent?
     @Binding private var text: String
 
-    public init(_ label: String, prompt: String = "", text: Binding<String>, isMono: Bool = true, isSecure: Bool = false) {
+    public init(_ label: String, prompt: String = "", text: Binding<String>, isMono: Bool = true, isSecure: Bool = false,
+                contentType: TildeTextContent? = nil) {
         self.label = label
         self.prompt = prompt
         self.isMono = isMono
         self.isSecure = isSecure
+        self.contentType = contentType
         self._text = text
     }
 
@@ -452,6 +574,7 @@ public struct TildeTextField: View {
             }
         }
         .textFieldStyle(.plain)
+        .modifier(ContentTypeHint(hint: contentType))
         .modifier(FieldFont(isMono: isMono))
         .foregroundStyle(TildeColor.text)
         .labelsHidden()
