@@ -131,7 +131,15 @@ public final class AppNavigator {
         if isCompact {
             isDeckPresented = true
         } else if !(remembersManualSidebarShow && sidebarShownByHand) {
+            #if os(macOS)
+            // No slide: the sidebar's rows change in this same update (the live dot), and animating the column away
+            // while its outline view re-lays those rows out is the window where SwiftUI's table can abort.
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { columnVisibility = .detailOnly }
+            #else
             columnVisibility = .detailOnly
+            #endif
         }
     }
 

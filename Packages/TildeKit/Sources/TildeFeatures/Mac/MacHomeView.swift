@@ -161,43 +161,63 @@ public struct MacHomeView: View {
                     .foregroundStyle(TildeColor.text3)
                     .padding(.vertical, 8)
             } else {
-                Table(recent, selection: $selection) {
-                    TableColumn("Name") { item in
-                        Text(item.name).tildeMono(13, weight: .semibold).lineLimit(1)
-                    }
-                    TableColumn("Address") { item in
-                        Text(item.address).tildeMono(12).foregroundStyle(TildeColor.text2).lineLimit(1)
-                    }
-                    TableColumn("Environment") { item in
-                        EnvBadge(EnvTone(item.environment))
-                    }
-                    .width(min: 80, ideal: 96, max: 120)
-                    TableColumn("Last used") { item in
-                        if let date = item.lastConnectedAt {
-                            Text(date, format: .relative(presentation: .named)).foregroundStyle(TildeColor.text2)
-                        }
-                    }
-                    .width(min: 90, ideal: 120, max: 160)
-                    TableColumn("Latency") { item in
-                        latencyCell(monitor.status(for: item.probeTarget))
-                    }
-                    .width(min: 60, ideal: 70, max: 90)
+                // A plain stack, not a `Table`: this page leaves the window the moment a session opens, and tearing
+                // down an AppKit-backed table while its rows update ("2 seconds ago", latency) aborts in SwiftUI.
+                VStack(spacing: 0) {
+                    recentRow(header: true, item: nil)
+                    ForEach(recent) { item in recentRow(header: false, item: item) }
                 }
-                .tableStyle(.inset)
-                .scrollDisabled(true)
-                .scrollContentBackground(.hidden)
-                .frame(height: CGFloat(recent.count) * 28 + 40)
-                .contextMenu(forSelectionType: UUID.self) { ids in
-                    if !ids.isEmpty {
-                        Button("Connect") { open(ids) }
-                        Button("Edit…") { if let id = ids.first { navigator.present(.editServer(id)) } }
-                    }
-                } primaryAction: { ids in
-                    // Outside the table's update (see MacSidebar): opening a session rebuilds this page.
-                    DispatchQueue.main.async { open(ids) }
-                }
+                .background(TildeColor.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(TildeColor.border))
             }
         }
+    }
+
+    /// One row of Recent (or its header): click selects, double-click or the context menu connects.
+    @ViewBuilder
+    private func recentRow(header: Bool, item: HomeServer?) -> some View {
+        let isSelected = item != nil && item?.id == selection
+        HStack(spacing: 12) {
+            Group {
+                if let item {
+                    Text(item.name).tildeMono(13, weight: .semibold).foregroundStyle(TildeColor.text)
+                } else {
+                    Text("Name")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Group {
+                if let item { Text(item.address).tildeMono(12).foregroundStyle(TildeColor.text2) } else { Text("Address") }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Group {
+                if let item { EnvBadge(EnvTone(item.environment)) } else { Text("Environment") }
+            }
+            .frame(width: 96, alignment: .leading)
+            Group {
+                if let item {
+                    if let date = item.lastConnectedAt {
+                        Text(date, format: .relative(presentation: .named)).foregroundStyle(TildeColor.text2)
+                    }
+                } else {
+                    Text("Last used")
+                }
+            }
+            .frame(width: 130, alignment: .leading)
+            Group {
+                if let item { latencyCell(monitor.status(for: item.probeTarget)) } else { Text("Latency") }
+            }
+            .frame(width: 70, alignment: .leading)
+        }
+        .lineLimit(1)
+        .font(header ? .system(size: 11, weight: .medium) : .system(size: 13))
+        .foregroundStyle(header ? TildeColor.text3 : TildeColor.text)
+        .padding(.horizontal, 12)
+        .frame(height: header ? 26 : 30)
+        .background(isSelected ? TildeColor.accentSoft : Color.clear)
+        .overlay(alignment: .bottom) { if header { TildeColor.border.frame(height: TildeSpacing.hairline) } }
+        .contentShape(Rectangle())
+        .modifier(RecentRowActions(item: item, selection: $selection, open: { open([$0]) }, edit: { navigator.present(.editServer($0)) }))
     }
 
     @ViewBuilder
@@ -269,5 +289,29 @@ public struct MacHomeView: View {
 #Preview("MacHomeView") {
     TildePreviewHost(openSession: false) { _ in MacHomeView() }
         .frame(width: 900, height: 640)
+}
+/// Selection, double-click and the context menu for a Recent row (none for the header).
+private struct RecentRowActions: ViewModifier {
+    let item: HomeServer?
+    @Binding var selection: UUID?
+    let open: (UUID) -> Void
+    let edit: (UUID) -> Void
+
+    func body(content: Content) -> some View {
+        if let item {
+            content
+                .onTapGesture(count: 2) { open(item.id) }
+                .onTapGesture { selection = item.id }
+                .contextMenu {
+                    Button("Connect") { open(item.id) }
+                    Button("Edit…") { edit(item.id) }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { open(item.id) }
+        } else {
+            content.accessibilityHidden(true)
+        }
+    }
 }
 #endif
