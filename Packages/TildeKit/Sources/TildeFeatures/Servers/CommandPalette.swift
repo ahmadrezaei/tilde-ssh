@@ -36,6 +36,8 @@ struct PaletteItem: Identifiable, Equatable {
     var symbol: String
     var environment: ServerEnvironment = .none
     var isMono = false
+    /// The keyboard shortcut shown at the right edge of the row on the Mac (`⌥⌘K`), if the item has one.
+    var shortcut: String?
 }
 
 enum PaletteAction: String, CaseIterable, Equatable {
@@ -63,6 +65,49 @@ enum PaletteAction: String, CaseIterable, Equatable {
         case .importConfig: "square.and.arrow.down"
         case .reopenClosed: "arrow.uturn.backward"
         }
+    }
+}
+
+/// The shortcuts the Mac palette shows in its right-hand column, and the hints in its footer. Pure, so it is unit tested.
+enum PaletteShortcut {
+    /// The menu shortcut of an action, as the menu bar shows it.
+    static func label(for action: PaletteAction) -> String? {
+        switch action {
+        case .newServer: "⇧⌘N"
+        case .settings: "⌘,"
+        case .keys: "⌥⌘K"
+        case .snippets: "⌥⌘S"
+        case .reopenClosed: "⇧⌘T"
+        case .generateKey, .importConfig: nil
+        }
+    }
+
+    /// The ⌘1...⌘9 shortcut of the tab at `index`, by the same rule as the Window menu: ⌘9 is always the last tab, so
+    /// with more than nine tabs the ninth has none.
+    static func label(forTabAt index: Int, tabCount: Int) -> String? {
+        (1...9).first { TabShortcut.index(forDigit: $0, tabCount: tabCount) == index }.map { "⌘\($0)" }
+    }
+
+    /// One footer hint: the keys and what they do.
+    struct Hint: Equatable {
+        var keys: String
+        var title: String
+    }
+
+    /// The footer hints for the highlighted row: Return does what the row does, ⌘Return opens a server in a new tab
+    /// (only on a server row), Esc closes.
+    static func hints(for item: PaletteItem?) -> [Hint] {
+        var hints: [Hint] = []
+        switch item?.kind {
+        case .quickConnect, .server: hints.append(Hint(keys: "↵", title: "connect"))
+        case .session: hints.append(Hint(keys: "↵", title: "switch"))
+        case .snippet: hints.append(Hint(keys: "↵", title: "insert"))
+        case .action: hints.append(Hint(keys: "↵", title: "run"))
+        case nil: break
+        }
+        if case .server = item?.kind { hints.append(Hint(keys: "⌘↵", title: "new tab")) }
+        hints.append(Hint(keys: "esc", title: "close"))
+        return hints
     }
 }
 
@@ -112,15 +157,7 @@ struct CommandPalette: View {
     @FocusState private var fieldFocused: Bool
 
     var body: some View {
-        TildeSheet(title, scrolls: false, idealHeight: 560) {
-            VStack(spacing: 0) {
-                field
-                Divider().overlay(TildeColor.border)
-                resultList
-            }
-        } actions: {
-            TildeCancelButton { dismiss() }
-        }
+        panel
         .task(id: query) {
             guard mode != .newTab else { return }
             snippets = await services.snippets.snippets(matching: query)
@@ -134,6 +171,56 @@ struct CommandPalette: View {
             }
         }
     }
+
+    @ViewBuilder private var panel: some View {
+        #if os(macOS)
+        // A floating glass panel: the field, the results with their shortcut column, and a row of key hints.
+        VStack(spacing: 0) {
+            field
+            Divider().overlay(TildeColor.border)
+            resultList
+            Divider().overlay(TildeColor.border)
+            footer
+        }
+        .frame(minWidth: 600, idealWidth: 640, minHeight: 380, idealHeight: 480, maxHeight: TildeSheetMetrics.macMaxHeight)
+        .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        .tint(TildeColor.accent)
+        .presentationSizing(.fitted)
+        #else
+        TildeSheet(title, scrolls: false, idealHeight: 560) {
+            VStack(spacing: 0) {
+                field
+                Divider().overlay(TildeColor.border)
+                resultList
+            }
+        } actions: {
+            TildeCancelButton { dismiss() }
+        }
+        #endif
+    }
+
+    #if os(macOS)
+    /// ↵ connect · ⌘↵ new tab · esc close, following the highlighted row.
+    private var footer: some View {
+        HStack(spacing: TildeSpacing.l) {
+            ForEach(PaletteShortcut.hints(for: highlightedItem ?? items.first), id: \.keys) { hint in
+                HStack(spacing: 6) {
+                    Text(hint.keys)
+                        .font(TildeFont.mono(11, weight: .semibold))
+                        .foregroundStyle(TildeColor.text2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(TildeColor.surface2, in: RoundedRectangle(cornerRadius: 5))
+                    Text(hint.title).font(TildeFont.caption).foregroundStyle(TildeColor.text3)
+                }
+                .accessibilityElement(children: .combine)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, TildeSheetMetrics.padding)
+        .frame(minHeight: 36)
+    }
+    #endif
 
     private var title: String {
         switch mode {
@@ -163,11 +250,21 @@ struct CommandPalette: View {
                 .onKeyPress(.downArrow) { move(1); return .handled }
                 .onKeyPress(.upArrow) { move(-1); return .handled }
                 .onKeyPress(.escape) { dismiss(); return .handled }
+                #if os(macOS)
+                // ⌘↵ opens the highlighted server in a new tab. Plain ↵ is left to `onSubmit` above.
+                .onKeyPress(keys: [.return]) { press in
+                    guard press.modifiers.contains(.command) else { return .ignored }
+                    openInNewTab(highlightedItem ?? items.first)
+                    return .handled
+                }
+                #endif
                 .accessibilityLabel(mode == .snippets ? "Search snippets" : "Search")
         }
         .padding(.horizontal, TildeSheetMetrics.padding)
         .frame(minHeight: 52)
+        #if !os(macOS)
         .background(TildeColor.surface)
+        #endif
     }
 
     private var resultList: some View {
@@ -199,7 +296,9 @@ struct CommandPalette: View {
                 }
                 .padding(.bottom, TildeSpacing.l)
             }
+            #if !os(macOS)
             .background(TildeColor.bg)
+            #endif
             .onChange(of: highlighted) { _, id in if let id { proxy.scrollTo(id) } }
             .onChange(of: query) { highlighted = nil }
         }
@@ -225,9 +324,12 @@ struct CommandPalette: View {
         }
         if mode != .snippets {
             if mode == .all {
-                for tab in navigator.tabs {
+                let tabs = navigator.tabs
+                for (index, tab) in tabs.enumerated() {
+                    let shortcut = PaletteShortcut.label(forTabAt: index, tabCount: tabs.count)
                     result.append(PaletteItem(id: "tab-\(tab.id)", kind: .session(tab.id), section: .sessions, title: tab.title,
-                                              subtitle: tab.server.target.displayString, symbol: "terminal", environment: tab.environment, isMono: true))
+                                              subtitle: tab.server.target.displayString, symbol: "terminal", environment: tab.environment, isMono: true,
+                                              shortcut: shortcut))
                 }
             }
             for server in servers {
@@ -251,7 +353,7 @@ struct CommandPalette: View {
         if mode == .all {
             for action in PaletteAction.allCases where action != .reopenClosed || !coordinator.recentlyClosed.isEmpty {
                 result.append(PaletteItem(id: "act-\(action.rawValue)", kind: .action(action), section: .actions, title: action.title,
-                                          subtitle: nil, symbol: action.symbol))
+                                          subtitle: nil, symbol: action.symbol, shortcut: PaletteShortcut.label(for: action)))
             }
         }
         return result
@@ -295,14 +397,27 @@ struct CommandPalette: View {
         }
     }
 
+    #if os(macOS)
+    /// ⌘↵: a server opens in a new tab even if it is already open; any other row does what ↵ does.
+    private func openInNewTab(_ item: PaletteItem?) {
+        guard let item else { return }
+        guard case .server(let id) = item.kind, let server = servers.first(where: { $0.id == id }) else {
+            run(item)
+            return
+        }
+        dismiss()
+        launcher.open(server, newSession: true)
+    }
+    #endif
+
     private func perform(_ action: PaletteAction) {
         switch action {
-        case .newServer: navigator.sheet = .newServer
-        case .settings: navigator.sheet = .settings
-        case .keys: navigator.sheet = .keys
-        case .snippets: navigator.sheet = .snippets
-        case .generateKey: navigator.sheet = .generateKey
-        case .importConfig: navigator.sheet = .importSSHConfig
+        case .newServer: navigator.present(.newServer)
+        case .settings: navigator.present(.settings)
+        case .keys: navigator.present(.keys)
+        case .snippets: navigator.present(.snippets)
+        case .generateKey: navigator.present(.generateKey)
+        case .importConfig: navigator.present(.importSSHConfig)
         case .reopenClosed:
             dismiss()
             navigator.reopenLastClosed()
@@ -332,7 +447,16 @@ private struct PaletteRow: View {
             }
             Spacer(minLength: 0)
             EnvBadge(EnvTone(item.environment))
+            #if os(macOS)
+            // A fixed, right-aligned column, so the shortcuts line up whatever the row holds.
+            Text(item.shortcut ?? "")
+                .font(TildeFont.mono(12))
+                .foregroundStyle(TildeColor.text3)
+                .frame(width: 56, alignment: .trailing)
+                .accessibilityLabel(item.shortcut.map { "Shortcut \($0)" } ?? "")
+            #else
             if isHighlighted { Image(systemName: "return").font(.system(size: 11)).foregroundStyle(TildeColor.text3).accessibilityHidden(true) }
+            #endif
         }
         .padding(.horizontal, TildeSpacing.m)
         .padding(.vertical, 6)

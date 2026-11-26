@@ -6,6 +6,9 @@ import AppKit
 
 /// The Mac (and iPadOS 26) menu bar: File, Edit, View, Session and Window (docs/DESIGN.md section 3.4).
 ///
+/// On the Mac the Keys (⌥⌘K) and Snippets (⌥⌘S) items are not here: they are the menu entries of their own `Window`
+/// scenes. ⌃⌘S toggles the sidebar through `WindowCommandActions.toggleSidebar`.
+///
 /// The commands carry no state of their own. They read ``WindowCommandActions`` and ``SessionCommandActions``
 /// from the focused scene (published with `.windowCommandActions(_:)` and `.sessionCommandActions(_:)`) and
 /// disable every item whose closure is `nil`.
@@ -141,9 +144,13 @@ public struct MacCommands: Commands {
                     .keyboardShortcut(KeyEquivalent(Character(String(digit))), modifiers: .command)
                     .disabled(TabShortcut.index(forDigit: digit, tabCount: window?.tabCount ?? 0) == nil || window?.selectTab == nil)
             }
+            #if !os(macOS)
+            // On the Mac, Keys and Snippets are `Window` scenes (declared in `TildeApp` with ⌥⌘K and ⌥⌘S), so the
+            // system lists them in this menu itself and they work from any window, even with no main window open.
             Divider()
             item("Keys", window?.showKeys).keyboardShortcut("k", modifiers: [.command, .option])
             item("Snippets", window?.showSnippets).keyboardShortcut("s", modifiers: [.command, .option])
+            #endif
         }
     }
 

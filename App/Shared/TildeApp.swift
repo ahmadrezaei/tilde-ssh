@@ -44,14 +44,37 @@ struct TildeApp: App {
         }
 
         #if os(macOS)
+        // Keys and Snippets are windows of their own, not sheets over a session. The scene's own shortcut puts ⌥⌘K and
+        // ⌥⌘S on its Window menu item, so they work from any window. Both sit behind the lock gate like every window.
+        Window(UtilityWindow.keys.title, id: UtilityWindow.keys.id) {
+            if case .success(let environment) = launch {
+                LockedWindow(environment: environment) { KeysWindowContent() }
+                    .preferredColorScheme(colorScheme)
+            }
+        }
+        .keyboardShortcut("k", modifiers: [.command, .option])
+        .defaultSize(width: 600, height: 640)
+        .windowResizability(.contentSize)
+        .restorationBehavior(.disabled)
+
+        Window(UtilityWindow.snippets.title, id: UtilityWindow.snippets.id) {
+            if case .success(let environment) = launch {
+                LockedWindow(environment: environment) { SnippetsWindowContent() }
+                    .preferredColorScheme(colorScheme)
+            }
+        }
+        .keyboardShortcut("s", modifiers: [.command, .option])
+        .defaultSize(width: 640, height: 680)
+        .windowResizability(.contentSize)
+        .restorationBehavior(.disabled)
+
         // The Settings scene is its own window: it needs the lock gate too, or Settings (known hosts, keys, the lock
-        // switch itself) would be reachable while the app is locked.
+        // switch itself) would be reachable while the app is locked. Each pane sets its own fixed size
+        // (`SettingsPane`), and the window follows the selected pane.
         Settings {
             if case .success(let environment) = launch {
                 LockedWindow(environment: environment) { SettingsRoot() }
                     .preferredColorScheme(colorScheme)
-                    .frame(width: 640)
-                    .frame(minHeight: 480, idealHeight: 720)
             }
         }
         #endif
