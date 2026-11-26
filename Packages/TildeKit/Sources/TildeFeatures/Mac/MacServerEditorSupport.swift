@@ -67,11 +67,14 @@ enum MacEditorReturn {
         return environment == .prod ? .save : .saveAndConnect
     }
 
-    static func saveRole(_ action: Action) -> TildeActionRole {
-        action == .save ? .confirm : .secondary
+    /// The look follows the environment, so it does not jump when focus moves; focus only takes Return away.
+    static func saveRole(environment: ServerEnvironment, isEditingFreeText: Bool) -> TildeActionRole {
+        guard environment == .prod else { return .secondary }
+        return isEditingFreeText ? .confirmByClick : .confirm
     }
 
-    static func saveAndConnectRole(_ action: Action) -> TildeActionRole {
-        action == .saveAndConnect ? .confirm : .confirmByClick
+    static func saveAndConnectRole(environment: ServerEnvironment, isEditingFreeText: Bool) -> TildeActionRole {
+        guard environment != .prod else { return .secondary }
+        return isEditingFreeText ? .confirmByClick : .confirm
     }
 }

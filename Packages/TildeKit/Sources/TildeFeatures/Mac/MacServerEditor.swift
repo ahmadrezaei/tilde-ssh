@@ -75,7 +75,7 @@ public struct MacServerEditor: View {
     @ViewBuilder
     private func sheet(_ model: ServerEditorModel) -> some View {
         @Bindable var model = model
-        let returnAction = MacEditorReturn.action(environment: model.environment, isEditingFreeText: tagsFocused || notesFocused)
+        let editingFreeText = tagsFocused || notesFocused
         TildeSheet(model.isNew ? "New Server" : "Edit Server", scrolls: false, idealHeight: 740) {
             VStack(spacing: 0) {
                 form($model)
@@ -83,9 +83,9 @@ public struct MacServerEditor: View {
             }
         } actions: {
             TildeCancelButton { model.cancelTest(); dismiss() }
-            TildeActionButton("Save", role: MacEditorReturn.saveRole(returnAction)) { save(model, connect: false) }
+            TildeActionButton("Save", role: MacEditorReturn.saveRole(environment: model.environment, isEditingFreeText: editingFreeText)) { save(model, connect: false) }
                 .disabled(!model.canSave)
-            TildeActionButton("Save & Connect", role: MacEditorReturn.saveAndConnectRole(returnAction)) { save(model, connect: true) }
+            TildeActionButton("Save & Connect", role: MacEditorReturn.saveAndConnectRole(environment: model.environment, isEditingFreeText: editingFreeText)) { save(model, connect: true) }
                 .disabled(!model.canSave)
         }
         .banner(model.saveError != nil) {

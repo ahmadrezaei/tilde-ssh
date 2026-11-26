@@ -20,7 +20,7 @@ public struct MacHomeView: View {
 
     @State private var text = ""
     @State private var selection: UUID?
-    @State private var dismissedClosure: ClosedSession?
+    @State private var dismissedClosureID: UUID?
     @FocusState private var fieldFocused: Bool
 
     public init() {}
@@ -39,8 +39,8 @@ public struct MacHomeView: View {
             .frame(maxWidth: .infinity)
         }
         .background(TildeColor.bg)
-        .task(id: servers.map(\.id)) {
-            for server in servers { monitor.refresh(HomeServer(server).probeTarget) }
+        .task(id: homeServers.map { ReachabilityMonitor.key($0.probeTarget) }) {
+            for server in homeServers { monitor.refresh(server.probeTarget) }
         }
         .onAppear { fieldFocused = true }
     }
@@ -59,7 +59,7 @@ public struct MacHomeView: View {
     /// The tab that just closed in this window, while nothing is open and the banner was not dismissed.
     private var visibleClosure: ClosedSession? {
         guard navigator.tabs.isEmpty, let closure = coordinator.lastClosure, closure.windowID == navigator.windowID,
-              closure != dismissedClosure else { return nil }
+              closure.id != dismissedClosureID else { return nil }
         return closure
     }
 
@@ -146,7 +146,7 @@ public struct MacHomeView: View {
     private func closedBanner(_ closure: ClosedSession) -> some View {
         var actions: [Banner.Action] = []
         if canReopen(closure) { actions.append(.init("Reopen  ⇧⌘T") { navigator.reopenLastClosed() }) }
-        actions.append(.init("Dismiss") { dismissedClosure = closure })
+        actions.append(.init("Dismiss") { dismissedClosureID = closure.id })
         return Banner(.info, headline: HomeLogic.message(for: closure), actions: actions)
     }
 
@@ -186,7 +186,7 @@ public struct MacHomeView: View {
                 .tableStyle(.inset)
                 .scrollDisabled(true)
                 .scrollContentBackground(.hidden)
-                .frame(height: CGFloat(recent.count) * 24 + 32)
+                .frame(height: CGFloat(recent.count) * 28 + 40)
                 .contextMenu(forSelectionType: UUID.self) { ids in
                     if !ids.isEmpty {
                         Button("Connect") { open(ids) }

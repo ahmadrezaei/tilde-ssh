@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import TildeCore
 import TildeDesign
+import TildeStore
 @testable import TildeFeatures
 
 private func server(_ name: String, env: ServerEnvironment = .none, used: TimeInterval? = nil) -> HomeServer {
@@ -121,7 +122,9 @@ private func server(_ name: String, env: ServerEnvironment = .none, used: TimeIn
         let tab = coordinator.open(PreviewServers.prodAPI, in: window)
         #expect(coordinator.lastClosure == nil)
         coordinator.close(tab)
-        #expect(coordinator.lastClosure == ClosedSession(server: PreviewServers.prodAPI, windowID: window, reason: .userClosed))
+        #expect(coordinator.lastClosure?.server == PreviewServers.prodAPI)
+        #expect(coordinator.lastClosure?.windowID == window)
+        #expect(coordinator.lastClosure?.reason == .userClosed)
         #expect(coordinator.recentlyClosed.first?.id == PreviewServers.prodAPI.id)
     }
 
@@ -209,14 +212,46 @@ private func server(_ name: String, env: ServerEnvironment = .none, used: TimeIn
         #expect(MacEditorReturn.action(environment: .prod, isEditingFreeText: true) == .none)
     }
 
-    @Test func rolesBindReturnToExactlyOneButtonOrNone() {
+    @Test func returnIsBoundToTheRightButtonAndNeverToSaveAndConnectInProd() {
         for environment in ServerEnvironment.allCases {
             for editing in [false, true] {
                 let action = MacEditorReturn.action(environment: environment, isEditingFreeText: editing)
-                let roles = [MacEditorReturn.saveRole(action), MacEditorReturn.saveAndConnectRole(action)]
+                let roles = [
+                    MacEditorReturn.saveRole(environment: environment, isEditingFreeText: editing),
+                    MacEditorReturn.saveAndConnectRole(environment: environment, isEditingFreeText: editing),
+                ]
                 #expect(roles.filter(\.bindsReturn).count == (action == .none ? 0 : 1))
-                if environment == .prod { #expect(!MacEditorReturn.saveAndConnectRole(action).bindsReturn) }
+                // Exactly one button is the filled one, however focus moves.
+                #expect(roles.filter { $0.look == .primary }.count == 1)
+                if environment == .prod { #expect(!roles[1].bindsReturn) }
             }
         }
+    }
+}
+
+#if os(macOS)
+@Suite struct TokenListTests {
+    @Test func trimsDropsEmptiesAndRepeatsKeepingOrder() {
+        let tokens: [Any] = ["web", " db, ", "WEB", "", "edge", 4, "Db"]
+        #expect(TildeTokenField.normalized(tokens) == ["web", "db", "edge"])
+    }
+}
+#endif
+
+@Suite struct HomeServerMappingTests {
+    @Test func addressOmitsPort22AndTheProbeTargetIsTheServerItself() {
+        let model = Server(name: "", host: "a.example.com", port: 22, username: "deploy", environmentRaw: "prod")
+        let item = HomeServer(model)
+        #expect(item.address == "deploy@a.example.com")
+        #expect(item.name == "a.example.com")
+        #expect(item.environment == .prod)
+        #expect(item.probeTarget == ConnectionTarget(host: "a.example.com", port: 22, username: "deploy"))
+        model.port = 2222
+        #expect(HomeServer(model).address == "deploy@a.example.com:2222")
+    }
+
+    @Test func bareAddressThatMatchesASavedServerOpensIt() {
+        let id = UUID()
+        #expect(HomeLogic.submit(text: "10.0.0.4", parses: true, firstMatch: id) == .open(id))
     }
 }

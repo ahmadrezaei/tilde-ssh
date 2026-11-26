@@ -81,6 +81,10 @@ public struct TildeTokenField: NSViewRepresentable {
 
         public func controlTextDidEndEditing(_ notification: Notification) {
             sync(notification)
+            // Show the cleaned list (repeats removed) once the user is done typing.
+            if let field = notification.object as? NSTokenField, TildeTokenField.normalized((field.objectValue as? [Any]) ?? []) != parent.tokens {
+                field.objectValue = parent.tokens
+            }
             setFocused(false)
         }
 
@@ -90,19 +94,14 @@ public struct TildeTokenField: NSViewRepresentable {
             if updated != parent.tokens { parent.tokens = updated }
         }
 
+        /// Repeats are removed in `sync`; checking here would compare a new token with the text it was made from.
         public func tokenField(_ tokenField: NSTokenField, shouldAdd tokens: [Any], at index: Int) -> [Any] {
-            let existing = Set(((tokenField.objectValue as? [Any]) ?? []).compactMap { ($0 as? String)?.lowercased() })
-            return tokens.filter { token in
-                guard let text = token as? String else { return false }
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                return !trimmed.isEmpty && !existing.contains(trimmed.lowercased())
-            }
+            tokens.filter { ($0 as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
         }
 
         public func tokenField(_ tokenField: NSTokenField, completionsForSubstring substring: String, indexOfToken tokenIndex: Int,
                                indexOfSelectedItem selectedIndex: UnsafeMutablePointer<Int>?) -> [Any]? {
-            let taken = Set(parent.tokens.map { $0.lowercased() })
-            return parent.suggestions.filter { $0.localizedCaseInsensitiveContains(substring) && !taken.contains($0.lowercased()) }
+            parent.suggestions.filter { $0.localizedCaseInsensitiveContains(substring) }
         }
     }
 }

@@ -6,6 +6,8 @@ import TildeSecurity
 
 /// A tab that was just closed: which server, in which window, and how its session ended.
 public struct ClosedSession: Equatable, Sendable {
+    /// Distinguishes two closures that look alike (the same server closed the same way twice).
+    public let id = UUID()
     public let server: ServerSnapshot
     public let windowID: UUID
     /// `.userClosed` when the tab was closed while its session was still running.
